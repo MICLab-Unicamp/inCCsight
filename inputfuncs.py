@@ -14,7 +14,7 @@ def get_parser():
 	parser.add_argument('-b', '--basename', help='Basename for the FSL files (basename default is \'dti\', e.g. dti_L1.nii.gz', nargs='?', default='dti', dest='basename')
 
 	parser.add_argument('-m', '--mask', help='String contained in the filename of the masks files located in the directories loaded using [-d] or [-p]', nargs='?', type=str, dest='mark_str')
-	parser.add_argument('-s', '--segm', help='Segmentation method to be performed (ROQS and/or Watershed)', nargs='+', dest='segm')
+	parser.add_argument('-s', '--segm', help='Segmentation method to be performed (ROQS and/or Watershed), default is both', nargs='+', dest='segm', default=['ROQS', 'Watershed'])
 	parser.add_argument('--staple', help='Will create a segmentation consensus between the methods selected and the mask (if inputted). Only possible with multiple segmentation')
 
 	return parser

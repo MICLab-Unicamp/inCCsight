@@ -69,7 +69,7 @@ def segm_watershed(wFA_ms, eigenvects_ms, gaussian_sigma=0.3):
     # Getting the CC
     seg_wFA, ymed, xmed = getTheCC(seg_wFA)
 
-    return seg_wFA, ymed, xmed
+    return seg_wFA
 
 
 def segm_roqs(wFA_ms, eigvects_ms):
@@ -126,7 +126,7 @@ def segm_roqs(wFA_ms, eigvects_ms):
     contours = measure.find_contours(segm, 0.1)
     contour = sorted(contours, key=lambda x: len(x))[-1] 
         
-    return segm, contour
+    return segm
 
 
 def segm_staple(path, fissure, segm_import=None):

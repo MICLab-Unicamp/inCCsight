@@ -6,7 +6,7 @@ import libcc
 shape_imports = libcc.shapeSignImports()
 
 
-def segment(subject_path, segmentation_method, segmentation_methods_dict, basename):
+def segment(subject_path, segmentation_method, segmentation_methods_dict, parcellation_methods_dict, basename):
 
 	name_dict = {'ROQS': 'roqs',
 	             'Watershed': 'watershed'}
@@ -41,12 +41,12 @@ def segment(subject_path, segmentation_method, segmentation_methods_dict, basena
 
 
 		# Check segmentation errors (True/False)
+		error_flag = False
+		error_prob = None
 		try:
 			error_flag, error_prob = libcc.checkShapeSign(segmentation, shape_imports, threshold=0.6)
-			print(segmentation_method, error_flag, error_prob)
 		except:
 			error_flag = True
-			print(segmentation_method, error_flag, "ERROR: checkShapeSign")
 
 			
 	   	# Get data (meanFA, stdFA, meanMD, stdMD, meanRD, stdRD, meanAD, stdAD)
@@ -57,27 +57,25 @@ def segment(subject_path, segmentation_method, segmentation_methods_dict, basena
 		except:
 			midline_fa = None
 		
-		'''
 		# Parcellation
 		parcellations_dict = {}
-		for parcellation_method, parcellation_function in parcellation_functions_dict.items():
+		for parcellation_method, parcellation_function in parcellation_methods_dict.items():
 
 			try:
 				parcellations_dict[parcellation_method] = parcellation_function(segmentation)
 			except:
 				parcellations_dict[parcellation_method] = []
-		'''
 
 		# Save files
 		data_tuple = (segmentation, scalar_maps, scalar_statistics, error_prob)
 
 		# Assemble nifti mask
-		if method != 'S_MASK':
+		if segmentation_method != 'S_MASK':
 			canvas = np.zeros(wFA_v.shape, dtype = 'int32')
 			canvas[fissure,:,:] = segmentation
-			save_nii(key, filename, canvas, affine)
+			save_nii(subject_path, filename, canvas, affine)
 
-		save_os(subject_path, dataname, data_tuple)
+		save_os(subject_path, filename, data_tuple)
 
 	return data_tuple
 
@@ -95,3 +93,15 @@ def save_os(path, filename, content):
 
 	# Save file
 	np.save(file_path, content)
+
+def save_nii(path, filename, content, affine):
+
+	save_path = path + 'CCLab'
+
+	# Create folder
+	if not os.path.exists(save_path):
+		os.mkdir(save_path)
+
+	# Filename
+	nii_img = nib.Nifti1Image(content, affine)
+	nib.save(nii_img, save_path+'/'+filename+'.nii.gz') 

@@ -1,8 +1,19 @@
-import pathlib
-import os
 
+import os
+import pathlib
 import pandas as pd
 import numpy as np
+import random
+from tqdm import tqdm
+
+import inputfuncs
+import ccprocess
+
+import segmfuncs
+import parcelfuncs
+
+import webbrowser
+from threading import Timer
 
 import dash
 import dash_table
@@ -10,37 +21,27 @@ import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
 
+import plotly.express as px
 import plotly.graph_objs as go
 from dash.dependencies import Input, Output, State
 
-import constants
-import inputfuncs
+# GENERAL DEFINITIONS -------------------------------------------------------------------------
 
-# INITIALIZE ----------------------------------------------------------------------------------
+segmentation_methods_dict = {'ROQS': segmfuncs.segm_roqs,
+                             'Watershed': segmfuncs.segm_roqs}
 
-app = dash.Dash(
-    __name__,
-    meta_tags=[
-        {"name": "viewport", "content": "width=device-width, initial-scale=1.0"}
-    ],
-    external_stylesheets = [dbc.themes.BOOTSTRAP],
-)
-server = app.server
-app.config["suppress_callback_exceptions"] = True
-
-# GENERAL ------------------------------------------------------------------------------------
-
-segmentation_methods = ['ROQS', 'Watershed', 'STAPLE', 'Imported Mask']
-parcellation_methods = ['Witelson', 'Hofer', 'Chao', 'Cover', 'Freesurfer']
-
-
+parcellation_methods_dict = {'Witelson': parcelfuncs.parc_witelson,
+                             'Hofer': parcelfuncs.parc_hofer,
+                             'Chao': parcelfuncs.parc_chao,
+                             'Cover': parcelfuncs.parc_cover,
+                             'Freesurfer': parcelfuncs.parc_freesurfer}
 
 # DATA IMPORTING -----------------------------------------------------------------------------
 
 # Arg parser
 opts = inputfuncs.get_parser().parse_args()
 
-# Get paths and check if files exist
+# Get subjects and assemble groups considering parent folders
 path_dict = {}
 if opts.dirs is not None:
     for directory in opts.dirs:
@@ -55,37 +56,52 @@ if opts.parents is not None:
             
             directory_dict = inputfuncs.import_parent(parent, opts.basename)
             
-            path_dict = dict(path_dict.items() + directory_dict.items())
-            group_dict[parent.rsplit('/', 2)[1]] = list(directory_dict.keys())
-
-# Check if there are CCLab folders
+            path_dict.update(directory_dict)
+            group_dict[parent.rsplit('/', 1)[1]] = list(directory_dict.keys())
+            print(parent.rsplit('/', 1))
 
 
 # DATA PROCESSING -----------------------------------------------------------------------------
 
+# Create dataframe for each segmentation method
+
+scalar_statistics_dict = {}
+scalar_statistics_names = ['FA','FA StdDev','MD','MD StdDev','RD','RD StdDev','AD','AD StdDev']
+
+# Segment and get info
+
+for subject_key, subject_path in tqdm(path_dict.items()):
+
+    for segmentation_method in segmentation_methods_dict.keys():
+
+        if segmentation_method in opts.segm:
+
+            _, _, scalar_statistics, _ = ccprocess.segment(subject_path, 
+                                                           segmentation_method, 
+                                                           segmentation_methods_dict, 
+                                                           parcellation_methods_dict, 
+                                                           opts.basename)
+
+            if segmentation_method not in scalar_statistics_dict.keys(): 
+                scalar_statistics_dict[segmentation_method] = {subject_key: list(scalar_statistics)}
+            else:
+                scalar_statistics_dict[segmentation_method][subject_key] = list(scalar_statistics)
+
+# Transform info to pandas dataframes
+
+for segmentation_method in segmentation_methods_dict.keys():
+    scalar_statistics_dict[segmentation_method] = pd.DataFrame.from_dict(scalar_statistics_dict[segmentation_method], 
+                                                                         orient='index', 
+                                                                         columns=scalar_statistics_names)
 
 
+# VISUALIZATION -------------------------------------------------------------------------------
 
-
-# Load data
-APP_PATH = str(pathlib.Path(__file__).parent.resolve())
-
-df_dict = {}
-df_roqs = pd.read_csv(os.path.join(APP_PATH, os.path.join("data", "df_roqs.csv")), index_col=0)
-df_dict["Watershed"] = pd.read_csv(os.path.join(APP_PATH, os.path.join("data", "df_watershed.csv")), index_col=0)
-
-
-
-
-
-
-
-# LAYOUT STUFF ----------------------------------------------------------------------------------
-
-colormap = {}
-for ind, segmentation in enumerate(df_dict.keys()):
-    colormap[segmentation] = constants.colors[ind]
-
+app = dash.Dash(__name__, 
+               meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1.0"}],
+               external_stylesheets = [dbc.themes.BOOTSTRAP])
+server = app.server
+app.config["suppress_callback_exceptions"] = True
 
 def build_banner():
     return html.Div(
@@ -102,6 +118,12 @@ def build_banner():
 
 def build_graph_title(title):
     return html.P(className="graph-title", children=title)
+
+def build_segm_boxplot():
+
+    fig = px.scatter_matrix(scalar_statistics_dict['ROQS'], dimensions=['FA','MD','RD','AD'])
+    
+    return fig
 
 
 app.layout = html.Div(
@@ -123,23 +145,6 @@ app.layout = html.Div(
                                             ],
                                     id="instruct",
                                 ),
-
-                                build_graph_title("Select segmentation methods"),
-                                dcc.Dropdown(
-                                    id='segmentation-drop',
-                                    options=[
-                                        {'label': 'ROQS', 'value': 'ROQS'},
-                                        {'label': 'Watershed', 'value': 'Watershed'},
-                                        {'label': 'STAPLE', 'value': 'STAPLE'}],
-                                    style={'backgroundColor':'rgba(0,0,0,0)',
-                                           'fontSize':'2rem',
-                                           'lineHeight':'42px',
-                                           'width':'470px',
-                                           'marginLeft':'5px'},
-                                    value='ROQS',
-                                    multi=True,
-                                    searchable=False
-                                )
                             ],
                         )
                     ],
@@ -166,7 +171,7 @@ app.layout = html.Div(
                                                       'name': 'Subjects', 
                                                       'selectable': True}]
                                                 ),
-                                                #data=[{"Subjects": i} for i in list(df_roqs.index)],
+                                                data=[{"Subjects": i} for i in list(path_dict.keys())],
                                                 style_header={'display':'none'},
                                                 style_table={'overflowY': 'scroll',
                                                              'overflowX': 'hidden', 
@@ -223,7 +228,7 @@ app.layout = html.Div(
                                                               'name': 'Subjects', 
                                                               'selectable': True}]
                                                         ),
-                                                        #data = [{"Subjects": i} for i in list(names_list)],
+                                                        data = [{"Groups": i} for i in list(group_dict.keys())],
                                                         style_header={'display':'none'},
                                                         style_table={'overflowY': 'scroll',
                                                                      'overflowX': 'hidden', 
@@ -285,8 +290,8 @@ app.layout = html.Div(
                     id="form-bar-container",
                     className="six columns",
                     children=[
-                        build_graph_title("Well count by formations"),
-                        dcc.Graph(id="form-by-bar"),
+                        build_graph_title("Scalar Box-Plot"),
+                        dcc.Graph(id="scalar_boxplot", figure=build_segm_boxplot()),
                     ],
                 ),
                 html.Div(
@@ -303,294 +308,23 @@ app.layout = html.Div(
     ]
 )
 
-
-
-'''
 # Update bar plot
-@app.callback(
-    Output("form-by-bar", "figure"),
-    [
-        Input("well-map", "selectedData"),
-        Input("ternary-map", "selectedData"),
-        Input("operator-select", "value"),
-    ],
-)
-'''
-def update_bar(map_selected_data, tern_selected_data, op_select):
-    dff = df[df["op"].isin(op_select)]
+@app.callback(Output("scalar_boxplot", "figure"),
+    [Input("scalar_boxplot", "selectedData")])
 
-    formations = dff["fm_name"].unique().tolist()
-    # Find which one has been triggered
-    ctx = dash.callback_context
-
-    prop_id = ""
-    prop_type = ""
-    if ctx.triggered:
-        splitted = ctx.triggered[0]["prop_id"].split(".")
-        prop_id = splitted[0]
-        prop_type = splitted[1]
-
-    processed_data = {}
-    if prop_id == "well-map" and prop_type == "selectedData":
-        for formation in formations:
-            if map_selected_data is None:
-                processed_data[formation] = [
-                    0
-                ]  # [0] is the default value to select current bar
-            else:
-                processed_data[formation] = get_selection(
-                    dff, formation, map_selected_data, 0
-                )
-
-    elif prop_id == "ternary-map" and prop_type == "selectedData":
-
-        for formation in formations:
-            if tern_selected_data is None:
-                processed_data[formation] = [0]
-            else:
-                processed_data[formation] = get_selection(
-                    dff, formation, tern_selected_data, 32
-                )
-
-    else:
-        for formation in formations:
-            processed_data[formation] = [0]
-
-    return generate_formation_bar(dff, processed_data)
-'''
-
-# Update ternary map
-@app.callback(
-    Output("ternary-map", "figure"),
-    [
-        Input("well-map", "selectedData"),
-        Input("form-by-bar", "selectedData"),
-        Input("form-by-bar", "clickData"),
-        Input("operator-select", "value"),
-        Input("ternary-layer-select", "value"),
-    ],
-    state=[State("ternary-map", "figure")],
-)
-'''
-def update_ternary_map(
-    map_selected_data,
-    bar_selected_data,
-    bar_click_data,
-    op_select,
-    layer_select,
-    curr_fig,
-):
-    marker_visible = contour_visible = True
-
-    dff = df[df["op"].isin(op_select)]
-    formations = dff["fm_name"].unique().tolist()
-
-    # Find which one has been triggered
-    ctx = dash.callback_context
-
-    if ctx.triggered:
-        splitted = ctx.triggered[0]["prop_id"].split(".")
-        prop_id = splitted[0]
-        prop_type = splitted[1]
-
-    processed_data = {}
-
-    if prop_id != "ternary-layer-select":
-        if prop_id == "well-map" and prop_type == "selectedData":
-
-            for formation in formations:
-                if map_selected_data is None:
-                    processed_data[formation] = None
-                else:
-                    processed_data[formation] = get_selection(
-                        dff, formation, map_selected_data, 0
-                    )
-
-        elif prop_id == "form-by-bar" and prop_type == "selectedData":
-
-            processed_data = get_selection_by_bar(bar_selected_data)
-
-            for formation in formations:
-                if bar_selected_data is None:
-                    processed_data[formation] = None
-                elif formation not in processed_data:
-                    processed_data[formation] = []
-
-        elif prop_id == "form-by-bar" and prop_type == "clickData":
-
-            processed_data = get_selection_by_bar(bar_click_data)
-            for formation in formations:
-                if bar_click_data is None:
-                    processed_data[formation] = None
-                elif formation not in processed_data:
-                    processed_data[formation] = []
-
-        else:
-
-            for formation in formations:
-                processed_data[formation] = None
-
-        return generate_ternary_map(
-            dff, processed_data, contour_visible, marker_visible
-        )
-
-    if prop_id == "ternary-layer-select":
-        if curr_fig is not None:
-            if "Well Data" not in layer_select:
-                marker_visible = "legendonly"
-            if "Rock Type" not in layer_select:
-                contour_visible = "legendonly"
-
-            for contour_dict in curr_fig["data"][:32]:
-                contour_dict["visible"] = contour_visible
-
-            for marker_dict in curr_fig["data"][32:]:
-                marker_dict["visible"] = marker_visible
-            return curr_fig
-        else:
-            return curr_fig
-'''
-
-# Update well map
-@app.callback(
-    Output("well-map", "figure"),
-    [
-        Input("ternary-map", "selectedData"),
-        Input("form-by-bar", "selectedData"),
-        Input("form-by-bar", "clickData"),
-        Input("operator-select", "value"),
-        Input("mapbox-view-selector", "value"),
-    ],
-)
-'''
-def update_well_map(
-    tern_selected_data, bar_selected_data, bar_click_data, op_select, mapbox_view
-):
-    dff = df[df["op"].isin(op_select)]
-    formations = dff["fm_name"].unique().tolist()
-
-    # Find which one has been triggered
-    ctx = dash.callback_context
-
-    prop_id = ""
-    prop_type = ""
-    if ctx.triggered:
-        splitted = ctx.triggered[0]["prop_id"].split(".")
-        prop_id = splitted[0]
-        prop_type = splitted[1]
-
-    processed_data = {}
-
-    if prop_id == "ternary-map":
-        for formation in formations:
-            if tern_selected_data is None:
-                processed_data[formation] = None
-            else:
-                processed_data[formation] = get_selection(
-                    dff, formation, tern_selected_data, 32
-                )
-
-    elif prop_id == "form-by-bar":
-
-        bar_data = ""
-        if prop_type == "selectedData":
-            bar_data = bar_selected_data
-        elif prop_type == "clickData":
-            bar_data = bar_click_data
-
-        processed_data = get_selection_by_bar(bar_data)
-
-        for formation in formations:
-            if bar_data is None:
-                processed_data[formation] = None
-            elif formation not in processed_data:
-                processed_data[formation] = []
-
-    else:
-        for formation in formations:
-            processed_data[formation] = None
-
-    return generate_well_map(dff, processed_data, mapbox_view)
-'''
-
-# Update production plot
-@app.callback(
-    Output("production-fig", "figure"),
-    [
-        Input("well-map", "selectedData"),
-        Input("ternary-map", "selectedData"),
-        Input("form-by-bar", "selectedData"),
-        Input("operator-select", "value"),
-    ],
-)
-'''
-def update_production(map_select, tern_select, bar_select, op_select):
-    dff = df[df["op"].isin(op_select)]
-
-    # Find which one has been triggered
-    ctx = dash.callback_context
-
-    prop_id = ""
-    prop_type = ""
-    if ctx.triggered:
-        splitted = ctx.triggered[0]["prop_id"].split(".")
-        prop_id = splitted[0]
-        prop_type = splitted[1]
-
-    processed_data_init = {}
-    processed_data_init["well_id"] = dff["RecordNumber"].tolist()
-    processed_data_init["formation"] = dff["fm_name"].tolist()
-
-    if prop_id == "well-map" and prop_type == "selectedData":
-        if map_select is not None:
-            processed_data = {"well_id": [], "formation": []}
-            for point in map_select["points"]:
-                processed_data["well_id"].append(point["customdata"])
-                processed_data["formation"].append(
-                    dff[dff["RecordNumber"] == point["customdata"]]["fm_name"].tolist()[
-                        0
-                    ]
-                )
-        else:
-            processed_data = processed_data_init
-
-    elif prop_id == "ternary-map" and prop_type == "selectedData":
-        if tern_select is not None:
-            processed_data = {"well_id": [], "formation": []}
-            for point in tern_select["points"]:
-                if "customdata" in point:
-                    processed_data["well_id"].append(point["customdata"])
-                    processed_data["formation"].append(
-                        dff[dff["RecordNumber"] == point["customdata"]][
-                            "fm_name"
-                        ].tolist()[0]
-                    )
-
-        else:
-            processed_data = processed_data_init
-
-    elif prop_id == "form-by-bar" and prop_type == "selectedData":
-        if bar_select is not None:
-            processed_data = {"well_id": [], "formation": []}
-
-            # Find all wells according to selected formation category
-            for point in bar_select["points"]:
-                selected_form = point["x"]
-                selected_well = dff[dff["fm_name"] == point["x"]][
-                    "RecordNumber"
-                ].tolist()
-                for well in selected_well:
-                    processed_data["well_id"].append(int(well))
-                    processed_data["formation"].append(selected_form)
-
-        else:
-            processed_data = processed_data_init
-    else:
-        processed_data = processed_data_init
-
-    return generate_production_plot(processed_data)
+def update_boxplot(data):
+    return {fig: build_segm_boxplot()}
 
 
-# Running the server
+
+# SERVER CONFIG ---------------------------------------------------------------------------------
+
+port = 5000 + random.randint(0, 999)
+
+def open_browser():
+    url = "http://127.0.0.1:{0}".format(port)
+    webbrowser.open_new(url)
+
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    Timer(1.25, open_browser).start()
+    app.run_server(debug=False, port=port)
