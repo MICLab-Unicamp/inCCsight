@@ -58,7 +58,8 @@ if opts.parents is not None:
             
             path_dict.update(directory_dict)
             group_dict[parent.rsplit('/', 1)[1]] = list(directory_dict.keys())
-            print(parent.rsplit('/', 1))
+            print('DIRECTORY',parent.rsplit('/', 1)[1])
+print('groupdict',group_dict.keys())
 
 
 # DATA PROCESSING -----------------------------------------------------------------------------
@@ -66,11 +67,11 @@ if opts.parents is not None:
 # Create dataframe for each segmentation method
 
 scalar_statistics_dict = {}
-scalar_statistics_names = ['FA','FA StdDev','MD','MD StdDev','RD','RD StdDev','AD','AD StdDev']
+scalar_statistics_names = ['Group','FA','FA StdDev','MD','MD StdDev','RD','RD StdDev','AD','AD StdDev']
 
 # Segment and get info
 
-for subject_key, subject_path in tqdm(path_dict.items()):
+for subject_name, subject_path in tqdm(path_dict.items()):
 
     for segmentation_method in segmentation_methods_dict.keys():
 
@@ -82,10 +83,15 @@ for subject_key, subject_path in tqdm(path_dict.items()):
                                                            parcellation_methods_dict, 
                                                            opts.basename)
 
+            for group_name, group_list in group_dict.items():
+                if subject_name in group_list:
+                    scalar_statistics = [group_name] + list(scalar_statistics)
+
+
             if segmentation_method not in scalar_statistics_dict.keys(): 
-                scalar_statistics_dict[segmentation_method] = {subject_key: list(scalar_statistics)}
+                scalar_statistics_dict[segmentation_method] = {subject_name: list(scalar_statistics)}
             else:
-                scalar_statistics_dict[segmentation_method][subject_key] = list(scalar_statistics)
+                scalar_statistics_dict[segmentation_method][subject_name] = list(scalar_statistics)
 
 # Transform info to pandas dataframes
 
@@ -121,10 +127,21 @@ def build_graph_title(title):
 
 def build_segm_boxplot():
 
-    fig = px.scatter_matrix(scalar_statistics_dict['ROQS'], dimensions=['FA','MD','RD','AD'])
-    
+    df = scalar_statistics_dict['ROQS']
+    fig = px.scatter_matrix(df, 
+                            dimensions=['FA','MD','RD','AD'],
+                            color='Group',
+                            hover_name=df.index)
     return fig
 
+def build_segm_scattermatrix():
+
+    df = scalar_statistics_dict['ROQS']
+    fig = px.scatter_matrix(df, 
+                            dimensions=['FA','MD','RD','AD'],
+                            color='Group',
+                            hover_name=df.index)
+    return fig
 
 app.layout = html.Div(
     children=[
@@ -224,8 +241,8 @@ app.layout = html.Div(
                                                     dash_table.DataTable(
                                                         id='table-groups',
                                                         columns=(
-                                                            [{'id': 'Subjects', 
-                                                              'name': 'Subjects', 
+                                                            [{'id': 'Groups', 
+                                                              'name': 'Groups', 
                                                               'selectable': True}]
                                                         ),
                                                         data = [{"Groups": i} for i in list(group_dict.keys())],
@@ -323,7 +340,7 @@ port = 5000 + random.randint(0, 999)
 
 def open_browser():
     url = "http://127.0.0.1:{0}".format(port)
-    webbrowser.open_new(url)
+    webbrowser.open(url)
 
 if __name__ == "__main__":
     Timer(1.25, open_browser).start()
