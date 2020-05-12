@@ -125,13 +125,16 @@ def build_banner():
 def build_graph_title(title):
     return html.P(className="graph-title", children=title)
 
-def build_segm_boxplot():
+def build_segm_scatterplot():
 
     df = scalar_statistics_dict['ROQS']
-    fig = px.scatter_matrix(df, 
-                            dimensions=['FA','MD','RD','AD'],
-                            color='Group',
-                            hover_name=df.index)
+    fig = px.scatter(df, 
+                    x="FA", 
+                    y="AD", 
+                    color="Group", 
+                    marginal_y="violin", 
+                    marginal_x="histogram",
+                    hover_name=df.index)
     return fig
 
 def build_segm_scattermatrix():
@@ -142,6 +145,8 @@ def build_segm_scattermatrix():
                             color='Group',
                             hover_name=df.index)
     return fig
+
+
 
 app.layout = html.Div(
     children=[
@@ -185,8 +190,7 @@ app.layout = html.Div(
                                                 id='table-subjects',
                                                 columns=(
                                                     [{'id': 'Subjects', 
-                                                      'name': 'Subjects', 
-                                                      'selectable': True}]
+                                                      'name': 'Subjects'}]
                                                 ),
                                                 data=[{"Subjects": i} for i in list(path_dict.keys())],
                                                 style_header={'display':'none'},
@@ -223,7 +227,7 @@ app.layout = html.Div(
                                            'color':'white',
                                            'line-width': '1px'},
                                     size='lg',
-                                    outline=True,
+                                    outline=False,
                                 ),
                             
                             ], width='auto'),
@@ -264,6 +268,7 @@ app.layout = html.Div(
                                                                     'textAlign': 'center',
                                                                     'color':'rgb(255,255,255)',
                                                                     'backgroundColor':'rgb(50,50,70)'},
+                                                        #editable = True
                                                     )
                                             )
 
@@ -302,13 +307,13 @@ app.layout = html.Div(
             className="row",
             id="bottom-row",
             children=[
-                # Formation bar plots
+                # Scatter boxplot
                 html.Div(
                     id="form-bar-container",
                     className="six columns",
                     children=[
-                        build_graph_title("Scalar Box-Plot"),
-                        dcc.Graph(id="scalar_boxplot", figure=build_segm_boxplot()),
+                        build_graph_title("Scatter Matrix"),
+                        dcc.Graph(id="scatter_matrix", figure=build_segm_scattermatrix()),
                     ],
                 ),
                 html.Div(
@@ -316,8 +321,32 @@ app.layout = html.Div(
                     id="well-production-container",
                     className="six columns",
                     children=[
-                        build_graph_title("Individual well annual production"),
-                        dcc.Graph(id="production-fig"),
+                        build_graph_title("Scatter Plot"),
+                        dcc.Graph(id="scatter_plot", figure=build_segm_scatterplot()),
+                    ],
+                ),
+            ],
+        ),
+        html.Div(
+            className="row",
+            id="second-bottom-row",
+            children=[
+                # Scatter boxplot
+                html.Div(
+                    id="graph-container",
+                    className="six columns",
+                    children=[
+                        build_graph_title(""),
+                        dcc.Graph(id="oto_grapho", figure=build_segm_scattermatrix()),
+                    ],
+                ),
+                html.Div(
+                    # Selected well productions
+                    id="boxplot-container",
+                    className="six columns",
+                    children=[
+                        build_graph_title("Box Plot"),
+                        #dcc.Graph(id="boxplot", figure=build_segm_boxplot()),
                     ],
                 ),
             ],
@@ -325,18 +354,44 @@ app.layout = html.Div(
     ]
 )
 
-# Update bar plot
-@app.callback(Output("scalar_boxplot", "figure"),
-    [Input("scalar_boxplot", "selectedData")])
 
-def update_boxplot(data):
-    return {fig: build_segm_boxplot()}
+# Add group
+@app.callback(
+    [Output("table-groups", "data"),
+     Output("table-subjects", "selected_cells")],
+    [Input("group-button", "n_clicks")],
+    [State("table-subjects","selected_cells")])
+def update_groups(n_clicks, selected_cells):
+    subject_list = list(path_dict.keys())
+    selected_subjects = []
+    
+    for i, cell_dict in enumerate(selected_cells):
+        subject_key = subject_list[cell_dict['row']]
+        selected_subjects.append(subject_key)
+    
+    new_group_name = "New Group"
+    k = 1
+    while new_group_name in group_dict.keys():
+        new_group_name = "New Group " + str(k)
+        k += 1
+
+    group_dict[new_group_name] = selected_subjects
+
+    return [{"Groups": i} for i in list(group_dict.keys())], {}
+    
+
+# Update bar plot
+@app.callback(Output("scatter_matrix", "figure"),
+    [Input("scatter_matrix", "selectedData")])
+def update_scattermatrix(data):
+    return {fig: build_segm_scattermatrix()}
 
 
 
 # SERVER CONFIG ---------------------------------------------------------------------------------
 
-port = 5000 + random.randint(0, 999)
+#port = 5000 + random.randint(0, 999)
+port = 5050
 
 def open_browser():
     url = "http://127.0.0.1:{0}".format(port)

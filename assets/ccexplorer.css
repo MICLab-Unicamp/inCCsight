@@ -562,9 +562,10 @@
 
 @media (max-width: 1000px) {
     #bottom-row {
+        height: 10rem;
         display: flex;
         flex-direction: column;
-        padding: 4rem 4vw;
+        padding: 5rem 4vw;
     }
 
     #form-bar-container, #well-production-container {
