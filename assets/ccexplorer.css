@@ -95,7 +95,6 @@
     color: white;
 }
 
-
 #subject-list-container .graph-title, #group-list-container .graph-title, #header-container .graph-title, #quality-container .graph-title {
     font-family: 'Open Sans', sans-serif;
     text-transform: uppercase;
@@ -148,7 +147,7 @@
 }
 
 #selected-rows .Select-multi-value-wrapper, #selected-columns .Select-multi-value-wrapper {
-    max-height: 20rem;
+    max-height: 25rem;
 }
 
 #operator-select .Select-control {
@@ -519,10 +518,11 @@
         z-index: 0;
     }
 
-    #bottom-row {
+    #bottom-row, #second-bottom-row, #third-bottom-row {
         position: relative;
         z-index: 1;
         margin-top: -5rem;
+        height: 15rem
     }
 
     #ternary-map {
@@ -538,7 +538,7 @@
     #well-map{
         height: 35rem;
     }
-    #bottom-row {
+    #bottom-row, #second-bottom-row, #third-bottom-row {
         margin-top: -8rem;
     }
 
@@ -549,20 +549,20 @@
 
 /* Bottom row
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
-#bottom-row {
+#bottom-row, #second-bottom-row, #third-bottom-row {
     padding: 5rem;
     background-color: #f2f5fa;
 }
 
-#bottom-row .graph-title {
+#bottom-row .graph-title, #second-bottom-row .graph-title, #third-bottom-row .graph-title {
     font-family: "Open Sans", sans-serif;
     font-weight: 800;
     margin-bottom: 2rem;
 }
 
 @media (max-width: 1000px) {
-    #bottom-row {
-        height: 10rem;
+    #bottom-row, #second-bottom-row, #third-bottom-row {
+        height: 15rem;
         display: flex;
         flex-direction: column;
         padding: 5rem 4vw;
@@ -579,16 +579,16 @@
 }
 
 @media (max-width: 550px) {
-    #bottom-row .xtitle, #bottom-row .ytitle {
+    #bottom-row .xtitle, #bottom-row .ytitle, #second-bottom-row .xtitle, #third-bottom-row .xtitle, #second-bottom-row .ytitle, #third-bottom-row .ytitle{
         font-size: 1.2rem !important
     }
 }
 
 @media (max-width: 550px) {
-    #bottom-row .xtitle, #bottom-row .ytitle {
+    #bottom-row .xtitle, #bottom-row .ytitle, #second-bottom-row .xtitle, #third-bottom-row .xtitle, #second-bottom-row .ytitle, #third-bottom-row .ytitle {
         font-size: 1rem !important
     }
-    #bottom-row .legendtext{
+    #bottom-row .legendtext, #second-bottom-row .legendtext, #third-bottom-row .legendtext {
         font-size: 0.8rem !important;
     }
 }

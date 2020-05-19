@@ -52,10 +52,14 @@ def segment(subject_path, segmentation_method, segmentation_methods_dict, parcel
 	   	# Get data (meanFA, stdFA, meanMD, stdMD, meanRD, stdRD, meanAD, stdAD)
 		scalar_maps = (wFA, FA, MD, RD, AD)
 		scalar_statistics = libcc.getScalars(segmentation, FA, MD, RD, AD)
+		scalar_midlines = {}
 		try:
-			midline_fa = libcc.getFAmidline(segmentation, FA, n_points=200)
+			scalar_midlines['FA'] = libcc.getFAmidline(segmentation, FA, n_points=200)
+			scalar_midlines['MD'] = libcc.getFAmidline(segmentation, MD, n_points=200)
+			scalar_midlines['RD'] = libcc.getFAmidline(segmentation, RD, n_points=200)
+			scalar_midlines['AD'] = libcc.getFAmidline(segmentation, AD, n_points=200)
 		except:
-			midline_fa = None
+			scalar_midlines = {'FA':[],'MD':[],'RD':[],'AD':[]}
 		
 		# Parcellation
 		parcellations_dict = {}
@@ -67,7 +71,7 @@ def segment(subject_path, segmentation_method, segmentation_methods_dict, parcel
 				parcellations_dict[parcellation_method] = []
 
 		# Save files
-		data_tuple = (segmentation, scalar_maps, scalar_statistics, error_prob)
+		data_tuple = (segmentation, scalar_maps, scalar_statistics, scalar_midlines, error_prob)
 
 		# Assemble nifti mask
 		if segmentation_method != 'S_MASK':
