@@ -239,7 +239,9 @@ app.layout = html.Div(
                     id="top-row-graphs",
                     children=[
 
-                        #Subjects list
+                        html.Div([
+
+                            #Subjects list
                             html.Div([
                                 html.Div(
                                     id="subject-list-container",
@@ -274,16 +276,16 @@ app.layout = html.Div(
                                         )
                                     ],
                                 ),
-                            ], className = "two columns"),
+                            ], className = "four columns"),
 
-                        # Create buttons
+                            # Create buttons
                             html.Div([
                                 html.Button('>>', 
                                     id='group-button',
                                 ),                            
-                            ], id = "button-container"),
+                            ], id = "button-container", className = "two columns"),
 
-                        # Groups list
+                            # Groups list
                             html.Div([
                                 html.Div(
                                     id="group-list-container",
@@ -326,10 +328,14 @@ app.layout = html.Div(
                                         ),
                                     ],
                                 ),
-                            ], className = "two columns"),
+                            ], className = "four columns"),
+
+                        ], className="one-half column", id="left-panel"),
 
 
-                        # Quality control
+                        html.Div([
+
+                            # Quality control
                             html.Div([
                                 html.Div(
                                     id='quality-container',
@@ -343,7 +349,9 @@ app.layout = html.Div(
                                         ])
                                     ]
                                 )
-                            ], className = "four columns")
+                            ], className = "eight columns"),
+
+                        ], className="one-half column", id="right-panel"),
                     ],
                 ),
             ],

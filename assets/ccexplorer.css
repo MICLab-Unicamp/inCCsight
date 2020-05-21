@@ -180,6 +180,13 @@ ___________________________________________________*/
     margin: 8rem 0 4rem 0;
 }
 
+#right-panel, #left-panel {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: center; 
+}
+
 
 #subject-list-container .graph-title, #group-list-container .graph-title, #header-container .graph-title, #quality-container .graph-title {
     font-family: 'Open Sans', sans-serif;
