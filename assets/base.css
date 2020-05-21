@@ -45,7 +45,8 @@
     width: 80%; }
   .column,
   .columns {
-    margin-left: 2%; }
+    margin-left: 2%
+  }
   .column:first-child,
   .columns:first-child {
     margin-left: 1%; }
@@ -54,7 +55,7 @@
   .one.columns                    { width: 4.66666666667%; }
   .two.columns                    { width: 13.3333333333%; }
   .three.columns                  { width: 23%;            }
-  .four.columns                   { width: 30.6666666667%; }
+  .four.columns                   { width: 31.3333333333%; }
   .five.columns                   { width: 39.3333333333%; }
   .six.columns                    { width: 48%;            }
   .seven.columns                  { width: 56.6666666667%; }

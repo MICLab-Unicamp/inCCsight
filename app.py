@@ -36,6 +36,9 @@ parcellation_methods_dict = {'Witelson': parcelfuncs.parc_witelson,
                              'Cover': parcelfuncs.parc_cover,
                              'Freesurfer': parcelfuncs.parc_freesurfer}
 
+scalar_list = ['FA', 'MD', 'RD', 'AD']
+colors_list = px.colors.qualitative.Plotly
+
 # DATA IMPORTING -----------------------------------------------------------------------------
 
 # Arg parser
@@ -90,13 +93,13 @@ for subject_name, subject_path in tqdm(path_dict.items()):
                 scalar_statistics_dict[segmentation_method] = {subject_name: list(scalar_statistics)}
                 
                 scalar_midlines_dict[segmentation_method] = {'FA':{},'MD':{},'RD':{},'AD':{}}
-                for scalar in ['FA', 'MD', 'RD', 'AD']:
+                for scalar in scalar_list:
                     scalar_midlines_dict[segmentation_method][scalar] = {subject_name: list(scalar_midlines[scalar])}
 
             else:
                 scalar_statistics_dict[segmentation_method][subject_name] = list(scalar_statistics)
                 
-                for scalar in ['FA', 'MD', 'RD', 'AD']:
+                for scalar in scalar_list:
                     scalar_midlines_dict[segmentation_method][scalar][subject_name] = list(scalar_midlines[scalar])
 
 
@@ -108,7 +111,7 @@ for segmentation_method in segmentation_methods_dict.keys():
     scalar_statistics_dict[segmentation_method] = pd.DataFrame.from_dict(scalar_statistics_dict[segmentation_method], 
                                                                          orient='index', 
                                                                          columns=scalar_statistics_names)
-    for scalar in ['FA', 'MD', 'RD', 'AD']:
+    for scalar in scalar_list:
         scalar_midlines_dict[segmentation_method][scalar] = pd.DataFrame.from_dict(scalar_midlines_dict[segmentation_method][scalar], 
                                                                                    orient='index', 
                                                                                    columns=scalar_midline_names)
@@ -140,16 +143,17 @@ def build_banner():
 def build_graph_title(title):
     return html.P(className="graph-title", children=title)
 
-def build_segm_scatterplot(segmentation_method = 'ROQS'):
+def build_segm_scatterplot(segmentation_method = 'ROQS', scalar_x = 'FA', scalar_y = 'MD'):
 
     df = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
     fig = px.scatter(df, 
-                    x="FA", 
-                    y="AD", 
+                    x=scalar_x, 
+                    y=scalar_y, 
                     color="Group", 
                     marginal_y="violin", 
                     marginal_x="histogram",
                     hover_name=df.index)
+    fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
     return fig
 
 def build_segm_scattermatrix(segmentation_method = 'ROQS'):
@@ -159,6 +163,7 @@ def build_segm_scattermatrix(segmentation_method = 'ROQS'):
                             dimensions=['FA','MD','RD','AD'],
                             color='Group',
                             hover_name=df.index)
+    fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
     return fig
 
 def build_midline_plot(segmentation_method='ROQS', scalar='FA'):
@@ -166,47 +171,43 @@ def build_midline_plot(segmentation_method='ROQS', scalar='FA'):
     df = pd.concat([df_group, scalar_midlines_dict[segmentation_method][scalar]], axis=1).reset_index()
     df_grouped = df.groupby('Group').mean().transpose()
     df_melt = pd.melt(df_grouped.reset_index(), id_vars='index', value_vars=set(np.hstack(list(group_dict.values()))))
+    
     fig = px.line(df_melt, x='index', y='value', color='Group')
+    fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h")    
     
     return fig
-
-def build_segm_boxplot1():
-
-    df = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
-    
-    fig1 = px.box(df, y='FA',color='Group')
-    fig2 = px.box(df, y='MD',color='Group')
- 
-    layout = dbc.Row([
-        dbc.Col([dcc.Graph(id="boxplot1", figure=fig1)]),
-        dbc.Col([dcc.Graph(id="boxplot2", figure=fig2)]),
-        ])
-    return layout
-
-def build_segm_boxplot2():
-
-    df = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
-    
-    fig3 = px.box(df, y='RD',color='Group')
-    fig4 = px.box(df, y='AD',color='Group')
-
-    layout = dbc.Row([
-        dbc.Col([dcc.Graph(id="boxplot3", figure=fig3)]),
-        dbc.Col([dcc.Graph(id="boxplot4", figure=fig4)]),
-        ])
-    return layout
 
 def build_segm_boxplot(scalar):
 
     df = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
     
-    fig = px.box(df, y=scalar, color='Group')
+    fig = px.box(df, y=scalar, color='Group', hover_name=df.index)
+    fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
 
-    layout = dbc.Row([
-        dbc.Col([dcc.Graph(id="boxplot"+scalar, figure=fig)]),
-        ])
+    layout = dcc.Graph(id="boxplot"+scalar, figure=fig)
+
     return layout
 
+def build_scalar_dropdown():
+
+    options = [{'label': scalar, 'value': scalar} for scalar in scalar_list]
+
+    layout = html.Div([
+                html.Div([
+                    dcc.Dropdown(id='dropdown-scalars-left',
+                                 options=options,
+                                 multi=False,
+                                 value='FA',
+                                 style={'float': 'right', 'width':'150px'}),
+                    dcc.Dropdown(id='dropdown-scalars-right',
+                                 options=options,
+                                 multi=False,
+                                 value='RD',
+                                 style={'float': 'right', 'width':'150px', 'margin-left':'20px'})
+                ], className='row', style={'justifyContent':'center'}),
+            ]
+        )
+    return layout
 
 app.layout = html.Div(
     children=[
@@ -237,10 +238,9 @@ app.layout = html.Div(
                     className="row",
                     id="top-row-graphs",
                     children=[
-                        dbc.Row([
 
                         #Subjects list
-                            dbc.Col([
+                            html.Div([
                                 html.Div(
                                     id="subject-list-container",
                                     children=[
@@ -257,7 +257,6 @@ app.layout = html.Div(
                                                 style_table={'overflowY': 'scroll',
                                                              'overflowX': 'hidden', 
                                                              'height': '500px',
-                                                             'width': '250px',
                                                              'border-width': '1px',
                                                              'border-style': 'solid',
                                                              'border-radius': '5px',
@@ -275,25 +274,17 @@ app.layout = html.Div(
                                         )
                                     ],
                                 ),
-                            ], width = True),
+                            ], className = "two columns"),
 
                         # Create buttons
-                            dbc.Col([
-
-                                dbc.Button('>>', 
+                            html.Div([
+                                html.Button('>>', 
                                     id='group-button',
-                                    style={'margin':'250px -25px 0 15px',
-                                           'verticalAlign':'middle',
-                                           'color':'white',
-                                           'line-width': '1px'},
-                                    size='lg',
-                                    outline=False,
-                                ),
-                            
-                            ], width='auto'),
+                                ),                            
+                            ], id = "button-container"),
 
                         # Groups list
-                            dbc.Col([
+                            html.Div([
                                 html.Div(
                                     id="group-list-container",
                                     children=[
@@ -314,7 +305,6 @@ app.layout = html.Div(
                                                         style_table={'overflowY': 'scroll',
                                                                      'overflowX': 'hidden', 
                                                                      'height': '500px',
-                                                                     'width': '250px',
                                                                      'border-width': '1px',
                                                                      'border-style': 'solid',
                                                                      'border-radius': '5px',
@@ -336,11 +326,11 @@ app.layout = html.Div(
                                         ),
                                     ],
                                 ),
-                            ], width = True),
+                            ], className = "two columns"),
 
 
                         # Quality control
-                            dbc.Col([
+                            html.Div([
                                 html.Div(
                                     id='quality-container',
                                     children=[
@@ -351,14 +341,9 @@ app.layout = html.Div(
                                             dcc.Tab(label='STAPLE', children='Oi bonita3', className='tabclass', selected_className='tabclass-selected'),
                                             dcc.Tab(label='Mask', children='Oi bonita4', className='tabclass', selected_className='tabclass-selected'),
                                         ])
-                                    ], style={'marginLeft':'4rem',
-                                              'flexGrow':1,
-                                              'width':'700px'}
+                                    ]
                                 )
-                            ], width=True)
-
-                        ], id='top-row-bootstrap', justify='end')
-
+                            ], className = "four columns")
                     ],
                 ),
             ],
@@ -382,7 +367,8 @@ app.layout = html.Div(
                     className="four columns",
                     children=[
                         build_graph_title("Scatter Plot"),
-                        dcc.Graph(id="scatter_plot", figure=build_segm_scatterplot()),
+                        dcc.Graph(id="scatter_plot"),
+                        build_scalar_dropdown(),
                     ],
                 ),
                 # Midline plots
@@ -452,6 +438,14 @@ app.layout = html.Div(
     ]
 )
 
+# Update scatter plot
+@app.callback(
+    Output("scatter_plot", "figure"),
+    [Input("dropdown-scalars-right","value"),
+     Input("dropdown-scalars-left","value")])
+def update_scatterplot_axis(scalar_x, scalar_y):
+    return build_segm_scatterplot(scalar_x=scalar_x, scalar_y=scalar_y)
+
 
 # Add group
 @app.callback(
@@ -477,14 +471,7 @@ def update_groups(n_clicks, selected_cells):
     df_group = pd.DataFrame.from_dict(group_dict, orient='index', columns=["Group"])
 
     return [{"Groups": i} for i in set(np.hstack(list(group_dict.values())))], {}
-    
-'''
-# Update scatter matrix
-@app.callback(Output("scatter_matrix", "figure"),
-    [Input("scatter_matrix", "selectedData")])
-def update_scattermatrix(data):
-    return {'fig': build_segm_scattermatrix()}
-'''
+
 
 
 # SERVER CONFIG ---------------------------------------------------------------------------------

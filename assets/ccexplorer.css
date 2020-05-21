@@ -12,13 +12,23 @@
     display: none;
 }
 
+/* General
+___________________________________________________*/
+
+.graph-title {
+    margin: 3rem 0 -2rem 3rem;
+    font-weight: 700;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 2rem;
+}
+
+
 /* Top-row
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
 #top-row {
     background-color: #192444;
-    padding: 0 5rem;
+    padding: 0 0 0 5rem;
     display: flex;
-    align-items: stretch;
 }
 
 @media (min-width: 1400px) {
@@ -34,8 +44,9 @@
     }
 }
 
-/* Top-row-header
+/* Top-row-left-header
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
+
 #top-row-header {
     background-color: #1f2c56;
     padding: 9rem 3rem 9rem 3rem;
@@ -79,80 +90,6 @@
     padding: 14rem 0 2rem 0;
 }
 
-#upload {
-    font-family: 'Open Sans', sans-serif;
-    font-size: 1.5rem;
-    font-weight: 400;
-    text-align: center;
-    
-    width: 470px;
-    height: 60px;
-    line-height: 60px;
-    border-width: 1px;
-    border-style: dashed;
-    border-radius: 5px;
-    margin: 10px 0 30px 10px;
-    color: white;
-}
-
-#subject-list-container .graph-title, #group-list-container .graph-title, #header-container .graph-title, #quality-container .graph-title {
-    font-family: 'Open Sans', sans-serif;
-    text-transform: uppercase;
-    font-weight: 800;
-    color: white;
-}
-
-#subject-list-container table, #group-list-container table {
-    --accent: gray;
-    --selected-background: darkgray;
-    --selected-color: black;
-}
-
-.Select-control, .Select-multi-value-wrapper, .Select-menu-outer div {
-    background-color: #1f2c56;
-}
-
-.Select-control, .Select, .Select-value-label, .Select-clear-zone {
-    color: white;
-}
-
-.Select-menu-outer {
-    background-color: #1f2c56;
-    border: 1px solid gray !important;
-}
-
-.Select-menu-outer div:hover {
-    background-color: rgba(255, 255, 255, 0.01);
-    cursor: pointer;
-}
-
-.Select--single > .Select-control .Select-value, .Select-placeholder {
-    border: 1px solid white;
-    border-radius: 4px;
-    color: white;
-    background-color: #1f2c56;
-}
-
-.Select--multi .Select-value-label, .Select--multi .Select-value {
-    color: #3c81e8;
-    background-color: #dfecff;
-}
-
-.Select-arrow {
-    border-color: white transparent transparent;
-}
-
-.Select-arrow-zone, .Select-clear-zone, .is-open > .Select-control {
-    background-color: #1f2c56 !important;
-}
-
-#selected-rows .Select-multi-value-wrapper, #selected-columns .Select-multi-value-wrapper {
-    max-height: 25rem;
-}
-
-#operator-select .Select-control {
-    padding: 1rem;
-}
 
 @media only screen and (max-width: 750px) {
     #banner h6 {
@@ -161,10 +98,6 @@
 
     #instructions {
         font-size: 1.25rem;
-    }
-
-    .Select-value-label, .Select-menu-outer {
-        font-size: 1rem;
     }
 
     .banner Img {
@@ -182,10 +115,6 @@
         font-size: 1.25rem;
     }
 
-    .Select-value-label, .Select-menu-outer {
-        font-size: 1rem;
-    }
-
     .banner Img {
         height: 3rem;
         margin-bottom: 2rem;
@@ -201,10 +130,7 @@
         font-size: 1.1rem;
     }
 
-    .Select-value-label, .Select-menu-outer {
-        font-size: 0.8rem;
-    }
-
+    
     .banner Img {
         height: 3rem;
         margin-bottom: 2rem;
@@ -238,7 +164,6 @@
 @media only screen and (max-width: 1400px) {
     #top-row-header {
         flex-grow: 1;
-        padding: 6rem 3rem 5rem 3rem;
     }
 }
 
@@ -246,50 +171,40 @@
 /* Top-row-graphs
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
 #top-row-graphs {
-    width: 70%;
+    width: 80%;
     display: flex;
     flex-direction: row;
     align-items: stretch;
+    justify-content: center;
     flex-grow: 1;
-}
-
-#subject-list-container {
-    flex-grow: 1;
-}
-
-#group-list-container {
-    flex-grow: 1;
-    margin-left: -3rem;
+    margin: 8rem 0 4rem 0;
 }
 
 
-#mapbox-view-selector, #ternary-layer-select {
-    margin-bottom: 1rem;
-}
-
-/* hides the svg dom element that has the click handler responsible for toggling */
-#well-map .legend .traces .legendtoggle {
-    display: none;
-}
-
-#ternary-map .legend .traces .legendtoggle {
-    display: none;
-}
-
-#mapbox-view-selector label, #ternary-layer-select label {
+#subject-list-container .graph-title, #group-list-container .graph-title, #header-container .graph-title, #quality-container .graph-title {
+    font-family: 'Open Sans', sans-serif;
+    text-transform: uppercase;
+    font-weight: 800;
     color: white;
-    font-family: "Open Sans", sans-serif;
-    font-weight: 300;
-    display: inline-block;
-}
-
-.graph-title {
     font-size: 2rem;
+    margin: 0 0 1rem 0;
 }
 
-#top-row-bootstrap {
-    margin-left: 5rem;
+#subject-list-container, #group-list-container{
+    margin-right: 20px;
 }
+
+
+#subject-list-container table, #group-list-container table {
+    --accent: gray;
+    --selected-background: darkgray;
+    --selected-color: black;
+}
+
+#button-container {
+    margin-top: 250px;
+}
+
 
 .tabclass {
     color:#586069;
@@ -321,30 +236,6 @@
         flex-direction: column;
     }
 
-    #subject-list-container {
-        width: 200px;
-        margin: 0 0 0 0;
-    }
-
-    #group-list-header {
-        margin: 0 0 0 0;
-    }
-
-    #group-list-container {
-        width: 200px;
-        margin-bottom: 5rem;
-    }
-}
-
-@media (min-width: 1001px) {
-    #subject-list-container {
-        margin: 0 -2rem 0 4rem;
-    }
-
-    #group-list-header {
-        margin: 0 0 0 5rem;
-    }
-}
 
 @media (min-width: 1001px) and (max-width: 1400px) {
     #top-row-graphs {
@@ -364,9 +255,6 @@
 }
 
 @media (min-width: 1551px) {
-    #ternary-map * {
-        font-size: 1rem;
-    }
 
     #top-row .legendtext {
         font-size: 1.25rem !important;
@@ -522,7 +410,8 @@
         position: relative;
         z-index: 1;
         margin-top: -5rem;
-        height: 15rem
+        height: 15rem;
+        justify-content: space-around;
     }
 
     #ternary-map {
@@ -554,11 +443,10 @@
     background-color: #f2f5fa;
 }
 
-#bottom-row .graph-title, #second-bottom-row .graph-title, #third-bottom-row .graph-title {
-    font-family: "Open Sans", sans-serif;
-    font-weight: 800;
-    margin-bottom: 2rem;
+#bottom-row .legendtext, #second-bottom-row .legendtext, #third-bottom-row .legendtext {
+    font-size: 2rem;
 }
+
 
 @media (max-width: 1000px) {
     #bottom-row, #second-bottom-row, #third-bottom-row {
