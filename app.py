@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import random
 from tqdm import tqdm
+from skimage import measure
 
 import inputfuncs
 import ccprocess
@@ -20,6 +21,8 @@ import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
+import dash_daq as daq
+
 
 import plotly.express as px
 import plotly.graph_objs as go
@@ -28,7 +31,7 @@ from dash.dependencies import Input, Output, State
 # GENERAL DEFINITIONS -------------------------------------------------------------------------
 
 segmentation_methods_dict = {'ROQS': segmfuncs.segm_roqs,
-                             'Watershed': segmfuncs.segm_roqs}
+                             'Watershed': segmfuncs.segm_watershed}
 
 parcellation_methods_dict = {'Witelson': parcelfuncs.parc_witelson,
                              'Hofer': parcelfuncs.parc_hofer,
@@ -38,6 +41,7 @@ parcellation_methods_dict = {'Witelson': parcelfuncs.parc_witelson,
 
 scalar_list = ['FA', 'MD', 'RD', 'AD']
 colors_list = px.colors.qualitative.Plotly
+name_dict = {'ROQS': 'roqs', 'Watershed': 'watershed'}
 
 # DATA IMPORTING -----------------------------------------------------------------------------
 
@@ -71,6 +75,7 @@ if opts.parents is not None:
 
 scalar_statistics_dict = {}
 scalar_midlines_dict = {}
+segmentation_mask_dict = {}
 
 scalar_statistics_names = ['FA','FA StdDev','MD','MD StdDev','RD','RD StdDev','AD','AD StdDev']
 scalar_midline_names = list(range(0,200))
@@ -83,21 +88,23 @@ for subject_name, subject_path in tqdm(path_dict.items()):
 
         if segmentation_method in opts.segm:
 
-            _, _, scalar_statistics, scalar_midlines ,_ = ccprocess.segment(subject_path, 
-                                                                           segmentation_method, 
-                                                                           segmentation_methods_dict, 
-                                                                           parcellation_methods_dict, 
-                                                                           opts.basename)
+            segmentation_mask, _, scalar_statistics, scalar_midlines ,_ = ccprocess.segment(subject_path, 
+                                                                                           segmentation_method, 
+                                                                                           segmentation_methods_dict, 
+                                                                                           parcellation_methods_dict, 
+                                                                                           opts.basename)
 
             if segmentation_method not in scalar_statistics_dict.keys(): 
                 scalar_statistics_dict[segmentation_method] = {subject_name: list(scalar_statistics)}
-                
+                segmentation_mask_dict[segmentation_method] = {subject_name: segmentation_mask}
+
                 scalar_midlines_dict[segmentation_method] = {'FA':{},'MD':{},'RD':{},'AD':{}}
                 for scalar in scalar_list:
                     scalar_midlines_dict[segmentation_method][scalar] = {subject_name: list(scalar_midlines[scalar])}
 
             else:
                 scalar_statistics_dict[segmentation_method][subject_name] = list(scalar_statistics)
+                segmentation_mask_dict[segmentation_method][subject_name] = segmentation_mask
                 
                 for scalar in scalar_list:
                     scalar_midlines_dict[segmentation_method][scalar][subject_name] = list(scalar_midlines[scalar])
@@ -111,11 +118,13 @@ for segmentation_method in segmentation_methods_dict.keys():
     scalar_statistics_dict[segmentation_method] = pd.DataFrame.from_dict(scalar_statistics_dict[segmentation_method], 
                                                                          orient='index', 
                                                                          columns=scalar_statistics_names)
+    scalar_statistics_dict[segmentation_method]['Method'] = segmentation_method
+
     for scalar in scalar_list:
         scalar_midlines_dict[segmentation_method][scalar] = pd.DataFrame.from_dict(scalar_midlines_dict[segmentation_method][scalar], 
                                                                                    orient='index', 
                                                                                    columns=scalar_midline_names)
-
+        scalar_midlines_dict[segmentation_method][scalar]['Method'] = segmentation_method
 
 
 # VISUALIZATION -------------------------------------------------------------------------------
@@ -143,52 +152,106 @@ def build_banner():
 def build_graph_title(title):
     return html.P(className="graph-title", children=title)
 
-def build_segm_scatterplot(segmentation_method = 'ROQS', scalar_x = 'FA', scalar_y = 'MD'):
+def build_segm_scatterplot(mode=False, segmentation_method = 'ROQS', scalar_x = 'FA', scalar_y = 'MD', selected_points = None):
 
-    df = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
-    fig = px.scatter(df, 
-                    x=scalar_x, 
-                    y=scalar_y, 
-                    color="Group", 
-                    marginal_y="violin", 
-                    marginal_x="histogram",
-                    hover_name=df.index)
+    if mode == False:
+        df = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
+        fig = px.scatter(df, 
+                        x=scalar_x, 
+                        y=scalar_y, 
+                        color="Group", 
+                        marginal_y="violin", 
+                        marginal_x="histogram",
+                        hover_name=list(path_dict.keys()))
+        fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
+        fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
+        fig.update_traces(selectedpoints = selected_points)
+        return fig
+
+    if mode == True:
+        df = pd.DataFrame()
+        for segmentation_method in segmentation_methods_dict.keys():
+            df_aux = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
+            df = pd.concat([df, df_aux], axis=0)
+
+        fig = px.scatter(df, 
+                        x=scalar_x, 
+                        y=scalar_y, 
+                        color="Method", 
+                        marginal_y="violin", 
+                        marginal_x="histogram",
+                        hover_name=df.index)
+        fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
+        fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
+        fig.update_traces(selectedpoints = selected_points)
+        return fig
+
+def build_segm_scattermatrix(mode=False, segmentation_method = 'ROQS', selected_points=None):
+
+    if mode == False:
+        df = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
+        fig = px.scatter_matrix(df, 
+                                dimensions=['FA','MD','RD','AD'],
+                                color='Group',
+                                hover_name=df.index)
+    if mode == True:
+        df = pd.DataFrame()
+        for segmentation_method in segmentation_methods_dict.keys():
+            df_aux = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
+            df = pd.concat([df, df_aux], axis=0)
+        fig = px.scatter_matrix(df, 
+                                dimensions=['FA','MD','RD','AD'],
+                                color='Method',
+                                hover_name=df.index)
+
     fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
+    fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12), margin=dict(r=0, l=0))
+    fig.update_traces(selectedpoints = selected_points)
     return fig
 
-def build_segm_scattermatrix(segmentation_method = 'ROQS'):
+def build_midline_plot(mode=False, segmentation_method='ROQS', scalar='FA'):
 
-    df = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
-    fig = px.scatter_matrix(df, 
-                            dimensions=['FA','MD','RD','AD'],
-                            color='Group',
-                            hover_name=df.index)
-    fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
-    return fig
+    if mode == False:
+        df = pd.concat([df_group, scalar_midlines_dict[segmentation_method][scalar]], axis=1).reset_index()
+        df_grouped = df.groupby('Group').mean().transpose()
+        df_melt = pd.melt(df_grouped.reset_index(), id_vars='index', value_vars=set(np.hstack(list(group_dict.values()))))
+        
+        fig = px.line(df_melt, x='index', y='value', color='Group')
 
-def build_midline_plot(segmentation_method='ROQS', scalar='FA'):
+    if mode == True:
+        df = pd.DataFrame()
+        for segmentation_method in segmentation_methods_dict.keys():
+            df_aux = pd.concat([df_group, scalar_midlines_dict[segmentation_method][scalar]], axis=1).reset_index()
+            df = pd.concat([df, df_aux], axis=0)
+        df_grouped = df.groupby('Method').mean().transpose()
+        df_melt = pd.melt(df_grouped.reset_index(), id_vars='index', value_vars=set(np.hstack(list(segmentation_methods_dict.keys()))))
 
-    df = pd.concat([df_group, scalar_midlines_dict[segmentation_method][scalar]], axis=1).reset_index()
-    df_grouped = df.groupby('Group').mean().transpose()
-    df_melt = pd.melt(df_grouped.reset_index(), id_vars='index', value_vars=set(np.hstack(list(group_dict.values()))))
+        fig = px.line(df_melt, x='index', y='value', color='Method')
     
-    fig = px.line(df_melt, x='index', y='value', color='Group')
     fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h")    
+    fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
     
     return fig
 
-def build_segm_boxplot(scalar):
+def build_segm_boxplot(scalar, mode=False, segmentation_method='ROQS'):
 
-    df = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
-    
-    fig = px.box(df, y=scalar, color='Group', hover_name=df.index)
+    if mode == False:
+        df = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()    
+        fig = px.box(df, y=scalar, color='Group', hover_name=list(path_dict.keys()))
+    if mode == True:
+        df = pd.DataFrame()
+        for segmentation_method in segmentation_methods_dict.keys():
+            df_aux = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
+            df = pd.concat([df, df_aux], axis=0)
+        fig = px.box(df, y=scalar, color='Method', hover_name=df.index)
+
     fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
+    fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
+    fig.update_layout(margin = dict(l=0, r=0))
 
-    layout = dcc.Graph(id="boxplot"+scalar, figure=fig)
+    return fig
 
-    return layout
-
-def build_scalar_dropdown():
+def build_scalar_compare_dropdowns():
 
     options = [{'label': scalar, 'value': scalar} for scalar in scalar_list]
 
@@ -209,6 +272,59 @@ def build_scalar_dropdown():
         )
     return layout
 
+def built_scalar_dropdown():
+
+    options = [{'label': scalar, 'value': scalar} for scalar in scalar_list]
+
+    layout = html.Div([
+                html.Div([
+                    dcc.Dropdown(id='dropdown-scalars',
+                                 options=options,
+                                 multi=False,
+                                 value='FA',
+                                 style={'float': 'right', 'width':'150px'}),
+                ], className='row', style={'justifyContent':'center'}),
+            ]
+        )
+    return layout
+
+def build_subject_collapse(segmentation_method='ROQS', scalar_map='wFA', subject_id = list(path_dict.keys())[0]):
+
+    folderpath = path_dict[subject_id] + 'CCLab/'
+    filepath = folderpath + 'segm_' + name_dict[segmentation_method] + '_data.npy'
+
+    layout = dbc.Card([
+                build_graph_title("Subject " + subject_id),
+                html.Div([                
+    
+                    # Segmentation image
+                    html.Div([
+                        dcc.Graph(id="graph", figure=build_fissure_image(filepath, scalar_map))
+                    ], className = 'four columns'),
+
+                    html.Div([
+                        dcc.Graph(id='oto-map', figure=build_segm_scattermatrix())
+                    ], className = 'four columns')
+
+                ], className='row', style={'justifyContent':'center'})
+            ], style={'margin':'20px', 'backgroundColor':'#FAFAFA', 'border-radius':'20px'})
+    return layout
+
+def build_fissure_image(filepath, scalar = 'wFA'):
+
+    scalar_maps_list = ['wFA','FA','MD','RD','AD']
+    segmentation, scalar_maps = np.load(filepath, allow_pickle=True)[:2]
+    img = scalar_maps[scalar_maps_list.index(scalar)]
+
+    contours = measure.find_contours(segmentation, 0.1)
+    contour = sorted(contours, key=lambda x: len(x))[-1]
+
+    fig = px.imshow(img, color_continuous_scale='gray', aspect='auto')
+    fig.add_trace(go.Scatter(x=contour[:, 1], y=contour[:, 0]))
+    fig.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h", coloraxis_showscale=False)
+
+    return fig 
+
 app.layout = html.Div(
     children=[
         html.Div(
@@ -228,6 +344,23 @@ app.layout = html.Div(
                                             ],
                                     id="instruct",
                                 ),
+                                html.Div(className='row', style=dict(justifyContent='center', verticalAlign='bottom'),
+                                    children=[
+                                        html.H5("Group View", style=dict(color='white')),
+                                        daq.ToggleSwitch(id='mode-switch', style=dict(color='white', margin='10px')),
+                                        html.H5("Method View", style=dict(color='white'))
+                                    ]
+                                ),  
+                                
+                                html.Div(className='row', style=dict(justifyContent='center'), 
+                                    children=[
+                                       dcc.Dropdown(id='dropdown_segm_methods',
+                                             options=[{'label': method, 'value': method} for method in segmentation_methods_dict.keys()],
+                                             multi=False,
+                                             value=list(segmentation_methods_dict.keys())[0],
+                                             style={'width':'150px'})
+                                ]),
+                            
                             ],
                         )
                     ],
@@ -356,14 +489,84 @@ app.layout = html.Div(
                 ),
             ],
         ),
+
+        dbc.Collapse(
+            dbc.Card(dbc.CardBody("very cool thingy")),
+            id="subject-collapse",
+        ),
+
         html.Div(
             className="row",
             id="bottom-row",
             children=[
+
+                dbc.Card(
+                    id = "summary-card",
+                    className = "two columns",
+                    children = [
+                        html.H1("168"),
+                        html.H5("Subjects"),
+                        html.H1("3"),
+                        html.H5("Groups"),
+                    ], style={'margin':'20px','backgroundColor':'#FAFAFA', 'border-radius':'20px'},
+                ),
+
+                html.Div(
+                        id="boxplot-container1",
+                        className="one columns",
+                        children=[
+                            build_graph_title("FA BoxPlot"),
+                            dcc.Graph(id="boxplotFA", figure=build_segm_boxplot(scalar="FA")),
+                        ],
+                    ),
+                html.Div(
+                        id="boxplot-container2",
+                        className="one columns",
+                        children=[
+                            build_graph_title("MD BoxPlot"),
+                            dcc.Graph(id="boxplotMD", figure=build_segm_boxplot(scalar="MD")),
+                        ],
+                    ),
+                html.Div(
+                        id="boxplot-container3",
+                        className="one columns",
+                        children=[
+                            build_graph_title("RD BoxPlot"),
+                            dcc.Graph(id="boxplotRD", figure=build_segm_boxplot(scalar="RD")),
+                        ],
+                    ),
+                html.Div(
+                        id="boxplot-container4",
+                        className="one columns",
+                        children=[
+                            build_graph_title("AD BoxPlot"),
+                            dcc.Graph(id="boxplotAD", figure=build_segm_boxplot(scalar="AD")),
+                        ],
+                    ),
+                
+                # Midline plots
+                html.Div(
+                    id="midline-container",
+                    className="four columns",
+                    children=[
+                        build_graph_title("Midline Plots"),
+                        dcc.Graph(id="midline_graph", figure=build_midline_plot()),
+                        built_scalar_dropdown(),
+                    ],
+                ),
+
+            ],
+        ),
+        html.Div(
+            className="row",
+            id="second-bottom-row",
+            children=[
+
+            
                 # Scatter boxplot
                 html.Div(
                     id="form-bar-container",
-                    className="four columns",
+                    className="seven columns",
                     children=[
                         build_graph_title("Scatter Matrix"),
                         dcc.Graph(id="scatter_matrix", figure=build_segm_scattermatrix()),
@@ -376,56 +579,11 @@ app.layout = html.Div(
                     children=[
                         build_graph_title("Scatter Plot"),
                         dcc.Graph(id="scatter_plot"),
-                        build_scalar_dropdown(),
+                        build_scalar_compare_dropdowns(),
                     ],
                 ),
-                # Midline plots
-                html.Div(
-                    id="midline-container",
-                    className="four columns",
-                    children=[
-                        build_graph_title("Midline Plots"),
-                        dcc.Graph(id="midline_graph", figure=build_midline_plot()),
-                    ],
-                ),
-            ],
-        ),
-        html.Div(
-            className="row",
-            id="second-bottom-row",
-            children=[
-                html.Div(
-                        id="boxplot-container1",
-                        className="three columns",
-                        children=[
-                            build_graph_title("FA BoxPlot"),
-                            build_segm_boxplot("FA"),
-                        ],
-                    ),
-                html.Div(
-                        id="boxplot-container2",
-                        className="three columns",
-                        children=[
-                            build_graph_title("MD BoxPlot"),
-                            build_segm_boxplot("MD"),
-                        ],
-                    ),
-                html.Div(
-                        id="boxplot-container3",
-                        className="three columns",
-                        children=[
-                            build_graph_title("RD BoxPlot"),
-                            build_segm_boxplot("RD"),
-                        ],
-                    ),
-                html.Div(
-                        id="boxplot-container4",
-                        className="three columns",
-                        children=[
-                            build_graph_title("AD BoxPlot"),
-                            build_segm_boxplot("AD"),
-                        ],
-                    ),
+
+
             ],
         ),
         html.Div(
@@ -448,12 +606,67 @@ app.layout = html.Div(
 
 # Update scatter plot
 @app.callback(
-    Output("scatter_plot", "figure"),
-    [Input("dropdown-scalars-right","value"),
+    Output("scatter_plot","figure"),
+    [Input("dropdown_segm_methods","value"),
+     Input("mode-switch","value"),
+     Input("dropdown-scalars-right","value"),
      Input("dropdown-scalars-left","value")])
-def update_scatterplot_axis(scalar_x, scalar_y):
-    return build_segm_scatterplot(scalar_x=scalar_x, scalar_y=scalar_y)
+def update_scatterplot(segm_method, mode_bool, scalar_x, scalar_y):
+    if mode_bool == None:
+        mode_bool = False
+    return build_segm_scatterplot(mode=mode_bool, segmentation_method=segm_method, scalar_x=scalar_x, scalar_y=scalar_y)
 
+
+# Update midline plot
+@app.callback(
+    Output("midline_graph", "figure"),
+    [Input("dropdown_segm_methods","value"),
+     Input("mode-switch","value"),
+     Input("dropdown-scalars","value")])
+def update_midlineplot(segm_method, mode_bool, scalar):
+    if mode_bool == None:
+        mode_bool = False
+    return build_midline_plot(mode=mode_bool, segmentation_method=segm_method, scalar=scalar)
+
+# Update box-plots
+@app.callback(
+    [Output("boxplotFA", "figure"),
+     Output("boxplotMD", "figure"),
+     Output("boxplotRD", "figure"),
+     Output("boxplotAD", "figure")],
+    [Input("dropdown_segm_methods","value"),
+     Input("mode-switch","value")])
+def update_boxplots(segm_method, mode_bool):
+    if mode_bool == None:
+        mode_bool = False
+    return [build_segm_boxplot(mode=mode_bool, segmentation_method=segm_method, scalar='FA'),
+            build_segm_boxplot(mode=mode_bool, segmentation_method=segm_method, scalar='MD'),
+            build_segm_boxplot(mode=mode_bool, segmentation_method=segm_method, scalar='RD'),
+            build_segm_boxplot(mode=mode_bool, segmentation_method=segm_method, scalar='AD')]
+
+# Update scatter matrix
+@app.callback(
+    Output("scatter_matrix", "figure"),
+    [Input("dropdown_segm_methods", "value"),
+     Input("mode-switch","value")])
+def update_scattermatrix(segm_method, mode_bool):
+    if mode_bool == None:
+        mode_bool = False
+    return build_segm_scattermatrix(mode=mode_bool, segmentation_method=segm_method)
+
+
+# Open subject collapse
+@app.callback(
+    [Output("subject-collapse", "is_open"),
+     Output("subject-collapse", "children")],
+    [Input("table-subjects","selected_cells")])
+def open_subject_collapse(selected_cells):
+    if len(selected_cells) == 1:
+        subject_list = list(path_dict.keys())
+        subject_id = subject_list[selected_cells[0]['row']]
+        return True, [build_subject_collapse(subject_id = subject_id)]
+    else:
+        return False, []
 
 # Add group
 @app.callback(
@@ -480,6 +693,25 @@ def update_groups(n_clicks, selected_cells):
 
     return [{"Groups": i} for i in set(np.hstack(list(group_dict.values())))], {}
 
+
+'''
+@app.callback(
+    Output('scatter_matrix', 'figure'),
+    [Input('scatter_matrix', 'selectedData'),
+     Input('scatter_plot', 'selectedData')],
+    [State("dropdown-scalars-right","value"),
+     State("dropdown-scalars-left","value")])
+def update_selected_points(selection1, selection2, scalar_x, scalar_y):
+    selected_points = []
+    for selected_data in [selection1, selection2]:
+        if selected_data is not None:
+            for point_dict in selected_data['points']:
+                print(point_dict)
+                selected_points.append(point_dict['pointIndex'])
+    if selected_points == []:
+        selected_points = None
+    return build_segm_scattermatrix(selected_points=selected_points)
+'''
 
 
 # SERVER CONFIG ---------------------------------------------------------------------------------

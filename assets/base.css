@@ -49,10 +49,10 @@
   }
   .column:first-child,
   .columns:first-child {
-    margin-left: 1%; }
+    margin-left: 2%; }
 
   .one.column,
-  .one.columns                    { width: 4.66666666667%; }
+  .one.columns                    { width: 10%; }
   .two.columns                    { width: 13.3333333333%; }
   .three.columns                  { width: 23%;            }
   .four.columns                   { width: 31.3333333333%; }

@@ -418,7 +418,7 @@ ___________________________________________________*/
         z-index: 1;
         margin-top: -5rem;
         height: 15rem;
-        justify-content: space-around;
+        justify-content: center;
     }
 
     #ternary-map {
@@ -445,15 +445,6 @@ ___________________________________________________*/
 
 /* Bottom row
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
-#bottom-row, #second-bottom-row, #third-bottom-row {
-    padding: 5rem;
-    background-color: #f2f5fa;
-}
-
-#bottom-row .legendtext, #second-bottom-row .legendtext, #third-bottom-row .legendtext {
-    font-size: 2rem;
-}
-
 
 @media (max-width: 1000px) {
     #bottom-row, #second-bottom-row, #third-bottom-row {
