@@ -471,9 +471,9 @@ app.layout = html.Div(
                                 dbc.Card(
                                     id = "summary-card",
                                     children = [
-                                        html.H1("168", className='numcard'),
+                                        html.H1(str(len(set(list(path_dict.keys())))), className='numcard'),
                                         html.H5("Subjects", className='titlecard'),
-                                        html.H1("3", className='numcard', style={'margin-top': '10px'}),
+                                        html.H1(str(len(set(np.hstack(list(group_dict.values()))))), className='numcard', style={'margin-top': '10px'}),
                                         html.H5("Groups", className='titlecard'),
                                     ],
                                 ),
