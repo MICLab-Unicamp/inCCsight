@@ -180,12 +180,43 @@ ___________________________________________________*/
     margin: 8rem 0 4rem 0;
 }
 
-#right-panel, #left-panel {
+#left-panel {
     display: flex;
     flex-direction: row;
     align-items: stretch;
     justify-content: center; 
 }
+
+#right-panel {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: flex-end;
+}
+
+.numcard{
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 600;
+    color: white;
+    margin: 0;
+}
+
+.titlecard{
+    font-family: 'Open Sans', sans-serif;
+    text-transform: uppercase;
+    font-weight: 350;
+    color: white;
+    margin: 0;
+}
+
+#summary-card {
+    border-radius: 20px;
+    border-color: white;
+    padding: 20px;
+    background-color: rgba(0,0,0,0);
+    margin: 0 8rem 4rem 0;
+}
+
 
 
 #subject-list-container .graph-title, #group-list-container .graph-title, #header-container .graph-title, #quality-container .graph-title {
@@ -204,7 +235,7 @@ ___________________________________________________*/
 
 #subject-list-container table, #group-list-container table {
     --accent: gray;
-    --selected-background: darkgray;
+    --selected-background: darkblue;
     --selected-color: black;
 }
 
@@ -445,6 +476,7 @@ ___________________________________________________*/
 
 /* Bottom row
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
+
 
 @media (max-width: 1000px) {
     #bottom-row, #second-bottom-row, #third-bottom-row {

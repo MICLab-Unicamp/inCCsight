@@ -228,7 +228,7 @@ def build_midline_plot(mode=False, segmentation_method='ROQS', scalar='FA'):
 
         fig = px.line(df_melt, x='index', y='value', color='Method')
     
-    fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h")    
+    fig.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h")    
     fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
     
     return fig
@@ -245,7 +245,7 @@ def build_segm_boxplot(scalar, mode=False, segmentation_method='ROQS'):
             df = pd.concat([df, df_aux], axis=0)
         fig = px.box(df, y=scalar, color='Method', hover_name=df.index)
 
-    fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
+    fig.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
     fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
     fig.update_layout(margin = dict(l=0, r=0))
 
@@ -301,10 +301,6 @@ def build_subject_collapse(segmentation_method='ROQS', scalar_map='wFA', subject
                     html.Div([
                         dcc.Graph(id="graph", figure=build_fissure_image(filepath, scalar_map))
                     ], className = 'four columns'),
-
-                    html.Div([
-                        dcc.Graph(id='oto-map', figure=build_segm_scattermatrix())
-                    ], className = 'four columns')
 
                 ], className='row', style={'justifyContent':'center'})
             ], style={'margin':'20px', 'backgroundColor':'#FAFAFA', 'border-radius':'20px'})
@@ -468,21 +464,20 @@ app.layout = html.Div(
 
                         html.Div([
 
-                            # Quality control
-                            html.Div([
-                                html.Div(
-                                    id='quality-container',
-                                    children=[
-                                        build_graph_title("Quality Check"),
-                                        dcc.Tabs([
-                                            dcc.Tab(label='ROQS', children='Oi bonita', className='tabclass', selected_className='tabclass-selected'),
-                                            dcc.Tab(label='Watershed', children='Oi bonita2', className='tabclass', selected_className='tabclass-selected'),
-                                            dcc.Tab(label='STAPLE', children='Oi bonita3', className='tabclass', selected_className='tabclass-selected'),
-                                            dcc.Tab(label='Mask', children='Oi bonita4', className='tabclass', selected_className='tabclass-selected'),
-                                        ])
-                                    ]
-                                )
-                            ], className = "eight columns"),
+                            html.Div(
+                                id='summary-card-container',
+                                className='five columns',
+                                children=[
+                                dbc.Card(
+                                    id = "summary-card",
+                                    children = [
+                                        html.H1("168", className='numcard'),
+                                        html.H5("Subjects", className='titlecard'),
+                                        html.H1("3", className='numcard', style={'margin-top': '10px'}),
+                                        html.H5("Groups", className='titlecard'),
+                                    ],
+                                ),
+                            ]),
 
                         ], className="one-half column", id="right-panel"),
                     ],
@@ -500,20 +495,9 @@ app.layout = html.Div(
             id="bottom-row",
             children=[
 
-                dbc.Card(
-                    id = "summary-card",
-                    className = "two columns",
-                    children = [
-                        html.H1("168"),
-                        html.H5("Subjects"),
-                        html.H1("3"),
-                        html.H5("Groups"),
-                    ], style={'margin':'20px','backgroundColor':'#FAFAFA', 'border-radius':'20px'},
-                ),
-
                 html.Div(
                         id="boxplot-container1",
-                        className="one columns",
+                        className="two columns",
                         children=[
                             build_graph_title("FA BoxPlot"),
                             dcc.Graph(id="boxplotFA", figure=build_segm_boxplot(scalar="FA")),
@@ -521,7 +505,7 @@ app.layout = html.Div(
                     ),
                 html.Div(
                         id="boxplot-container2",
-                        className="one columns",
+                        className="two columns",
                         children=[
                             build_graph_title("MD BoxPlot"),
                             dcc.Graph(id="boxplotMD", figure=build_segm_boxplot(scalar="MD")),
@@ -529,7 +513,7 @@ app.layout = html.Div(
                     ),
                 html.Div(
                         id="boxplot-container3",
-                        className="one columns",
+                        className="two columns",
                         children=[
                             build_graph_title("RD BoxPlot"),
                             dcc.Graph(id="boxplotRD", figure=build_segm_boxplot(scalar="RD")),
@@ -537,7 +521,7 @@ app.layout = html.Div(
                     ),
                 html.Div(
                         id="boxplot-container4",
-                        className="one columns",
+                        className="two columns",
                         children=[
                             build_graph_title("AD BoxPlot"),
                             dcc.Graph(id="boxplotAD", figure=build_segm_boxplot(scalar="AD")),
@@ -566,7 +550,7 @@ app.layout = html.Div(
                 # Scatter boxplot
                 html.Div(
                     id="form-bar-container",
-                    className="seven columns",
+                    className="eight columns",
                     children=[
                         build_graph_title("Scatter Matrix"),
                         dcc.Graph(id="scatter_matrix", figure=build_segm_scattermatrix()),
@@ -604,29 +588,15 @@ app.layout = html.Div(
     ]
 )
 
-# Update scatter plot
+# Enable/Disable segm method dropdown
 @app.callback(
-    Output("scatter_plot","figure"),
-    [Input("dropdown_segm_methods","value"),
-     Input("mode-switch","value"),
-     Input("dropdown-scalars-right","value"),
-     Input("dropdown-scalars-left","value")])
-def update_scatterplot(segm_method, mode_bool, scalar_x, scalar_y):
-    if mode_bool == None:
-        mode_bool = False
-    return build_segm_scatterplot(mode=mode_bool, segmentation_method=segm_method, scalar_x=scalar_x, scalar_y=scalar_y)
-
-
-# Update midline plot
-@app.callback(
-    Output("midline_graph", "figure"),
-    [Input("dropdown_segm_methods","value"),
-     Input("mode-switch","value"),
-     Input("dropdown-scalars","value")])
-def update_midlineplot(segm_method, mode_bool, scalar):
-    if mode_bool == None:
-        mode_bool = False
-    return build_midline_plot(mode=mode_bool, segmentation_method=segm_method, scalar=scalar)
+    Output("dropdown_segm_methods","disabled"),
+    [Input("mode-switch","value")])
+def update_dropdown_disabled(mode_bool):
+    if mode_bool == None or mode_bool == False:
+        return False
+    else:
+        return True
 
 # Update box-plots
 @app.callback(
@@ -644,6 +614,19 @@ def update_boxplots(segm_method, mode_bool):
             build_segm_boxplot(mode=mode_bool, segmentation_method=segm_method, scalar='RD'),
             build_segm_boxplot(mode=mode_bool, segmentation_method=segm_method, scalar='AD')]
 
+
+# Update midline plot
+@app.callback(
+    Output("midline_graph", "figure"),
+    [Input("dropdown_segm_methods","value"),
+     Input("mode-switch","value"),
+     Input("dropdown-scalars","value")])
+def update_midlineplot(segm_method, mode_bool, scalar):
+    if mode_bool == None:
+        mode_bool = False
+    return build_midline_plot(mode=mode_bool, segmentation_method=segm_method, scalar=scalar)
+
+
 # Update scatter matrix
 @app.callback(
     Output("scatter_matrix", "figure"),
@@ -653,6 +636,19 @@ def update_scattermatrix(segm_method, mode_bool):
     if mode_bool == None:
         mode_bool = False
     return build_segm_scattermatrix(mode=mode_bool, segmentation_method=segm_method)
+
+
+# Update scatter plot
+@app.callback(
+    Output("scatter_plot","figure"),
+    [Input("dropdown_segm_methods","value"),
+     Input("mode-switch","value"),
+     Input("dropdown-scalars-right","value"),
+     Input("dropdown-scalars-left","value")])
+def update_scatterplot(segm_method, mode_bool, scalar_x, scalar_y):
+    if mode_bool == None:
+        mode_bool = False
+    return build_segm_scatterplot(mode=mode_bool, segmentation_method=segm_method, scalar_x=scalar_x, scalar_y=scalar_y)
 
 
 # Open subject collapse
@@ -713,6 +709,23 @@ def update_selected_points(selection1, selection2, scalar_x, scalar_y):
     return build_segm_scattermatrix(selected_points=selected_points)
 '''
 
+'''
+# Quality control
+html.Div([
+    html.Div(
+        id='quality-container',
+        children=[
+            build_graph_title("Quality Check"),
+            dcc.Tabs([
+                dcc.Tab(label='ROQS', children='Oi bonita', className='tabclass', selected_className='tabclass-selected'),
+                dcc.Tab(label='Watershed', children='Oi bonita2', className='tabclass', selected_className='tabclass-selected'),
+                dcc.Tab(label='STAPLE', children='Oi bonita3', className='tabclass', selected_className='tabclass-selected'),
+                dcc.Tab(label='Mask', children='Oi bonita4', className='tabclass', selected_className='tabclass-selected'),
+            ])
+        ]
+    )
+], className = "eight columns"),
+'''
 
 # SERVER CONFIG ---------------------------------------------------------------------------------
 
