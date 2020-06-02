@@ -15,8 +15,12 @@
 /* General
 ___________________________________________________*/
 
-.graph-title {
+#bottom-row .graph-title, #second-bottom-row .graph-title, #third-bottom-row .graph-title {
     margin: 3rem 0 -2rem 3rem;
+}
+
+.graph-title {
+    margin: 3rem 0 0 3rem;
     font-weight: 700;
     font-family: 'Open Sans', sans-serif;
     font-size: 2rem;
@@ -49,7 +53,15 @@ ___________________________________________________*/
 
 #top-row-header {
     background-color: #1f2c56;
-    padding: 9rem 3rem 9rem 3rem;
+    padding: 9rem 3rem 3rem 3rem;
+}
+
+#quality-button-container {
+    height: 8rem;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: center;
 }
 
 #banner {
@@ -145,7 +157,7 @@ ___________________________________________________*/
 @media (min-width: 1401px) {
     #top-row-header {
         flex-grow: 1;
-        padding: 6rem 3rem 9rem 3rem;
+        padding: 6rem 3rem 3rem 3rem;
     }
 
     .banner h6 {

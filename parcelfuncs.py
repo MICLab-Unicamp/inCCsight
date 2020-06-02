@@ -1,5 +1,7 @@
 # coding: utf-8
 
+import numpy as np
+
 def parc_cover(segm, FA_map, n_parcel=5, group_offset=10):
 
     '''
@@ -190,41 +192,29 @@ def parc_geometric_cc(segmentation, scheme = 'HOFER', eps=1**-5):
 
 def parc_witelson(segmentation, FA_map):
 
-    try: 
-        parc = parc_geometric_cc(segmentation, scheme = 'WITELSON', eps=1**-5)
-        if np.max(parc) < 5:
-            parc = parc_geometric_cc(segmentation, scheme = 'WITELSON', eps=0)
-    except:
-        parc = []
+    parc = parc_geometric_cc(segmentation, scheme = 'WITELSON', eps=1**-5)
+    if np.max(parc) < 5:
+        parc = parc_geometric_cc(segmentation, scheme = 'WITELSON', eps=0)
     return parc
 
 def parc_hofer(segmentation, FA_map):
 
-    try: 
-        parc = parc_geometric_cc(segmentation, scheme = 'HOFER', eps=1**-5)
-        if np.max(parc) < 5:
-            parc = parc_geometric_cc(segmentation, scheme = 'HOFER', eps=0)
-    except:
-        parc = []
+    parc = parc_geometric_cc(segmentation, scheme = 'HOFER', eps=1**-5)
+    if np.max(parc) < 5:
+        parc = parc_geometric_cc(segmentation, scheme = 'HOFER', eps=0)
     return parc
 
 def parc_chao(segmentation, FA_map):
 
-    try: 
-        parc = parc_geometric_cc(segmentation, scheme = 'CHAO', eps=1**-5)
-        if np.max(parc) < 5:
-            parc = parc_geometric_cc(segmentation, scheme = 'CHAO', eps=0)
-    except:
-        parc = []
+    parc = parc_geometric_cc(segmentation, scheme = 'CHAO', eps=1**-5)
+    if np.max(parc) < 5:
+        parc = parc_geometric_cc(segmentation, scheme = 'CHAO', eps=0)
     return parc
 
 def parc_freesurfer(segmentation, FA_map):
 
-    try: 
-        parc = parc_geometric_cc(segmentation, scheme = 'FREESURFER', eps=1**-5)
-        if np.max(parc) < 5:
-            parc = parc_geometric_cc(segmentation, scheme = 'FREESURFER', eps=0)
-    except:
-        parc = []
+    parc = parc_geometric_cc(segmentation, scheme = 'FREESURFER', eps=1**-5)
+    if np.max(parc) < 5:
+        parc = parc_geometric_cc(segmentation, scheme = 'FREESURFER', eps=0)
     return parc
 

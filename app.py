@@ -76,6 +76,7 @@ if opts.parents is not None:
 scalar_statistics_dict = {}
 scalar_midlines_dict = {}
 segmentation_mask_dict = {}
+error_prob_dict = {}
 
 scalar_statistics_names = ['FA','FA StdDev','MD','MD StdDev','RD','RD StdDev','AD','AD StdDev']
 scalar_midline_names = list(range(0,200))
@@ -88,15 +89,15 @@ for subject_name, subject_path in tqdm(path_dict.items()):
 
         if segmentation_method in opts.segm:
 
-            segmentation_mask, _, scalar_statistics, scalar_midlines ,_ = ccprocess.segment(subject_path, 
-                                                                                           segmentation_method, 
-                                                                                           segmentation_methods_dict, 
-                                                                                           parcellation_methods_dict, 
-                                                                                           opts.basename)
-
+            segmentation_mask, _, scalar_statistics, scalar_midlines, error_prob, _ = ccprocess.segment(subject_path, 
+                                                                                                       segmentation_method, 
+                                                                                                       segmentation_methods_dict, 
+                                                                                                       parcellation_methods_dict, 
+                                                                                                       opts.basename)
             if segmentation_method not in scalar_statistics_dict.keys(): 
                 scalar_statistics_dict[segmentation_method] = {subject_name: list(scalar_statistics)}
                 segmentation_mask_dict[segmentation_method] = {subject_name: segmentation_mask}
+                error_prob_dict[segmentation_method] = {subject_name: error_prob}
 
                 scalar_midlines_dict[segmentation_method] = {'FA':{},'MD':{},'RD':{},'AD':{}}
                 for scalar in scalar_list:
@@ -105,6 +106,7 @@ for subject_name, subject_path in tqdm(path_dict.items()):
             else:
                 scalar_statistics_dict[segmentation_method][subject_name] = list(scalar_statistics)
                 segmentation_mask_dict[segmentation_method][subject_name] = segmentation_mask
+                error_prob_dict[segmentation_method][subject_name] = error_prob
                 
                 for scalar in scalar_list:
                     scalar_midlines_dict[segmentation_method][scalar][subject_name] = list(scalar_midlines[scalar])
@@ -118,7 +120,12 @@ for segmentation_method in segmentation_methods_dict.keys():
     scalar_statistics_dict[segmentation_method] = pd.DataFrame.from_dict(scalar_statistics_dict[segmentation_method], 
                                                                          orient='index', 
                                                                          columns=scalar_statistics_names)
+    error_prob_dict[segmentation_method] = pd.DataFrame.from_dict(error_prob_dict[segmentation_method], 
+                                                                 orient='index', 
+                                                                 columns=['error_prob'])
+    
     scalar_statistics_dict[segmentation_method]['Method'] = segmentation_method
+    error_prob_dict[segmentation_method]['Method'] = segmentation_method
 
     for scalar in scalar_list:
         scalar_midlines_dict[segmentation_method][scalar] = pd.DataFrame.from_dict(scalar_midlines_dict[segmentation_method][scalar], 
@@ -154,6 +161,7 @@ def build_graph_title(title):
 
 def build_segm_scatterplot(mode=False, segmentation_method = 'ROQS', scalar_x = 'FA', scalar_y = 'MD', selected_points = None):
 
+    df = pd.DataFrame()
     if mode == False:
         df = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
         fig = px.scatter(df, 
@@ -188,6 +196,7 @@ def build_segm_scatterplot(mode=False, segmentation_method = 'ROQS', scalar_x = 
 
 def build_segm_scattermatrix(mode=False, segmentation_method = 'ROQS', selected_points=None):
 
+    df = pd.DataFrame()
     if mode == False:
         df = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
         fig = px.scatter_matrix(df, 
@@ -211,6 +220,7 @@ def build_segm_scattermatrix(mode=False, segmentation_method = 'ROQS', selected_
 
 def build_midline_plot(mode=False, segmentation_method='ROQS', scalar='FA'):
 
+    df = pd.DataFrame()
     if mode == False:
         df = pd.concat([df_group, scalar_midlines_dict[segmentation_method][scalar]], axis=1).reset_index()
         df_grouped = df.groupby('Group').mean().transpose()
@@ -235,6 +245,7 @@ def build_midline_plot(mode=False, segmentation_method='ROQS', scalar='FA'):
 
 def build_segm_boxplot(scalar, mode=False, segmentation_method='ROQS'):
 
+    df = pd.DataFrame()
     if mode == False:
         df = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()    
         fig = px.box(df, y=scalar, color='Group', hover_name=list(path_dict.keys()))
@@ -288,6 +299,56 @@ def built_scalar_dropdown():
         )
     return layout
 
+def build_quality_collapse():
+
+    layout = dbc.Card([
+                
+                build_graph_title("Quality evaluation"),
+                
+                html.Div([
+                    html.H5("Threshold:"), 
+                    dcc.Dropdown(id='dropdown-quality-threshold',
+                                 options= [{'label': num/100, 'value': num/100} for num in np.arange(95, 5, -5)],
+                                 multi=False,
+                                 value='0.7',
+                                 style={'float': 'right', 'width':'150px', 'margin-left':'10px'})
+                    ], className='row', 
+                    style=dict(margin="1rem 0 0 3rem", display="flex", alignItems="center")),
+                
+                html.Div(children=[html.H5(children=build_quality_images())], 
+                    className="row", 
+                    id='photo-container',
+                    style=dict(margin="2rem 1rem 2rem 3rem", height=400, width="95%", overflow="auto"))
+            
+            ], style={'margin':'20px', 'backgroundColor':'#FAFAFA', 'border-radius':'20px'})
+
+    return layout
+
+def build_quality_images(threshold=0.7):
+    
+    children = []
+
+    for segmentation_method in segmentation_methods_dict.keys():
+        
+        # Get error probs
+        df = error_prob_dict[segmentation_method] 
+        df.sort_values(by=['error_prob'])
+        
+        # Order by error probs
+        index_label = df.query('error_prob > '+str(threshold)).index.tolist()
+
+        # Retrieve images and segmentation
+        for subject_id in index_label:
+
+            folderpath = path_dict[subject_id] + 'CCLab/'
+            filepath = folderpath + 'segm_' + name_dict[segmentation_method] + '_data.npy'
+
+            children.append(html.Div([
+                                html.H5("Subject: {} - Method: {}".format(subject_id, segmentation_method)),
+                                dcc.Graph(id="graph", figure=build_fissure_image(filepath))
+                            ], className = 'three columns'))
+    return children
+
 def build_subject_collapse(segmentation_method='ROQS', scalar_map='wFA', subject_id = list(path_dict.keys())[0]):
 
     folderpath = path_dict[subject_id] + 'CCLab/'
@@ -300,7 +361,7 @@ def build_subject_collapse(segmentation_method='ROQS', scalar_map='wFA', subject
                     # Segmentation image
                     html.Div([
                         dcc.Graph(id="graph", figure=build_fissure_image(filepath, scalar_map))
-                    ], className = 'four columns'),
+                    ], className = 'three columns'),
 
                 ], className='row', style={'justifyContent':'center'})
             ], style={'margin':'20px', 'backgroundColor':'#FAFAFA', 'border-radius':'20px'})
@@ -317,7 +378,8 @@ def build_fissure_image(filepath, scalar = 'wFA'):
 
     fig = px.imshow(img, color_continuous_scale='gray', aspect='auto')
     fig.add_trace(go.Scatter(x=contour[:, 1], y=contour[:, 0]))
-    fig.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h", coloraxis_showscale=False)
+    fig.update_layout(height=300, paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h", coloraxis_showscale=False)
+    fig.update_layout(margin = dict(l=0, r=0,t=0,b=0))
 
     return fig 
 
@@ -355,6 +417,16 @@ app.layout = html.Div(
                                              multi=False,
                                              value=list(segmentation_methods_dict.keys())[0],
                                              style={'width':'150px'})
+                                ]),
+
+                                html.Div(className='row', id='quality-button-container', 
+                                    children=[
+                                       dbc.Button(
+                                            ["Check quality  ", dbc.Badge("0", color="warning", className="ml-1", id='quality-count')],
+                                            size='lg',
+                                            color="light",
+                                            id='quality-button'
+                                        )
                                 ]),
                             
                             ],
@@ -483,6 +555,11 @@ app.layout = html.Div(
                     ],
                 ),
             ],
+        ),
+        
+        dbc.Collapse(
+            dbc.Card(dbc.CardBody("very cool thingy")),
+            id="quality-collapse",
         ),
 
         dbc.Collapse(
@@ -650,6 +727,23 @@ def update_scatterplot(segm_method, mode_bool, scalar_x, scalar_y):
         mode_bool = False
     return build_segm_scatterplot(mode=mode_bool, segmentation_method=segm_method, scalar_x=scalar_x, scalar_y=scalar_y)
 
+# Open quality collapse
+@app.callback(
+    [Output("quality-collapse","is_open"),
+     Output("quality-collapse","children")],
+    [Input("quality-button","n_clicks")])
+def open_quality_collapse(n_clicks):
+    if n_clicks == None or n_clicks%2 == 0:
+        return False, []
+    else: 
+        return True, build_quality_collapse()
+
+# Updqte quality threshold
+@app.callback(
+    Output("photo-container","children"),
+    [Input("dropdown-quality-threshold","value")])
+def update_quality_threshold(threshold):
+    return build_quality_images(threshold)
 
 # Open subject collapse
 @app.callback(

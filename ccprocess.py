@@ -42,7 +42,7 @@ def segment(subject_path, segmentation_method, segmentation_methods_dict, parcel
 
 		# Check segmentation errors (True/False)
 		error_flag = False
-		error_prob = None
+		error_prob = []
 		try:
 			error_flag, error_prob = libcc.checkShapeSign(segmentation, shape_imports, threshold=0.6)
 		except:
@@ -64,14 +64,14 @@ def segment(subject_path, segmentation_method, segmentation_methods_dict, parcel
 		# Parcellation
 		parcellations_dict = {}
 		for parcellation_method, parcellation_function in parcellation_methods_dict.items():
-
 			try:
-				parcellations_dict[parcellation_method] = parcellation_function(segmentation)
+				parcellations_dict[parcellation_method] = parcellation_function(segmentation, wFA)
 			except:
+				print("Parc. Error - Method: {}, Subj.: {}".format(parcellation_method, subject_path))
 				parcellations_dict[parcellation_method] = []
 
 		# Save files
-		data_tuple = (segmentation, scalar_maps, scalar_statistics, scalar_midlines, error_prob)
+		data_tuple = (segmentation, scalar_maps, scalar_statistics, scalar_midlines, error_prob, parcellations_dict)
 
 		# Assemble nifti mask
 		if segmentation_method != 'S_MASK':
