@@ -116,7 +116,7 @@ def getFAmidline(segm, wFA_ms, n_points=200):
 
     return fa_line	
 
-def getData(parcel, FA, MD, RD, AD):
+def getData(parcel, FA, MD, RD, AD, get_std = False):
     
     import numpy as np
     
@@ -136,8 +136,11 @@ def getData(parcel, FA, MD, RD, AD):
         meanAD = np.mean(AD[parcel==i])
         stdAD = np.std(AD[parcel==i])
 
-        data.append([meanFA, stdFA, meanMD, stdMD, meanRD, stdRD, meanAD, stdAD])
-    
+        if get_std is True:
+            data.append([meanFA, stdFA, meanMD, stdMD, meanRD, stdRD, meanAD, stdAD])
+        else:
+            data.append([meanFA, meanMD, meanRD, meanAD])            
+
     return data
 	
 

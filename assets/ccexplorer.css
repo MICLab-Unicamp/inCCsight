@@ -69,9 +69,14 @@ ___________________________________________________*/
 }
 
 .banner Img {
-    height: 8rem;
+    height: 9rem;
     margin-bottom: 2rem;
     padding: 1rem
+}
+
+#banner .logo {
+    height: 25rem;
+    padding-left: 5rem;
 }
 
 #banner .cctitle {
@@ -99,7 +104,8 @@ ___________________________________________________*/
     font-family: 'Open Sans', sans-serif;
     font-weight: 350;
     color: white;
-    padding: 14rem 0 2rem 0;
+    padding: 0 0 2rem 0;
+
 }
 
 

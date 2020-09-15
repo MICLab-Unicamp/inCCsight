@@ -1,6 +1,9 @@
 import argparse
 import os
 import glob
+import numpy as np
+import libcc
+import pandas as pd
 
 def get_parser():
 	parser = argparse.ArgumentParser(
@@ -49,5 +52,31 @@ def import_parent(parent_path, basename):
 				directory_dict[directory_path.rsplit('/', 2)[1]] = directory_path
 
 	return directory_dict
+
+
+def parcellations_dfs_dicts(scalar_maps_dict, parcellations_dict):
+
+    method_dict = {}
+    for method in ['Witelson', 'Hofer', 'Chao', 'Cover', 'Freesurfer']:
+        
+        scalar_dict = {}
+        for scalar in ['FA', 'MD', 'RD', 'AD']:
+            scalar_dict[scalar] = dict()
+            
+        for key in scalar_maps_dict.keys():
+            _, FA, MD, RD, AD = scalar_maps_dict[key]
+            data = np.array(libcc.getData(parcellations_dict[key][method], FA, MD, RD, AD))
+                
+            scalar_dict['FA'][key] = data[:,0]
+            scalar_dict['MD'][key] = data[:,1]
+            scalar_dict['RD'][key] = data[:,2]
+            scalar_dict['AD'][key] = data[:,3]
+
+        for scalar in ['FA', 'MD', 'RD', 'AD']:
+            scalar_dict[scalar] = pd.DataFrame.from_dict(scalar_dict[scalar], orient='index', columns = ['P1', 'P2', 'P3', 'P4', 'P5']).reset_index().round(6)
+
+        method_dict[method] = scalar_dict
+        
+    return method_dict
 
 

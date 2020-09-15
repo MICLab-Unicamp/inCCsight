@@ -26,7 +26,7 @@ import dash_daq as daq
 
 import plotly.express as px
 import plotly.graph_objs as go
-from dash.dependencies import Input, Output, State
+from dash.dependencies import Input, Output, State, ALL, MATCH
 
 # GENERAL DEFINITIONS -------------------------------------------------------------------------
 
@@ -77,6 +77,8 @@ scalar_statistics_dict = {}
 scalar_midlines_dict = {}
 segmentation_mask_dict = {}
 error_prob_dict = {}
+parcellations_dict = {}
+scalar_maps_dict = {}
 
 scalar_statistics_names = ['FA','FA StdDev','MD','MD StdDev','RD','RD StdDev','AD','AD StdDev']
 scalar_midline_names = list(range(0,200))
@@ -89,7 +91,7 @@ for subject_name, subject_path in tqdm(path_dict.items()):
 
         if segmentation_method in opts.segm:
 
-            segmentation_mask, _, scalar_statistics, scalar_midlines, error_prob, _ = ccprocess.segment(subject_path, 
+            segmentation_mask, scalar_maps, scalar_statistics, scalar_midlines, error_prob, parcellations_masks = ccprocess.segment(subject_path, 
                                                                                                        segmentation_method, 
                                                                                                        segmentation_methods_dict, 
                                                                                                        parcellation_methods_dict, 
@@ -98,6 +100,8 @@ for subject_name, subject_path in tqdm(path_dict.items()):
                 scalar_statistics_dict[segmentation_method] = {subject_name: list(scalar_statistics)}
                 segmentation_mask_dict[segmentation_method] = {subject_name: segmentation_mask}
                 error_prob_dict[segmentation_method] = {subject_name: error_prob}
+                parcellations_dict[segmentation_method] = {subject_name: parcellations_masks}
+                scalar_maps_dict[segmentation_method] = {subject_name: scalar_maps}
 
                 scalar_midlines_dict[segmentation_method] = {'FA':{},'MD':{},'RD':{},'AD':{}}
                 for scalar in scalar_list:
@@ -107,6 +111,8 @@ for subject_name, subject_path in tqdm(path_dict.items()):
                 scalar_statistics_dict[segmentation_method][subject_name] = list(scalar_statistics)
                 segmentation_mask_dict[segmentation_method][subject_name] = segmentation_mask
                 error_prob_dict[segmentation_method][subject_name] = error_prob
+                parcellations_dict[segmentation_method][subject_name] = parcellations_masks
+                scalar_maps_dict[segmentation_method][subject_name] = scalar_maps
                 
                 for scalar in scalar_list:
                     scalar_midlines_dict[segmentation_method][scalar][subject_name] = list(scalar_midlines[scalar])
@@ -126,6 +132,7 @@ for segmentation_method in segmentation_methods_dict.keys():
     
     scalar_statistics_dict[segmentation_method]['Method'] = segmentation_method
     error_prob_dict[segmentation_method]['Method'] = segmentation_method
+    parcellations_dict[segmentation_method] = inputfuncs.parcellations_dfs_dicts(scalar_maps_dict[segmentation_method], parcellations_dict[segmentation_method])
 
     for scalar in scalar_list:
         scalar_midlines_dict[segmentation_method][scalar] = pd.DataFrame.from_dict(scalar_midlines_dict[segmentation_method][scalar], 
@@ -137,11 +144,13 @@ for segmentation_method in segmentation_methods_dict.keys():
 # VISUALIZATION -------------------------------------------------------------------------------
 
 app = dash.Dash(__name__, 
-               meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1.0"}],
+               meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=.8, maximum-scale=.8"}],
                external_stylesheets = [dbc.themes.BOOTSTRAP])
 server = app.server
 app.config["suppress_callback_exceptions"] = True
 
+
+# ------------------------------- BUILD FUNCS  -----------------------------------------------
 
 def build_banner():
     return html.Div(
@@ -150,11 +159,12 @@ def build_banner():
         children=[
             html.Img(src=app.get_asset_url("unicampw.png")),
             html.Img(src=app.get_asset_url("miclab.png")),
-            html.H5("Corpus Callosum DTI", className='cctitle'),
-            html.H5("Data Explorer", className='detitle'),
+            html.Img(src=app.get_asset_url("inccsight.png"), className='logo', style=dict(justifyContent='center')),
+            
+            #html.H5("Corpus Callosum DTI", className='cctitle'),
+            #html.H5("Data Explorer", className='detitle'),
         ],
     )
-
 
 def build_graph_title(title):
     return html.P(className="graph-title", children=title)
@@ -315,10 +325,10 @@ def build_quality_collapse():
                     ], className='row', 
                     style=dict(margin="1rem 0 0 3rem", display="flex", alignItems="center")),
                 
-                html.Div(children=[html.H5(children=build_quality_images())], 
+                html.Div(children=build_quality_images(), 
                     className="row", 
                     id='photo-container',
-                    style=dict(margin="2rem 1rem 2rem 3rem", height=400, width="95%", overflow="auto"))
+                    style=dict(margin="2rem 1rem 2rem 3rem", height=400, width="95%", overflowY="auto"))
             
             ], style={'margin':'20px', 'backgroundColor':'#FAFAFA', 'border-radius':'20px'})
 
@@ -344,8 +354,11 @@ def build_quality_images(threshold=0.7):
             filepath = folderpath + 'segm_' + name_dict[segmentation_method] + '_data.npy'
 
             children.append(html.Div([
-                                html.H5("Subject: {} - Method: {}".format(subject_id, segmentation_method)),
-                                dcc.Graph(id="graph", figure=build_fissure_image(filepath))
+                                html.Div([
+                                    html.H6("Subject: {} - Method: {}".format(subject_id, segmentation_method)),
+                                    dbc.Button("Remove", color='dark', size='lg', id={'type': 'remove_button', 'index': 'btn_{}_{}'.format(segmentation_method, subject_id)}),
+                                    ], className='row', style=dict(width='100%', display='flex', alignItems='center', justifyContent='space-between')),
+                                dcc.Graph(figure=build_fissure_image(filepath))
                             ], className = 'three columns'))
     return children
 
@@ -360,12 +373,26 @@ def build_subject_collapse(segmentation_method='ROQS', scalar_map='wFA', subject
     
                     # Segmentation image
                     html.Div([
-                        dcc.Graph(id="graph", figure=build_fissure_image(filepath, scalar_map))
+                        dcc.Graph(figure=build_fissure_image(filepath, scalar_map))
                     ], className = 'three columns'),
 
                 ], className='row', style={'justifyContent':'center'})
             ], style={'margin':'20px', 'backgroundColor':'#FAFAFA', 'border-radius':'20px'})
     return layout
+
+def build_tables_collapse():
+
+    layout = dbc.Card([
+                html.Div([                
+    
+                    # Segmentation image
+                    html.Div([
+                        build_graph_title("Subject " + subject_id)
+
+                    ], className = 'two columns'),
+
+                ], className='row', style={'justifyContent':'center'})
+            ], style={'margin':'20px', 'backgroundColor':'#FAFAFA', 'border-radius':'20px'})
 
 def build_fissure_image(filepath, scalar = 'wFA'):
 
@@ -383,6 +410,161 @@ def build_fissure_image(filepath, scalar = 'wFA'):
 
     return fig 
 
+# DataTable functions ---------------------------------------------------------------------
+
+def extend_colorscale(colormap, factor = 5):
+    
+    from plotly.colors import n_colors
+    
+    new_colormap = []
+    for i in range(len(colormap)-1):
+        new_colormap += n_colors(eval(colormap[i][3:]), eval(colormap[i+1][3:]), factor)
+    
+    for i, color in enumerate(new_colormap):
+        new_colormap[i] = 'rgb' + str(color)
+        
+    return new_colormap
+   
+def color_table(df, use_values_limits = True, mean = None, stdev = None):
+
+    if 'id' in df:
+        numeric_columns = df.select_dtypes('number').drop(['index'], axis=1)
+    else:
+        numeric_columns = df.select_dtypes('number')
+
+    colormap = px.colors.diverging.RdBu[::-1][2:-2]
+    colormap = extend_colorscale(colormap, 4)
+    
+    styles = []
+
+    for col in numeric_columns:
+
+        values = df[col]
+
+        if use_values_limits is True:
+            mean = np.mean(values)
+            min_value = np.min(values)
+            max_value = np.max(values)
+        else:
+            min_value = mean - stdev
+            max_value = mean + stdev
+            
+        limits = np.linspace(min_value, max_value, len(colormap))
+            
+        for value in values:
+            idx = (np.abs(limits - value)).argmin()
+            
+            styles.append({
+                'if': {
+                    'filter_query': '{{{col}}} = {value}'.format(
+                            col = col, value = value
+                        ),
+                    'column_id': col
+                    },
+                    'backgroundColor': colormap[idx]
+                })
+
+            styles.append({
+                'if': {
+                    'filter_query': '{{{col}}} = {value}'.format(col = col, value = value),
+                    'state': 'selected',
+                    'column_id': col,
+                    },
+                    'backgroundColor': colormap[idx]
+                })
+
+            styles.append({
+                'if': {
+                    'filter_query': '{{{col}}} = {value}'.format(col = col, value = value),
+                    'state': 'selected',
+                    'column_id': 'index',
+                    },
+                    'backgroundColor': 'rgb(228, 228, 255)'
+                })
+
+    return styles
+
+def build_segm_table(segmentation_method = 'ROQS', show_stdev = False, color = True, selected_cells = []):
+
+    df = scalar_statistics_dict[segmentation_method].reset_index().round(6)
+
+    if color is True:
+        style_data_conditional = color_table(df)
+    else:
+        style_data_conditional = {'if': {'row_index': 'odd'},
+                                  'backgroundColor': 'rgb(252, 252, 252)'}      
+
+    if show_stdev is False:
+        columns=[{"name": i, "id": i, "selectable": True} for i in ['index','FA','RD','AD','MD']]
+        data=df[['index','FA','RD','AD','MD']]
+    else:
+        columns=[{"name": i, "id": i} for i in df.columns]
+        data=df
+
+    layout = dash_table.DataTable(
+        id = 'segm_table',
+        columns = columns,
+        data = data.to_dict('records'),
+        
+        page_action = 'none',
+        fixed_rows = {'headers': True},
+        style_table={
+            'height': '400px', 
+            'overflowY': 'auto'},
+        style_header = {
+            'fontWeight': 'bold',
+        },
+        style_cell = {
+            'font_family': 'Open Sans',
+            'font_size': '18px',
+            'text_align': 'center'
+        },
+        style_as_list_view = True,
+        export_format='xlsx',
+        export_headers='display',
+        style_data_conditional = style_data_conditional,
+    )
+
+    return layout
+
+def build_parcel_table(mode='subjects', segmentation_method = 'ROQS', parcellation_method = 'Witelson', scalar = 'FA', color = True):
+
+    df = parcellations_dict[segmentation_method][parcellation_method][scalar]
+    
+    if color is True:
+        style_data_conditional = color_table(df)
+    else:
+        style_data_conditional = {'if': {'row_index': 'odd'},
+                                  'backgroundColor': 'rgb(252, 252, 252)'}
+
+    layout = dash_table.DataTable(
+        id = 'parcel_table',
+        columns = [{"name": i, "id": i} for i in df.columns],
+        data = df.to_dict('records'),
+
+        page_action = 'none',
+        fixed_rows = {'headers': True},
+        style_table={
+            'height': '400px', 
+            'overflowY': 'auto'},
+        style_header = {
+            'fontWeight': 'bold',
+        },
+        style_cell = {
+            'font_family': 'Open Sans',
+            'font_size': '18px',
+            'text_align': 'center'
+        },
+        style_as_list_view = True,
+        export_format='xlsx',
+        export_headers='display',
+        style_data_conditional = style_data_conditional,
+        
+    )
+
+    return layout
+
+# ---------------------------------- LAYOUT -----------------------------------------------
 app.layout = html.Div(
     children=[
         html.Div(
@@ -558,13 +740,42 @@ app.layout = html.Div(
         ),
         
         dbc.Collapse(
-            dbc.Card(dbc.CardBody("very cool thingy")),
+            dbc.Card(dbc.CardBody(build_quality_collapse())),
             id="quality-collapse",
         ),
 
         dbc.Collapse(
             dbc.Card(dbc.CardBody("very cool thingy")),
             id="subject-collapse",
+        ),
+
+        html.Div(
+            className = 'row',
+            id = 'tables-row',
+            children = [
+
+                html.Div(
+                    id = 'segm_table_container',
+                    className = 'six columns',
+                    children = [
+                        build_graph_title("Segmentation data"),
+                        build_segm_table(show_stdev = False, color = True),
+                    ],
+                ),
+
+                html.Div(
+                    id = 'parcel_table_container',
+                    className = 'six columns',
+                    children = [
+                        build_graph_title("Parcellation data"),
+                        build_parcel_table(mode='subjects', 
+                            segmentation_method = 'ROQS', 
+                            parcellation_method = 'Witelson', 
+                            scalar = 'FA')
+                    ],
+                )
+
+            ]
         ),
 
         html.Div(
@@ -665,6 +876,10 @@ app.layout = html.Div(
     ]
 )
 
+
+
+# --------------------------------- CALLBACKS ---------------------------------------------
+
 # Enable/Disable segm method dropdown
 @app.callback(
     Output("dropdown_segm_methods","disabled"),
@@ -727,18 +942,24 @@ def update_scatterplot(segm_method, mode_bool, scalar_x, scalar_y):
         mode_bool = False
     return build_segm_scatterplot(mode=mode_bool, segmentation_method=segm_method, scalar_x=scalar_x, scalar_y=scalar_y)
 
+# Update number of quality warnings
+@app.callback(
+    Output("quality-count", 'children'),
+    [Input("photo-container", 'children')])
+def update_quality_counter(quality_photos):
+    return len(quality_photos)
+
 # Open quality collapse
 @app.callback(
-    [Output("quality-collapse","is_open"),
-     Output("quality-collapse","children")],
+    Output("quality-collapse","is_open"),
     [Input("quality-button","n_clicks")])
 def open_quality_collapse(n_clicks):
     if n_clicks == None or n_clicks%2 == 0:
-        return False, []
+        return False
     else: 
-        return True, build_quality_collapse()
+        return True
 
-# Updqte quality threshold
+# Update quality threshold
 @app.callback(
     Output("photo-container","children"),
     [Input("dropdown-quality-threshold","value")])
@@ -757,6 +978,13 @@ def open_subject_collapse(selected_cells):
         return True, [build_subject_collapse(subject_id = subject_id)]
     else:
         return False, []
+
+# Remove subject in quality view
+@app.callback(
+    Output('subject_list', 'children'),
+    [Input({'type': 'remove_button', 'id': ALL}, 'n_clicks')])
+def remove_subject_from_quality(value):
+    print(value)
 
 # Add group
 @app.callback(
