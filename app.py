@@ -132,7 +132,8 @@ for segmentation_method in segmentation_methods_dict.keys():
     
     scalar_statistics_dict[segmentation_method]['Method'] = segmentation_method
     error_prob_dict[segmentation_method]['Method'] = segmentation_method
-    parcellations_dict[segmentation_method] = inputfuncs.parcellations_dfs_dicts(scalar_maps_dict[segmentation_method], parcellations_dict[segmentation_method])
+    
+    parcellations_dict[segmentation_method] = inputfuncs.parcellations_dfs_dicts(scalar_maps_dict[segmentation_method], parcellations_dict[segmentation_method], segmentation_method)
 
     for scalar in scalar_list:
         scalar_midlines_dict[segmentation_method][scalar] = pd.DataFrame.from_dict(scalar_midlines_dict[segmentation_method][scalar], 
@@ -380,20 +381,6 @@ def build_subject_collapse(segmentation_method='ROQS', scalar_map='wFA', subject
             ], style={'margin':'20px', 'backgroundColor':'#FAFAFA', 'border-radius':'20px'})
     return layout
 
-def build_tables_collapse():
-
-    layout = dbc.Card([
-                html.Div([                
-    
-                    # Segmentation image
-                    html.Div([
-                        build_graph_title("Subject " + subject_id)
-
-                    ], className = 'two columns'),
-
-                ], className='row', style={'justifyContent':'center'})
-            ], style={'margin':'20px', 'backgroundColor':'#FAFAFA', 'border-radius':'20px'})
-
 def build_fissure_image(filepath, scalar = 'wFA'):
 
     scalar_maps_list = ['wFA','FA','MD','RD','AD']
@@ -484,21 +471,39 @@ def color_table(df, use_values_limits = True, mean = None, stdev = None):
 
     return styles
 
-def build_segm_table(segmentation_method = 'ROQS', show_stdev = False, color = True, selected_cells = []):
+def build_segm_table(mode = 'method', segmentation_method = 'ROQS', show_stdev = False, color = True, selected_cells = []):
 
-    df = scalar_statistics_dict[segmentation_method].reset_index().round(6)
+    if mode == 'subjects':
+        df = scalar_statistics_dict[segmentation_method].reset_index().round(6)
+        names = ['index','FA','RD','AD','MD']
+    elif mode == 'groups':
+        df = scalar_statistics_dict[segmentation_method]
+        df = pd.concat([df_group, df], axis=1).reset_index()
+        df = df.groupby('Group').mean().reset_index().round(6)
+        names = ['Group','FA','RD','AD','MD']
+    elif mode == 'method':
+        df = pd.DataFrame()
+        for segmentation_method in segmentation_methods_dict.keys():
+            df_aux = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
+            df = pd.concat([df, df_aux], axis=0)
+        df = df.groupby('Method').mean().reset_index().round(6)
+        names = ['Method','FA','RD','AD','MD']
 
-    if color is True:
+    if mode == 'groups' or mode == 'method':
+        style_data_conditional = [{'if': {'row_index': 'odd'},
+                                  'backgroundColor': 'rgb(248, 248, 248)'}]
+    elif color is True:
         style_data_conditional = color_table(df)
     else:
         style_data_conditional = {'if': {'row_index': 'odd'},
-                                  'backgroundColor': 'rgb(252, 252, 252)'}      
+                                  'backgroundColor': 'rgb(248, 248, 248)'}      
+
 
     if show_stdev is False:
-        columns=[{"name": i, "id": i, "selectable": True} for i in ['index','FA','RD','AD','MD']]
-        data=df[['index','FA','RD','AD','MD']]
+        columns=[{"name": i, "id": i, "selectable": True} for i in names]
+        data=df[names]
     else:
-        columns=[{"name": i, "id": i} for i in df.columns]
+        columns=[{"name": i, "id": i} for i in df.columns[:-1]]
         data=df
 
     layout = dash_table.DataTable(
@@ -509,7 +514,7 @@ def build_segm_table(segmentation_method = 'ROQS', show_stdev = False, color = T
         page_action = 'none',
         fixed_rows = {'headers': True},
         style_table={
-            'height': '400px', 
+            'maxHeight': '300px', 
             'overflowY': 'auto'},
         style_header = {
             'fontWeight': 'bold',
@@ -527,25 +532,42 @@ def build_segm_table(segmentation_method = 'ROQS', show_stdev = False, color = T
 
     return layout
 
-def build_parcel_table(mode='subjects', segmentation_method = 'ROQS', parcellation_method = 'Witelson', scalar = 'FA', color = True):
+def build_parcel_table(mode = 'method', segmentation_method = 'ROQS', parcellation_method = 'Witelson', scalar = 'FA', color = True):
 
-    df = parcellations_dict[segmentation_method][parcellation_method][scalar]
-    
-    if color is True:
+    if mode == 'subjects':
+        df = parcellations_dict[segmentation_method][parcellation_method][scalar].reset_index()
+        names = ['index', 'P1', 'P2', 'P3', 'P4', 'P5']
+    elif mode == 'groups':
+        df = parcellations_dict[segmentation_method][parcellation_method][scalar]
+        df = pd.concat([df_group, df], axis=1)
+        df = df.groupby('Group').mean().reset_index().round(6)
+        names = ['Group', 'P1', 'P2', 'P3', 'P4', 'P5']
+    elif mode == 'method':
+        df = pd.DataFrame()
+        for segmentation_method in segmentation_methods_dict.keys():
+            df_aux = pd.concat([df_group, parcellations_dict[segmentation_method][parcellation_method][scalar]], axis=1).reset_index()
+            df = pd.concat([df, df_aux], axis=0)
+        df = df.groupby('Method').mean().reset_index().round(6)
+        names = ['Method', 'P1', 'P2', 'P3', 'P4', 'P5']
+
+    if mode == 'groups' or mode == 'method':
+        style_data_conditional = [{'if': {'row_index': 'odd'},
+                                  'backgroundColor': 'rgb(248, 248, 248)'}]
+    elif color is True:
         style_data_conditional = color_table(df)
     else:
         style_data_conditional = {'if': {'row_index': 'odd'},
-                                  'backgroundColor': 'rgb(252, 252, 252)'}
+                                  'backgroundColor': 'rgb(248, 248, 248)'}    
 
     layout = dash_table.DataTable(
         id = 'parcel_table',
-        columns = [{"name": i, "id": i} for i in df.columns],
+        columns = [{"name": i, "id": i} for i in names],
         data = df.to_dict('records'),
 
         page_action = 'none',
         fixed_rows = {'headers': True},
         style_table={
-            'height': '400px', 
+            'maxHeight': '300px', 
             'overflowY': 'auto'},
         style_header = {
             'fontWeight': 'bold',
@@ -755,23 +777,103 @@ app.layout = html.Div(
             children = [
 
                 html.Div(
-                    id = 'segm_table_container',
+                    id = 'segm_table_super_container',
                     className = 'six columns',
                     children = [
                         build_graph_title("Segmentation data"),
-                        build_segm_table(show_stdev = False, color = True),
+                        html.Div(
+                            id = 'segm_table_container',
+                            children = [build_segm_table(show_stdev = False, color = True)]),
+                        html.Div(
+                            id = 'segm_table_options',
+                            className = 'table-options',
+                            children = [
+
+                                html.H6('Mode:', className='table-options-title'),
+
+                                dcc.Dropdown(
+                                    id='segm_table_dropdown_mode',
+                                    className = 'options-dropdown',
+                                    options=[{'label': 'Overall', 'value': 'overall'},
+                                              {'label': 'Subjects', 'value': 'subjects'}],
+                                    multi=False,
+                                    value='overall'),
+
+                                html.H6('Std.Dev.:', className='table-options-title'),
+
+                                dcc.Dropdown(
+                                    id = 'segm_table_dropdown_stdev',
+                                    className = 'options-dropdown',
+                                    options = [
+                                        {'label': 'Show', 'value': True},
+                                        {'label': 'Hide', 'value': False},
+                                    ],
+                                    value = False,
+                                ),  
+                            ],
+                        ),
                     ],
                 ),
 
                 html.Div(
-                    id = 'parcel_table_container',
+                    id = 'parcel_table_super_container',
                     className = 'six columns',
                     children = [
                         build_graph_title("Parcellation data"),
-                        build_parcel_table(mode='subjects', 
-                            segmentation_method = 'ROQS', 
-                            parcellation_method = 'Witelson', 
-                            scalar = 'FA')
+                        html.Div(
+                            id = 'parcel_table_container',
+                            children = [build_parcel_table(
+                                            segmentation_method = 'ROQS', 
+                                            parcellation_method = 'Witelson', 
+                                            scalar = 'FA')]),
+                        html.Div(
+                            id = 'parcel_table_options',
+                            className = 'table-options',
+                            children = [
+                                
+                                html.H6('Mode:', className='table-options-title'),
+
+                                dcc.Dropdown(
+                                    id='parcel_table_dropdown_mode',
+                                    className = 'options-dropdown',
+                                    options=[{'label': 'Overall', 'value': 'overall'},
+                                             {'label': 'Subjects', 'value': 'subjects'}],
+                                    multi=False,
+                                    value='overall',
+                                ),
+                                
+                                html.H6('Parcel. method:', className='table-options-title'),
+
+                                dcc.Dropdown(
+                                    id = 'parcel_table_dropdown_method',
+                                    className = 'options-dropdown',
+                                    options = [
+                                        {'label': 'Witelson', 'value': 'Witelson'},
+                                        {'label': 'Hofer & Frahm', 'value': 'Hofer'},
+                                        {'label': 'Chao et al.', 'value': 'Chao'},
+                                        {'label': 'Cover et al.', 'value': 'Cover'},
+                                        {'label': 'Freesurfer', 'value': 'Freesurfer'},
+                                    ],
+                                    value = 'Witelson',
+                                ),
+
+                                html.H6('Scalar:', className='table-options-title'),
+
+                                dcc.Dropdown(
+                                    id = 'parcel_table_dropdown_scalar',
+                                    className = 'options-dropdown',
+                                    options = [
+                                        {'label': 'FA', 'value': 'FA'},
+                                        {'label': 'MD', 'value': 'MD'},
+                                        {'label': 'RD', 'value': 'RD'},
+                                        {'label': 'AD', 'value': 'AD'},
+                                    ],
+                                    value = 'FA'
+                                ),                
+                            
+
+                            ],
+                        ),
                     ],
                 )
 
@@ -1011,6 +1113,52 @@ def update_groups(n_clicks, selected_cells):
 
     return [{"Groups": i} for i in set(np.hstack(list(group_dict.values())))], {}
 
+# Change segm table mode
+@app.callback(
+    Output("segm_table_container", "children"),
+    [Input("segm_table_dropdown_mode", "value"),
+     Input("dropdown_segm_methods", "value"),
+     Input("mode-switch","value"),
+     Input("segm_table_dropdown_stdev", "value")])
+def change_segm_table_mode(table_mode, segmentation_method, mode_bool, show_stdev):
+    if mode_bool == None:
+        mode_bool = False
+
+    if table_mode == 'overall':
+        if mode_bool is False:
+            mode = 'groups'
+        else:
+            mode = 'method'
+    else:
+        mode = 'subjects'
+
+    return [build_segm_table(mode = mode, segmentation_method = segmentation_method, show_stdev = show_stdev, color = True)]
+
+# Change parcel table mode
+@app.callback(
+    Output("parcel_table_container", "children"),
+    [Input("parcel_table_dropdown_mode", "value"),
+     Input("parcel_table_dropdown_method", "value"),
+     Input("parcel_table_dropdown_scalar", "value"),
+     Input("dropdown_segm_methods", "value"),
+     Input("mode-switch","value")])
+def change_parcel_table_mode(table_mode, parcellation_method, scalar, segmentation_method, mode_bool):
+    if mode_bool == None:
+        mode_bool = False
+
+    if table_mode == 'overall':
+        if mode_bool is False:
+            mode = 'groups'
+        else:
+            mode = 'method'
+    else:
+        mode = 'subjects'
+
+    return [build_parcel_table(mode = mode, 
+                segmentation_method = segmentation_method, 
+                parcellation_method = parcellation_method,
+                scalar = scalar,
+                color = True)]
 
 '''
 @app.callback(

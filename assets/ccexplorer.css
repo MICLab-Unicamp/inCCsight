@@ -29,6 +29,29 @@ ___________________________________________________*/
 
 /* Top-row
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
+.dash-spreadsheet-menu {
+    flex-direction: row-reverse !important;
+    padding: 5px;
+}
+
+.table-options {
+    display: flex;
+    flex-direction: row;
+    padding: 5px;  
+}
+
+.table-options-title {
+    font-size: 2rem;
+    line-height: 1;
+    padding: 0 5px 0 0;
+
+}
+
+.options-dropdown {
+    width: 150px;
+    padding: 0 25px 0 0;
+}
+
 #top-row {
     background-color: #192444;
     padding: 0 0 0 5rem;

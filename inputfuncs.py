@@ -54,7 +54,7 @@ def import_parent(parent_path, basename):
 	return directory_dict
 
 
-def parcellations_dfs_dicts(scalar_maps_dict, parcellations_dict):
+def parcellations_dfs_dicts(scalar_maps_dict, parcellations_dict, segmentation_method):
 
     method_dict = {}
     for method in ['Witelson', 'Hofer', 'Chao', 'Cover', 'Freesurfer']:
@@ -73,7 +73,8 @@ def parcellations_dfs_dicts(scalar_maps_dict, parcellations_dict):
             scalar_dict['AD'][key] = data[:,3]
 
         for scalar in ['FA', 'MD', 'RD', 'AD']:
-            scalar_dict[scalar] = pd.DataFrame.from_dict(scalar_dict[scalar], orient='index', columns = ['P1', 'P2', 'P3', 'P4', 'P5']).reset_index().round(6)
+            scalar_dict[scalar] = pd.DataFrame.from_dict(scalar_dict[scalar], orient='index', columns = ['P1', 'P2', 'P3', 'P4', 'P5']).round(6)
+            scalar_dict[scalar]['Method'] = segmentation_method
 
         method_dict[method] = scalar_dict
         
