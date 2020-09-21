@@ -490,14 +490,22 @@ def build_segm_table(mode = 'method', segmentation_method = 'ROQS', show_stdev =
         names = ['Method','FA','RD','AD','MD']
 
     if mode == 'groups' or mode == 'method':
-        style_data_conditional = [{'if': {'row_index': 'odd'},
-                                  'backgroundColor': 'rgb(248, 248, 248)'}]
-    elif color is True:
-        style_data_conditional = color_table(df)
-    else:
-        style_data_conditional = {'if': {'row_index': 'odd'},
-                                  'backgroundColor': 'rgb(248, 248, 248)'}      
+        style_data_conditional = []
+        
+        style_data_conditional.append({'if': {'row_index': 'odd'},
+                                          'backgroundColor': 'rgb(248, 248, 248)'})
+        style_data_conditional.append({'if': {'row_index': 'odd', 'state': 'selected'},
+                                       'backgroundColor': 'rgb(248, 248, 248)'})
+        style_data_conditional.append({'if': {'row_index': 'even'},
+                                  'backgroundColor': 'rgb(255, 255, 255)'})
+        style_data_conditional.append({'if': {'row_index': 'even', 'state': 'selected'},
+                                       'backgroundColor': 'rgb(255, 255, 255)'})
 
+    elif mode == 'subjects':
+        style_data_conditional = color_table(df)   
+
+    style_data_conditional.append({'if': {'state': 'selected'},
+                                   "border": "3px solid blue"})
 
     if show_stdev is False:
         columns=[{"name": i, "id": i, "selectable": True} for i in names]
@@ -551,13 +559,21 @@ def build_parcel_table(mode = 'method', segmentation_method = 'ROQS', parcellati
         names = ['Method', 'P1', 'P2', 'P3', 'P4', 'P5']
 
     if mode == 'groups' or mode == 'method':
-        style_data_conditional = [{'if': {'row_index': 'odd'},
-                                  'backgroundColor': 'rgb(248, 248, 248)'}]
-    elif color is True:
+        style_data_conditional = []
+
+        style_data_conditional.append({'if': {'row_index': 'odd'},
+                                          'backgroundColor': 'rgb(248, 248, 248)'})
+        style_data_conditional.append({'if': {'row_index': 'odd', 'state': 'selected'},
+                                       'backgroundColor': 'rgb(248, 248, 248)'})
+        style_data_conditional.append({'if': {'row_index': 'even'},
+                                  'backgroundColor': 'rgb(255, 255, 255)'})
+        style_data_conditional.append({'if': {'row_index': 'even', 'state': 'selected'},
+                                       'backgroundColor': 'rgb(255, 255, 255)'})
+    elif mode == 'subjects':
         style_data_conditional = color_table(df)
-    else:
-        style_data_conditional = {'if': {'row_index': 'odd'},
-                                  'backgroundColor': 'rgb(248, 248, 248)'}    
+
+    style_data_conditional.append({'if': {'state': 'selected'},
+                                   "border": "3px solid blue"})
 
     layout = dash_table.DataTable(
         id = 'parcel_table',
@@ -1137,12 +1153,12 @@ def change_segm_table_mode(table_mode, segmentation_method, mode_bool, show_stde
 # Change parcel table mode
 @app.callback(
     Output("parcel_table_container", "children"),
-    [Input("parcel_table_dropdown_mode", "value"),
-     Input("parcel_table_dropdown_method", "value"),
-     Input("parcel_table_dropdown_scalar", "value"),
+    [Input("mode-switch","value"),
      Input("dropdown_segm_methods", "value"),
-     Input("mode-switch","value")])
-def change_parcel_table_mode(table_mode, parcellation_method, scalar, segmentation_method, mode_bool):
+     Input("parcel_table_dropdown_mode", "value"),
+     Input("parcel_table_dropdown_method", "value"),
+     Input("parcel_table_dropdown_scalar", "value")])
+def change_parcel_table_mode(mode_bool, segmentation_method, table_mode, parcellation_method, scalar):
     if mode_bool == None:
         mode_bool = False
 
@@ -1159,6 +1175,56 @@ def change_parcel_table_mode(table_mode, parcellation_method, scalar, segmentati
                 parcellation_method = parcellation_method,
                 scalar = scalar,
                 color = True)]
+
+# Highlight table row borders upon clicking
+@app.callback(
+    Output("segm_table", "style_data_conditional"),
+    [Input("segm_table", "selected_cells")],
+    [State("segm_table", "data"),
+     State('segm_table', 'style_data_conditional')])
+def paint_segm_table(selected_cells, table_data, style_data_conditional):
+ 
+    n_rows = len(table_data)
+
+    for row in range(n_rows):
+        rule = {"if": {"row_index": row}, "border": "3px solid blue"}
+        if rule in style_data_conditional:
+            style_data_conditional.remove(rule)
+
+    if selected_cells is not None:
+
+        for cell in selected_cells:
+            row = cell['row'] 
+            style_data_conditional.append({"if": {"row_index": row},
+                                           "border": "3px solid blue"})
+    
+    return style_data_conditional
+
+# Highlight table row borders upon clicking
+@app.callback(
+    Output("parcel_table", "style_data_conditional"),
+    [Input("parcel_table", "selected_cells")],
+    [State("parcel_table", "data"),
+     State('parcel_table', 'style_data_conditional')])
+def paint_parcel_table(selected_cells, table_data, style_data_conditional):
+ 
+    n_rows = len(table_data)
+
+    for row in range(n_rows):
+        rule = {"if": {"row_index": row}, "border": "3px solid blue"}
+        if rule in style_data_conditional:
+            style_data_conditional.remove(rule)
+
+    if selected_cells is not None:
+
+        for cell in selected_cells:
+            row = cell['row'] 
+            style_data_conditional.append({"if": {"row_index": row},
+                                           "border": "3px solid blue"})
+    
+    return style_data_conditional
+
+
 
 '''
 @app.callback(
