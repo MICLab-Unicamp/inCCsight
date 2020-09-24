@@ -144,3 +144,13 @@ def getData(parcel, FA, MD, RD, AD, get_std = False):
     return data
 	
 
+def getLargestConnectedComponent(segmentation):
+
+    from skimage.measure import label, regionprops  
+    import numpy as np
+
+    labels = label(segmentation)
+    assert(labels.max() != 0 ) # assume at least 1 CC
+    cc = labels == np.argmax(np.bincount(labels.flat)[1:])+1
+
+    return cc

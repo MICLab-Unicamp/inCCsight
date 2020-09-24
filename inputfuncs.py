@@ -17,8 +17,9 @@ def get_parser():
 	parser.add_argument('-b', '--basename', help='Basename for the FSL files (basename default is \'dti\', e.g. dti_L1.nii.gz', nargs='?', default='dti', dest='basename')
 
 	parser.add_argument('-m', '--mask', help='String contained in the filename of the masks files located in the directories loaded using [-d] or [-p]', nargs='?', type=str, dest='mark_str')
-	parser.add_argument('-s', '--segm', help='Segmentation method to be performed (ROQS and/or Watershed), default is both', nargs='+', dest='segm', default=['ROQS', 'Watershed'])
-	parser.add_argument('--staple', help='Will create a segmentation consensus between the methods selected and the mask (if inputted). Only possible with multiple segmentation')
+	parser.add_argument('-s', '--segm', help='Segmentation methods to be performed (ROQS, Watershed), default is both', nargs='+', dest='segm', default=['ROQS', 'Watershed'])
+	parser.add_argument('-3d', help='3D Segmentation methods to be performed (Watershed3d), default is None', dest='segm3d', default=[None])
+	parser.add_argument('--staple', help='Will create a segmentation consensus between the methods selected and the mask (if inputted). Only possible with multiple segmentations')
 
 	return parser
 
@@ -34,7 +35,7 @@ def check_directory(path, basename):
 		
 		return True
 	else:
-		print("Warning: Directory {} did not contain all files required to be imported".format(path))
+		print("Warning: Directory {} did not contain all files required to perform the segmentation".format(path))
 		return False
 
 

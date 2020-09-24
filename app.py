@@ -7,6 +7,13 @@ import random
 from tqdm import tqdm
 from skimage import measure
 
+import warnings
+warnings.filterwarnings('ignore') 
+
+import logging
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
 import inputfuncs
 import ccprocess
 
@@ -23,10 +30,12 @@ import dash_html_components as html
 import dash_bootstrap_components as dbc
 import dash_daq as daq
 
-
+import plotly.figure_factory as ff
 import plotly.express as px
 import plotly.graph_objs as go
 from dash.dependencies import Input, Output, State, ALL, MATCH
+from dash.exceptions import PreventUpdate
+
 
 # GENERAL DEFINITIONS -------------------------------------------------------------------------
 
@@ -39,9 +48,13 @@ parcellation_methods_dict = {'Witelson': parcelfuncs.parc_witelson,
                              'Cover': parcelfuncs.parc_cover,
                              'Freesurfer': parcelfuncs.parc_freesurfer}
 
+segmentation_methods_3d_dict = {'Watershed3d': segmfuncs.segm_watershed_3d}
+
 scalar_list = ['FA', 'MD', 'RD', 'AD']
 colors_list = px.colors.qualitative.Plotly
-name_dict = {'ROQS': 'roqs', 'Watershed': 'watershed'}
+name_dict = {'ROQS': 'roqs', 
+             'Watershed': 'watershed'}
+name_3d_dict = {'Watershed3d':'watershed3d'}
 
 # DATA IMPORTING -----------------------------------------------------------------------------
 
@@ -92,10 +105,10 @@ for subject_name, subject_path in tqdm(path_dict.items()):
         if segmentation_method in opts.segm:
 
             segmentation_mask, scalar_maps, scalar_statistics, scalar_midlines, error_prob, parcellations_masks = ccprocess.segment(subject_path, 
-                                                                                                       segmentation_method, 
-                                                                                                       segmentation_methods_dict, 
-                                                                                                       parcellation_methods_dict, 
-                                                                                                       opts.basename)
+                                                                                                                                   segmentation_method, 
+                                                                                                                                   segmentation_methods_dict, 
+                                                                                                                                   parcellation_methods_dict, 
+                                                                                                                                   opts.basename)
             if segmentation_method not in scalar_statistics_dict.keys(): 
                 scalar_statistics_dict[segmentation_method] = {subject_name: list(scalar_statistics)}
                 segmentation_mask_dict[segmentation_method] = {subject_name: segmentation_mask}
@@ -116,6 +129,15 @@ for subject_name, subject_path in tqdm(path_dict.items()):
                 
                 for scalar in scalar_list:
                     scalar_midlines_dict[segmentation_method][scalar][subject_name] = list(scalar_midlines[scalar])
+
+    for segmentation_method_3d in segmentation_methods_3d_dict:
+
+        if segmentation_method_3d in opts.segm3d:
+
+            segmentation, segmentation3d, wFA_v, error_flag = ccprocess.segment3d(subject_path, 
+                                                                                  segmentation_method_3d, 
+                                                                                  segmentation_methods_3d_dict, 
+                                                                                  opts.basename)
 
 
 # Transform info to pandas dataframes
@@ -173,7 +195,7 @@ def build_graph_title(title):
 def build_segm_scatterplot(mode=False, segmentation_method = 'ROQS', scalar_x = 'FA', scalar_y = 'MD', selected_points = None):
 
     df = pd.DataFrame()
-    if mode == False:
+    if mode is False:
         df = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
         fig = px.scatter(df, 
                         x=scalar_x, 
@@ -182,12 +204,8 @@ def build_segm_scatterplot(mode=False, segmentation_method = 'ROQS', scalar_x = 
                         marginal_y="violin", 
                         marginal_x="histogram",
                         hover_name=list(path_dict.keys()))
-        fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
-        fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
-        fig.update_traces(selectedpoints = selected_points)
-        return fig
 
-    if mode == True:
+    elif mode is True:
         df = pd.DataFrame()
         for segmentation_method in segmentation_methods_dict.keys():
             df_aux = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
@@ -199,11 +217,15 @@ def build_segm_scatterplot(mode=False, segmentation_method = 'ROQS', scalar_x = 
                         color="Method", 
                         marginal_y="violin", 
                         marginal_x="histogram",
-                        hover_name=df.index)
-        fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
-        fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
-        fig.update_traces(selectedpoints = selected_points)
-        return fig
+                        hover_name=list(path_dict.keys()))
+
+    fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
+    fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
+    
+    fig.update_traces(customdata=list(path_dict.keys()),
+                      unselected={'marker': {'opacity': 0.3 }})
+
+    return fig
 
 def build_segm_scattermatrix(mode=False, segmentation_method = 'ROQS', selected_points=None):
 
@@ -213,7 +235,7 @@ def build_segm_scattermatrix(mode=False, segmentation_method = 'ROQS', selected_
         fig = px.scatter_matrix(df, 
                                 dimensions=['FA','MD','RD','AD'],
                                 color='Group',
-                                hover_name=df.index)
+                                hover_name=list(path_dict.keys()))
     if mode == True:
         df = pd.DataFrame()
         for segmentation_method in segmentation_methods_dict.keys():
@@ -222,11 +244,14 @@ def build_segm_scattermatrix(mode=False, segmentation_method = 'ROQS', selected_
         fig = px.scatter_matrix(df, 
                                 dimensions=['FA','MD','RD','AD'],
                                 color='Method',
-                                hover_name=df.index)
+                                hover_name=list(path_dict.keys()))
 
     fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
     fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12), margin=dict(r=0, l=0))
-    fig.update_traces(selectedpoints = selected_points)
+    
+    fig.update_traces(selectedpoints = ['000001'])
+    fig.update_traces(customdata=list(path_dict.keys()),
+                     unselected={'marker': {'opacity': 0.3 }})
     return fig
 
 def build_midline_plot(mode=False, segmentation_method='ROQS', scalar='FA'):
@@ -265,7 +290,7 @@ def build_segm_boxplot(scalar, mode=False, segmentation_method='ROQS'):
         for segmentation_method in segmentation_methods_dict.keys():
             df_aux = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
             df = pd.concat([df, df_aux], axis=0)
-        fig = px.box(df, y=scalar, color='Method', hover_name=df.index)
+        fig = px.box(df, y=scalar, color='Method', hover_name=list(path_dict.keys()))
 
     fig.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
     fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
@@ -363,6 +388,48 @@ def build_quality_images(threshold=0.7):
                             ], className = 'three columns'))
     return children
 
+def build_3d_visualization(subject_id):
+
+    folderpath = path_dict[subject_id] + 'CCLab/'
+    filepath = folderpath + 'segm_watershed3d.npy'
+
+    if os.path.exists(filepath):
+       
+        _, segmentation3d, wFA_v, _ = np.load(filepath, allow_pickle=True)
+
+        verts, faces, normals, values = measure.marching_cubes_lewiner(wFA_v, 0)
+
+        tri_FA = ff.create_trisurf(x=verts[:,0], y=verts[:,2], z=verts[:,1]*-1+70,
+                                simplices=faces,
+                                colormap=[(1,0,0), (1,0,0)],
+                                aspectratio=dict(x=1, y=1, z=.66),
+                                plot_edges = False,
+                                show_colorbar = False)
+
+        tri_FA['data'][0].update(opacity=0.2)
+
+        verts, faces, normals, values = measure.marching_cubes_lewiner(segmentation3d, 0)
+
+        tri_CC = ff.create_trisurf(x=verts[:,0], y=verts[:,2], z=verts[:,1]*-1+70,
+                                simplices=faces,
+                                colormap=[(0,0,1), (0,0,1)],
+                                aspectratio=dict(x=1, y=1, z=.66),
+                                plot_edges = False,
+                                show_colorbar = False)
+
+        tri_CC['data'][0].update(opacity=0.1)
+
+        fig = go.Figure(tri_FA)
+        fig.add_trace(tri_CC.data[0])
+        fig.update_layout(title="3D Visualization")
+        fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+
+        return fig
+
+    else:
+        return []
+
+
 def build_subject_collapse(segmentation_method='ROQS', scalar_map='wFA', subject_id = list(path_dict.keys())[0]):
 
     folderpath = path_dict[subject_id] + 'CCLab/'
@@ -374,10 +441,11 @@ def build_subject_collapse(segmentation_method='ROQS', scalar_map='wFA', subject
     
                     # Segmentation image
                     html.Div([
-                        dcc.Graph(figure=build_fissure_image(filepath, scalar_map))
+                        dcc.Graph(figure=build_3d_visualization(subject_id))
                     ], className = 'three columns'),
 
-                ], className='row', style={'justifyContent':'center'})
+                ], className='row', style={'justifyContent':'center'}),
+
             ], style={'margin':'20px', 'backgroundColor':'#FAFAFA', 'border-radius':'20px'})
     return layout
 
@@ -980,15 +1048,28 @@ app.layout = html.Div(
             className="row",
             id="third-bottom-row",
             children=[
+
+            
+                # Scatter boxplot
                 html.Div(
-                    # Selected well productions
-                    id="othersss-container",
-                    className="six columns",
+                    id="second-scattermatrix-container",
+                    className="eight columns",
                     children=[
-                        build_graph_title("Box Plot"),
-                        #dcc.Graph(id="boxplot", figure=build_segm_boxplot()),
+                        build_graph_title("Scatter Matrix"),
+                        dcc.Graph(id="scatter_matrix_2", figure=build_segm_scattermatrix()),
                     ],
                 ),
+                # Selected well productions
+                html.Div(
+                    id="second-scatterplot-container",
+                    className="four columns",
+                    children=[
+                        build_graph_title("Scatter Plot"),
+                        dcc.Graph(id="scatter_plot_2", figure=build_segm_scatterplot()),
+                    ],
+                ),
+
+
             ],
         ),
     ]
@@ -1224,8 +1305,34 @@ def paint_parcel_table(selected_cells, table_data, style_data_conditional):
     
     return style_data_conditional
 
+'''
+@app.callback(
+    [Output('scatter_plot_2', 'figure'),
+     Output('scatter_matrix_2', 'figure')],
+    [Input('scatter_plot', 'selectedData'),
+     Input('scatter_matrix', 'selectedData')],
+    [State('scatter_plot', 'figure'),
+     State('scatter_matrix', 'figure')])
+def get_selected_data(selection1, selection2, fig1, fig2):
+    
+    if fig1 is None:
+        raise PreventUpdate
+    else:
 
-
+        selectedpoints = []
+        for selected_data in [selection1, selection2]:
+            if selected_data and selected_data['points']:
+                selectedpoints = selectedpoints + [p['customdata'] for p in selected_data['points']]
+        
+        if fig1 is not None and fig2 is not None:
+            fig1 = go.Figure(fig1)
+            fig1.update_traces(selectedpoints=selectedpoints, customdata=list(path_dict.keys()))
+            
+            fig2 = go.Figure(fig2)
+            fig2.update_traces(selectedpoints=selectedpoints, customdata=list(path_dict.keys()))
+        
+        return fig1, fig2
+'''
 '''
 @app.callback(
     Output('scatter_matrix', 'figure'),

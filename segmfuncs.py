@@ -200,3 +200,71 @@ def segm_mask(path, threshold=0):
         axis = 2
 
     return mask, fissure, axis
+
+
+def segm_watershed_3d(wFA, gaussian_sigma=0.3):
+
+    import numpy as np
+    from scipy import ndimage 
+
+    import siamxt
+    from libcc.preprocess import run_analysis, grad_morf
+    from libcc.gets import getTheCC, getLargestConnectedComponent
+    from skimage.morphology import watershed, disk, square, erosion, dilation
+    from skimage.measure import label, regionprops  
+
+
+    ## MORPHOLOGICAL GRADIENT
+
+    # Gaussian filter
+    wFA_gauss = ndimage.gaussian_filter(wFA, sigma=gaussian_sigma)
+
+    # Structuring element
+    se1 = np.zeros((3,3,3)).astype('bool')
+    se1[1,:,:] = True
+    se1[:,1,:] = True
+    se1[:,:,1] = True
+
+    # Gradient
+    grad_wFA = grad_morf(wFA_gauss, se1)
+
+
+    ## MAX-TREE
+
+    #Structuring element. connectivity-4
+    se2 = se1.copy()
+
+    # Computing Max Tree by volume
+    mxt = siamxt.MaxTreeAlpha(((grad_wFA)*255).astype("uint8"), se2)
+    attr = "volume"
+    leaves_volume = mxt.computeExtinctionValues(mxt.computeVolume(),attr)
+
+    # Create canvas
+    segm_markers = np.zeros(grad_wFA.shape, dtype = np.int16)
+
+    # Labeling canvas
+    indexes = np.argsort(leaves_volume)[::-1]
+    counter = 1
+    for i in indexes[:85]:
+        segm_markers = segm_markers + mxt.recConnectedComponent(i)*(counter)
+        counter+=1
+           
+
+
+    ## SEGMENTING CC
+
+    # Watershed    
+    wc_wfa = watershed(grad_wFA, segm_markers)
+        
+    # Thresholding regions by FA
+    seg_wFA = np.zeros((grad_wFA).shape).astype(bool)
+    listAll = np.unique(wc_wfa)
+    for i in listAll:
+        media = np.mean(wFA[wc_wfa == i])
+        if media > 0.2*wFA.max():
+            seg_wFA[wc_wfa == i] = 1
+
+    # Getting the CC
+    seg_wFA_3d = getLargestConnectedComponent(seg_wFA)
+
+    return seg_wFA_3d

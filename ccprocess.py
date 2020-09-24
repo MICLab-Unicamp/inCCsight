@@ -3,6 +3,9 @@ import nibabel as nib
 import os
 import libcc
 
+import warnings
+warnings.filterwarnings('ignore') 
+
 shape_imports = libcc.shapeSignImports()
 
 
@@ -83,6 +86,60 @@ def segment(subject_path, segmentation_method, segmentation_methods_dict, parcel
 
 	return data_tuple
 
+def segment3d(subject_path, segmentation_method, segmentation_methods_dict, basename):
+
+	name_dict = {'Watershed3d': 'watershed3d'}
+
+	folderpath = subject_path + 'CCLab/'
+	filename = 'segm_' + name_dict[segmentation_method] + '.npy'
+
+
+	# Check if segmentation has already been done
+	if os.path.exists(folderpath + filename):
+
+		# Load files
+		data_tuple = np.load(folderpath+filename, allow_pickle=True)
+
+	# If there is no data available, segment
+	else:
+
+		# Read data, get scalar maps and eigs.
+		wFA_v, FA_v, MD_v, RD_v, AD_v, fissure, eigvals, eigvects, affine = libcc.run_analysis(subject_path, basename)
+		
+		if segmentation_method == 'Watershed3d':
+			segmentation3d = segmentation_methods_dict[segmentation_method](wFA_v)
+			segmentation = segmentation3d[fissure,:,:]
+
+		# Check segmentation errors (True/False)
+		error_flag = False
+		error_prob = []
+		try:
+			error_flag, error_prob = libcc.checkShapeSign(segmentation[fissure,:,:], shape_imports, threshold=0.6)
+		except:
+			error_flag = True
+
+		'''	
+		# Parcellation
+		parcellations_dict = {}
+		for parcellation_method, parcellation_function in parcellation_methods_dict.items():
+			try:
+				parcellations_dict[parcellation_method] = parcellation_function(segmentation, wFA)
+			except:
+				print("Parc. Error - Method: {}, Subj.: {}".format(parcellation_method, subject_path))
+				parcellations_dict[parcellation_method] = []
+		'''
+
+		# Save files
+		#data_tuple = (segmentation, scalar_maps, scalar_statistics, scalar_midlines, error_prob, parcellations_dict)
+		data_tuple = (segmentation, segmentation3d, wFA_v, error_flag)
+
+		# Assemble nifti mask
+		save_nii(subject_path, filename, np.array(segmentation3d, dtype = np.int), affine)
+
+		filename = filename + '.npy'
+		save_os(subject_path, filename, data_tuple)
+
+	return data_tuple
 
 def save_os(path, filename, content):
 
