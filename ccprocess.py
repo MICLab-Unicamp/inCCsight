@@ -14,7 +14,7 @@ def segment(subject_path, segmentation_method, segmentation_methods_dict, parcel
 	name_dict = {'ROQS': 'roqs',
 	             'Watershed': 'watershed'}
 
-	folderpath = subject_path + 'CCLab/'
+	folderpath = subject_path + 'inCCsight/'
 	filename = 'segm_' + name_dict[segmentation_method] + '_data.npy'
 
 
@@ -90,7 +90,7 @@ def segment3d(subject_path, segmentation_method, segmentation_methods_dict, base
 
 	name_dict = {'Watershed3d': 'watershed3d'}
 
-	folderpath = subject_path + 'CCLab/'
+	folderpath = subject_path + 'inCCsight/'
 	filename = 'segm_' + name_dict[segmentation_method] + '.npy'
 
 
@@ -143,7 +143,7 @@ def segment3d(subject_path, segmentation_method, segmentation_methods_dict, base
 
 def save_os(path, filename, content):
 
-	save_path = path + 'CCLab'
+	save_path = path + 'inCCsight'
 
 	# Create folder
 	if not os.path.exists(save_path):
@@ -157,7 +157,7 @@ def save_os(path, filename, content):
 
 def save_nii(path, filename, content, affine):
 
-	save_path = path + 'CCLab'
+	save_path = path + 'inCCsight'
 
 	# Create folder
 	if not os.path.exists(save_path):

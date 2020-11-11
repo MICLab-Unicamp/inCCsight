@@ -203,7 +203,7 @@ def build_segm_scatterplot(mode=False, segmentation_method = 'ROQS', scalar_x = 
                         color="Group", 
                         marginal_y="violin", 
                         marginal_x="histogram",
-                        hover_name=list(path_dict.keys()))
+                        hover_name=df.index)
 
     elif mode is True:
         df = pd.DataFrame()
@@ -217,7 +217,7 @@ def build_segm_scatterplot(mode=False, segmentation_method = 'ROQS', scalar_x = 
                         color="Method", 
                         marginal_y="violin", 
                         marginal_x="histogram",
-                        hover_name=list(path_dict.keys()))
+                        hover_name=df.index)
 
     fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
     fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
@@ -235,7 +235,7 @@ def build_segm_scattermatrix(mode=False, segmentation_method = 'ROQS', selected_
         fig = px.scatter_matrix(df, 
                                 dimensions=['FA','MD','RD','AD'],
                                 color='Group',
-                                hover_name=list(path_dict.keys()))
+                                hover_name=df.index)
     if mode == True:
         df = pd.DataFrame()
         for segmentation_method in segmentation_methods_dict.keys():
@@ -244,12 +244,12 @@ def build_segm_scattermatrix(mode=False, segmentation_method = 'ROQS', selected_
         fig = px.scatter_matrix(df, 
                                 dimensions=['FA','MD','RD','AD'],
                                 color='Method',
-                                hover_name=list(path_dict.keys()))
+                                hover_name=df.index)
 
     fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
     fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12), margin=dict(r=0, l=0))
     
-    fig.update_traces(selectedpoints = ['000001'])
+    #fig.update_traces(selectedpoints = ['000001'])
     fig.update_traces(customdata=list(path_dict.keys()),
                      unselected={'marker': {'opacity': 0.3 }})
     return fig
@@ -284,13 +284,13 @@ def build_segm_boxplot(scalar, mode=False, segmentation_method='ROQS'):
     df = pd.DataFrame()
     if mode == False:
         df = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()    
-        fig = px.box(df, y=scalar, color='Group', hover_name=list(path_dict.keys()))
+        fig = px.box(df, y=scalar, color='Group', hover_name=df.index)
     if mode == True:
         df = pd.DataFrame()
         for segmentation_method in segmentation_methods_dict.keys():
             df_aux = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
             df = pd.concat([df, df_aux], axis=0)
-        fig = px.box(df, y=scalar, color='Method', hover_name=list(path_dict.keys()))
+        fig = px.box(df, y=scalar, color='Method', hover_name=df.index)
 
     fig.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
     fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
@@ -376,7 +376,7 @@ def build_quality_images(threshold=0.7):
         # Retrieve images and segmentation
         for subject_id in index_label:
 
-            folderpath = path_dict[subject_id] + 'CCLab/'
+            folderpath = path_dict[subject_id] + 'inCCsight/'
             filepath = folderpath + 'segm_' + name_dict[segmentation_method] + '_data.npy'
 
             children.append(html.Div([
@@ -390,7 +390,7 @@ def build_quality_images(threshold=0.7):
 
 def build_3d_visualization(subject_id):
 
-    folderpath = path_dict[subject_id] + 'CCLab/'
+    folderpath = path_dict[subject_id] + 'inCCsight/'
     filepath = folderpath + 'segm_watershed3d.npy'
 
     if os.path.exists(filepath):
@@ -429,10 +429,9 @@ def build_3d_visualization(subject_id):
     else:
         return []
 
-
 def build_subject_collapse(segmentation_method='ROQS', scalar_map='wFA', subject_id = list(path_dict.keys())[0]):
 
-    folderpath = path_dict[subject_id] + 'CCLab/'
+    folderpath = path_dict[subject_id] + 'inCCsight/'
     filepath = folderpath + 'segm_' + name_dict[segmentation_method] + '_data.npy'
 
     layout = dbc.Card([
@@ -539,7 +538,7 @@ def color_table(df, use_values_limits = True, mean = None, stdev = None):
 
     return styles
 
-def build_segm_table(mode = 'method', segmentation_method = 'ROQS', show_stdev = False, color = True, selected_cells = []):
+def build_segm_table(mode = 'method', segmentation_method = 'ROQS', show_stdev = False, color = False, selected_cells = []):
 
     if mode == 'subjects':
         df = scalar_statistics_dict[segmentation_method].reset_index().round(6)
@@ -608,7 +607,7 @@ def build_segm_table(mode = 'method', segmentation_method = 'ROQS', show_stdev =
 
     return layout
 
-def build_parcel_table(mode = 'method', segmentation_method = 'ROQS', parcellation_method = 'Witelson', scalar = 'FA', color = True):
+def build_parcel_table(mode = 'method', segmentation_method = 'ROQS', parcellation_method = 'Witelson', scalar = 'FA', color = False):
 
     if mode == 'subjects':
         df = parcellations_dict[segmentation_method][parcellation_method][scalar].reset_index()
@@ -1015,6 +1014,8 @@ app.layout = html.Div(
 
             ],
         ),
+
+
         html.Div(
             className="row",
             id="second-bottom-row",
@@ -1044,6 +1045,7 @@ app.layout = html.Div(
 
             ],
         ),
+
         html.Div(
             className="row",
             id="third-bottom-row",
@@ -1229,7 +1231,7 @@ def change_segm_table_mode(table_mode, segmentation_method, mode_bool, show_stde
     else:
         mode = 'subjects'
 
-    return [build_segm_table(mode = mode, segmentation_method = segmentation_method, show_stdev = show_stdev, color = True)]
+    return [build_segm_table(mode = mode, segmentation_method = segmentation_method, show_stdev = show_stdev, color = False)]
 
 # Change parcel table mode
 @app.callback(
