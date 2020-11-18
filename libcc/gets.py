@@ -116,30 +116,29 @@ def getFAmidline(segm, wFA_ms, n_points=200):
 
     return fa_line	
 
-def getData(parcel, FA, MD, RD, AD, get_std = False):
+def getData(parcel, FA, MD, RD, AD):
     
     import numpy as np
     
-    data = []
+    data = {}
+
+    # Initialize
+    for region in ['P1', 'P2', 'P3', 'P4', 'P5']:
+        data[region] = {}
 
     # Parcel values
     for i in range(2,7):
-        meanFA = np.mean(FA[parcel==i])
-        stdFA = np.std(FA[parcel==i])
-        
-        meanMD = np.mean(MD[parcel==i])
-        stdMD = np.std(MD[parcel==i])
+        data['P'+str(i-1)]['FA'] = np.mean(FA[parcel==i])
+        data['P'+str(i-1)]['FA StdDev'] = np.std(FA[parcel==i])
 
-        meanRD = np.mean(RD[parcel==i])
-        stdRD = np.std(RD[parcel==i])
+        data['P'+str(i-1)]['MD'] = np.mean(MD[parcel==i])
+        data['P'+str(i-1)]['MD StdDev'] = np.std(MD[parcel==i])
 
-        meanAD = np.mean(AD[parcel==i])
-        stdAD = np.std(AD[parcel==i])
+        data['P'+str(i-1)]['RD'] = np.mean(RD[parcel==i])
+        data['P'+str(i-1)]['RD StdDev'] = np.std(RD[parcel==i])
 
-        if get_std is True:
-            data.append([meanFA, stdFA, meanMD, stdMD, meanRD, stdRD, meanAD, stdAD])
-        else:
-            data.append([meanFA, meanMD, meanRD, meanAD])            
+        data['P'+str(i-1)]['AD'] = np.mean(AD[parcel==i])
+        data['P'+str(i-1)]['AD StdDev'] = np.std(AD[parcel==i])
 
     return data
 	

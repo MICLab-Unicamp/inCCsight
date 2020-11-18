@@ -29,39 +29,60 @@ import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
 import dash_daq as daq
+from dash.dependencies import Input, Output, State, ALL, MATCH
+from dash.exceptions import PreventUpdate
 
+from dash_extensions import Download
+from dash_extensions.snippets import send_data_frame
+
+import plotly.io as pio
 import plotly.figure_factory as ff
 import plotly.express as px
 import plotly.graph_objs as go
-from dash.dependencies import Input, Output, State, ALL, MATCH
-from dash.exceptions import PreventUpdate
+from plotly.subplots import make_subplots
+
+
+theme = 'plotly'
 
 
 # GENERAL DEFINITIONS -------------------------------------------------------------------------
 
-segmentation_methods_dict = {'ROQS': segmfuncs.segm_roqs,
+dict_segmentation_functions = {'ROQS': segmfuncs.segm_roqs,
                              'Watershed': segmfuncs.segm_watershed}
 
-parcellation_methods_dict = {'Witelson': parcelfuncs.parc_witelson,
+dict_parcellation_functions = {'Witelson': parcelfuncs.parc_witelson,
                              'Hofer': parcelfuncs.parc_hofer,
                              'Chao': parcelfuncs.parc_chao,
                              'Cover': parcelfuncs.parc_cover,
                              'Freesurfer': parcelfuncs.parc_freesurfer}
 
-segmentation_methods_3d_dict = {'Watershed3d': segmfuncs.segm_watershed_3d}
+dict_3d_segmentation_functions = {'Watershed3d': segmfuncs.segm_watershed_3d}
 
 scalar_list = ['FA', 'MD', 'RD', 'AD']
 colors_list = px.colors.qualitative.Plotly
-name_dict = {'ROQS': 'roqs', 
-             'Watershed': 'watershed'}
-name_3d_dict = {'Watershed3d':'watershed3d'}
+
+dict_segmentation_methods = {'ROQS': 'roqs', 'Watershed': 'watershed'}
+dict_3d_segmentation_methods = {'Watershed3d':'watershed3d'}
 
 # DATA IMPORTING -----------------------------------------------------------------------------
 
 # Arg parser
 opts = inputfuncs.get_parser().parse_args()
 
-# Get subjects and assemble groups considering parent folders
+df_categories = pd.DataFrame()
+
+# Read external data
+if opts.ext_data is not None:
+    
+    external_data = pd.read_excel(external_data_path, dtype={'Subjects':'object'})
+    external_data = external_data.set_index('Subjects')
+
+    df_categories = external_data.select_dtypes(include=['object'])
+    df_numerical = external_data.select_dtypes(include=np.number)
+
+    col_categories = ['Method'] + list(df_categories.columns)    
+
+# Get indicated directories
 path_dict = {}
 if opts.dirs is not None:
     for directory in opts.dirs:
@@ -70,6 +91,7 @@ if opts.dirs is not None:
                 path_dict[directory.rsplit('/', 2)[1]] = directory
 
 # Import the subjects inside the parents folders
+
 group_dict = {}
 if opts.parents is not None:
     for parent in opts.parents:
@@ -79,96 +101,98 @@ if opts.parents is not None:
             path_dict.update(directory_dict)
 
             # Create dict with subjects as keys and group (parents names) as values
-            group_dict.update(dict.fromkeys(directory_dict.keys(), [parent.rsplit('/', 1)[1]]))
-            
+            dict_folders = dict.fromkeys(directory_dict.keys(), [parent.rsplit('/', 1)[1]])
+            group_dict.update(dict_folders)
+
+
+df_group = pd.DataFrame.from_dict(group_dict, orient='index', columns=["Folder"])
+df_categories = pd.concat([df_categories, df_group], axis = 1)
 
 # DATA PROCESSING -----------------------------------------------------------------------------
 
 # Create dataframe for each segmentation method
 
-scalar_statistics_dict = {}
-scalar_midlines_dict = {}
-segmentation_mask_dict = {}
-error_prob_dict = {}
-parcellations_dict = {}
-scalar_maps_dict = {}
-
 scalar_statistics_names = ['FA','FA StdDev','MD','MD StdDev','RD','RD StdDev','AD','AD StdDev']
 scalar_midline_names = list(range(0,200))
 
+loaded_subjects = []
+
+dict_segmentation_masks = {}
+dict_scalar_maps = {}
+dict_scalar_statistics = {}
+dict_scalar_midlines = {}
+dict_error_prob = {}
+dict_parcellations_masks = {}
+dict_parcellations_statistics = {}
+dict_thickness = {}
+
 # Segment and get info
 
-for subject_name, subject_path in tqdm(path_dict.items()):
-
-    for segmentation_method in segmentation_methods_dict.keys():
-
-        if segmentation_method in opts.segm:
-
-            segmentation_mask, scalar_maps, scalar_statistics, scalar_midlines, error_prob, parcellations_masks = ccprocess.segment(subject_path, 
-                                                                                                                                   segmentation_method, 
-                                                                                                                                   segmentation_methods_dict, 
-                                                                                                                                   parcellation_methods_dict, 
-                                                                                                                                   opts.basename)
-            if segmentation_method not in scalar_statistics_dict.keys(): 
-                scalar_statistics_dict[segmentation_method] = {subject_name: list(scalar_statistics)}
-                segmentation_mask_dict[segmentation_method] = {subject_name: segmentation_mask}
-                error_prob_dict[segmentation_method] = {subject_name: error_prob}
-                parcellations_dict[segmentation_method] = {subject_name: parcellations_masks}
-                scalar_maps_dict[segmentation_method] = {subject_name: scalar_maps}
-
-                scalar_midlines_dict[segmentation_method] = {'FA':{},'MD':{},'RD':{},'AD':{}}
-                for scalar in scalar_list:
-                    scalar_midlines_dict[segmentation_method][scalar] = {subject_name: list(scalar_midlines[scalar])}
-
-            else:
-                scalar_statistics_dict[segmentation_method][subject_name] = list(scalar_statistics)
-                segmentation_mask_dict[segmentation_method][subject_name] = segmentation_mask
-                error_prob_dict[segmentation_method][subject_name] = error_prob
-                parcellations_dict[segmentation_method][subject_name] = parcellations_masks
-                scalar_maps_dict[segmentation_method][subject_name] = scalar_maps
-                
-                for scalar in scalar_list:
-                    scalar_midlines_dict[segmentation_method][scalar][subject_name] = list(scalar_midlines[scalar])
-
-    for segmentation_method_3d in segmentation_methods_3d_dict:
-
-        if segmentation_method_3d in opts.segm3d:
-
-            segmentation, segmentation3d, wFA_v, error_flag = ccprocess.segment3d(subject_path, 
-                                                                                  segmentation_method_3d, 
-                                                                                  segmentation_methods_3d_dict, 
-                                                                                  opts.basename)
+for subject_path in tqdm(path_dict.values()):
+    
+    for segmentation_method in dict_segmentation_methods.keys():    
+        
+        if segmentation_method not in dict_scalar_statistics.keys(): 
+            dict_segmentation_masks[segmentation_method] = {}
+            dict_scalar_maps[segmentation_method] = {}
+            dict_scalar_statistics[segmentation_method] = {}
+            dict_scalar_midlines[segmentation_method] = {}
+            dict_error_prob[segmentation_method] = {}
+            dict_parcellations_masks[segmentation_method] = {}
+            dict_thickness[segmentation_method] = {}
 
 
-# Transform info to pandas dataframes
+        # Get data path info
+        folderpath = subject_path + 'inCCsight/'
+        filename = 'segm_' + dict_segmentation_methods[segmentation_method] + '_data.npy'
+        subject_name = subject_path.rsplit('/', 2)[1]
 
-df_group = pd.DataFrame.from_dict(group_dict, orient='index', columns=["Group"])
+        # Process/Load data
+        segmentation_mask, scalar_maps, scalar_statistics, scalar_midlines, error_prob, parcellations_masks = ccprocess.segment(subject_path, 
+                                                                                                                               segmentation_method, 
+                                                                                                                               dict_segmentation_functions, 
+                                                                                                                               dict_parcellation_functions, 
+                                                                                                                               opts.basename)        
+        # Get thickness
+        try:
+            thick, _, _ = thickness(segmentation_mask, 200)
+        except:
+            thick = np.empty(200)
+        
+        # Assemble dictionaries
+        dict_segmentation_masks[segmentation_method][subject_name] = segmentation_mask
+        dict_scalar_maps[segmentation_method][subject_name] = scalar_maps
+        dict_scalar_statistics[segmentation_method][subject_name] = scalar_statistics
+        dict_scalar_midlines[segmentation_method][subject_name] = scalar_midlines
+        dict_error_prob[segmentation_method][subject_name] = error_prob
+        dict_parcellations_masks[segmentation_method][subject_name] = parcellations_masks
+        dict_thickness[segmentation_method][subject_name] = thick
+        
+        # Save array with subject keys
+        loaded_subjects.append(subject_name)
+    
+    
+for segmentation_method in dict_segmentation_methods.keys():
 
-for segmentation_method in segmentation_methods_dict.keys():
-    scalar_statistics_dict[segmentation_method] = pd.DataFrame.from_dict(scalar_statistics_dict[segmentation_method], 
+    # Convert to pandas dataframe
+    dict_scalar_statistics[segmentation_method] = pd.DataFrame.from_dict(dict_scalar_statistics[segmentation_method], 
                                                                          orient='index', 
                                                                          columns=scalar_statistics_names)
-    error_prob_dict[segmentation_method] = pd.DataFrame.from_dict(error_prob_dict[segmentation_method], 
-                                                                 orient='index', 
-                                                                 columns=['error_prob'])
+    dict_scalar_midlines[segmentation_method] = pd.DataFrame.from_dict(dict_scalar_midlines[segmentation_method], 
+                                                                       orient='index')
+    dict_thickness[segmentation_method] = pd.DataFrame.from_dict(dict_thickness[segmentation_method],
+                                                                 orient='index')
+    dict_error_prob[segmentation_method] = pd.DataFrame.from_dict(dict_error_prob[segmentation_method], columns=['error_prob'], orient='index')
     
-    scalar_statistics_dict[segmentation_method]['Method'] = segmentation_method
-    error_prob_dict[segmentation_method]['Method'] = segmentation_method
-    
-    parcellations_dict[segmentation_method] = inputfuncs.parcellations_dfs_dicts(scalar_maps_dict[segmentation_method], parcellations_dict[segmentation_method], segmentation_method)
-
-    for scalar in scalar_list:
-        scalar_midlines_dict[segmentation_method][scalar] = pd.DataFrame.from_dict(scalar_midlines_dict[segmentation_method][scalar], 
-                                                                                   orient='index', 
-                                                                                   columns=scalar_midline_names)
-        scalar_midlines_dict[segmentation_method][scalar]['Method'] = segmentation_method
+    dict_parcellations_statistics[segmentation_method] = inputfuncs.parcellations_dfs_dicts(dict_scalar_maps[segmentation_method], dict_parcellations_masks[segmentation_method], segmentation_method)
 
 
 # VISUALIZATION -------------------------------------------------------------------------------
 
 app = dash.Dash(__name__, 
                meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=.8, maximum-scale=.8"}],
-               external_stylesheets = [dbc.themes.BOOTSTRAP])
+               external_stylesheets = [dbc.themes.BOOTSTRAP],
+               prevent_initial_callbacks=True)
 server = app.server
 app.config["suppress_callback_exceptions"] = True
 
@@ -192,111 +216,350 @@ def build_banner():
 def build_graph_title(title):
     return html.P(className="graph-title", children=title)
 
-def build_segm_scatterplot(mode=False, segmentation_method = 'ROQS', scalar_x = 'FA', scalar_y = 'MD', selected_points = None):
+# DataViz ------------------------------------------------------------------------------------
+
+def build_group_segm_boxplot(mode='Method', segmentation_method='ROQS', extra_dims=[]):
+
+    std_colors = pio.templates[theme]['layout']['colorway']
+        
+    if mode == 'Method':
+    
+        df = pd.DataFrame()
+        scalar_names = ['FA', 'MD', 'RD', 'AD']
+        subplots = make_subplots(rows=1, cols=len(scalar_names), subplot_titles=scalar_names)
+    
+        for i, scalar in enumerate(scalar_names):
+            
+            for j, segmentation_method in enumerate(dict_segmentation_methods.keys()):
+                
+                df = dict_scalar_statistics[segmentation_method]
+                
+                subplots.add_trace(go.Box(y=df[scalar], name=segmentation_method, legendgroup=segmentation_method, marker=dict(color=std_colors[j])), row=1, col=i+1)
+
+                if i == 0:
+                    subplots.data[-1].update(name=segmentation_method, legendgroup=segmentation_method)
+                else:
+                    subplots.data[-1].update(showlegend=False)
+
+    else:
+
+        scalar_names = ['FA', 'MD', 'RD', 'AD'] + extra_dims
+        subplots = make_subplots(rows=1, cols=len(scalar_names), subplot_titles=scalar_names)
+        
+        if len(extra_dims) == 0:
+            df = pd.DataFrame()
+        else:
+            df = df_numerical[extra_dims]
+    
+        df = pd.concat([df, df_categories[mode], dict_scalar_statistics[segmentation_method]], axis=1)
+        df = df.dropna(axis=0)
+        
+        categories = set(df[mode])
+        
+        for i, scalar in enumerate(scalar_names):
+            
+            for j, category in enumerate(categories):
+                
+                subplots.add_trace(go.Box(y=df[df[mode] == category][scalar], name=category, legendgroup=category, marker=dict(color=std_colors[j])), row=1, col=i+1)
+
+                if i == 0:
+                    subplots.data[-1].update(name=category, legendgroup=category)
+                else:
+                    subplots.data[-1].update(showlegend=False)
+
+    subplots.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h")
+    subplots.update_layout(font=dict(family="Open Sans, sans-serif", size=12))    
+    
+    return subplots
+
+def build_parcel_boxplot(scalar, mode='Method', segmentation_method='ROQS', parcellation_method='Witelson'):
+
+    std_colors = pio.templates[theme]['layout']['colorway']
+    
+    parcel_names = ['P1', 'P2', 'P3', 'P4', 'P5']
+    subplots = make_subplots(rows=1, cols=5, subplot_titles=parcel_names)
+    
+    if mode == 'Method':
+        
+        for i, parcel in enumerate(parcel_names):
+            
+            for j, segmentation_method in enumerate(dict_segmentation_methods.keys()):
+                df = dict_parcellations_statistics[segmentation_method][parcellation_method][scalar]
+                subplots.add_trace(go.Box(y=df[parcel], name=segmentation_method, legendgroup=segmentation_method, marker=dict(color=std_colors[j])), row=1, col=i+1)
+
+                if i == 0:
+                    subplots.data[-1].update(name=segmentation_method, legendgroup=segmentation_method)
+                else:
+                    subplots.data[-1].update(showlegend=False)
+
+    else:
+        
+        df = dict_parcellations_statistics[segmentation_method][parcellation_method][scalar]
+        df = pd.concat([df_categories, df], axis=1)
+        df = df.dropna(axis=0)
+        
+        categories = set(df[mode])
+        
+        for i, parcel in enumerate(parcel_names):
+            
+            for j, category in enumerate(categories):
+                
+                subplots.add_trace(go.Box(y=df[df[mode] == category][parcel], name=category, legendgroup=category, marker=dict(color=std_colors[j])), row=1, col=i+1)
+
+                if i == 0:
+                    subplots.data[-1].update(name=category, legendgroup=category)
+                else:
+                    subplots.data[-1].update(showlegend=False)
+
+    subplots.update_layout(title_text=scalar)
+    
+    return subplots
+
+def build_segm_scatterplot(mode='Method', segmentation_method = 'ROQS', scalar_x = 'FA', scalar_y = 'MD'):
 
     df = pd.DataFrame()
-    if mode is False:
-        df = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
-        fig = px.scatter(df, 
-                        x=scalar_x, 
-                        y=scalar_y, 
-                        color="Group", 
-                        marginal_y="violin", 
-                        marginal_x="histogram",
-                        hover_name=df.index)
 
-    elif mode is True:
+    if mode == 'Method':
         df = pd.DataFrame()
-        for segmentation_method in segmentation_methods_dict.keys():
-            df_aux = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
+        for segmentation_method in dict_segmentation_methods.keys():
+            df_aux = dict_scalar_statistics[segmentation_method]
+            df_aux['Method'] = segmentation_method 
             df = pd.concat([df, df_aux], axis=0)
 
-        fig = px.scatter(df, 
-                        x=scalar_x, 
-                        y=scalar_y, 
-                        color="Method", 
-                        marginal_y="violin", 
-                        marginal_x="histogram",
-                        hover_name=df.index)
+    else:
+        df = pd.concat([df_categories[mode], dict_scalar_statistics[segmentation_method]], axis=1)
+        df = pd.concat([df, df_numerical], axis=1)        
+        
+    df = df.dropna(axis=0)
+    fig = px.scatter(df, 
+                    x=scalar_x, 
+                    y=scalar_y, 
+                    color=mode, 
+                    marginal_y="violin", 
+                    marginal_x="histogram",
+                    hover_name=df.index)
 
     fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
     fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
     
-    fig.update_traces(customdata=list(path_dict.keys()),
-                      unselected={'marker': {'opacity': 0.3 }})
-
     return fig
 
-def build_segm_scattermatrix(mode=False, segmentation_method = 'ROQS', selected_points=None):
+def build_segm_scattermatrix(mode='Method', segmentation_method = 'ROQS', extra_dims = []):
 
+    dimensions = ['FA','MD','RD','AD']
     df = pd.DataFrame()
-    if mode == False:
-        df = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
-        fig = px.scatter_matrix(df, 
-                                dimensions=['FA','MD','RD','AD'],
-                                color='Group',
-                                hover_name=df.index)
-    if mode == True:
-        df = pd.DataFrame()
-        for segmentation_method in segmentation_methods_dict.keys():
-            df_aux = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
+
+    if mode == 'Method':
+        for segmentation_method in dict_segmentation_methods.keys():
+            df_aux = dict_scalar_statistics[segmentation_method]
+            df_aux['Method'] = segmentation_method 
             df = pd.concat([df, df_aux], axis=0)
-        fig = px.scatter_matrix(df, 
-                                dimensions=['FA','MD','RD','AD'],
-                                color='Method',
-                                hover_name=df.index)
+    
+    else:
+        df = pd.concat([df_categories[mode], dict_scalar_statistics[segmentation_method]], axis=1)
+    
+        if len(extra_dims) > 0:
+            dimensions = ['FA','MD','RD','AD'] + extra_dims
+            df = pd.concat([df, df_numerical], axis=1)
+
+    df = df.dropna(axis=0)
+    fig = px.scatter_matrix(df, 
+                            dimensions=dimensions,
+                            color=mode,
+                            hover_name=df.index)
 
     fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
     fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12), margin=dict(r=0, l=0))
-    
-    #fig.update_traces(selectedpoints = ['000001'])
-    fig.update_traces(customdata=list(path_dict.keys()),
-                     unselected={'marker': {'opacity': 0.3 }})
+
     return fig
 
-def build_midline_plot(mode=False, segmentation_method='ROQS', scalar='FA'):
+def build_midline_plot(scalar='FA', mode='Method', segmentation_method='ROQS'):
 
     df = pd.DataFrame()
-    if mode == False:
-        df = pd.concat([df_group, scalar_midlines_dict[segmentation_method][scalar]], axis=1).reset_index()
-        df_grouped = df.groupby('Group').mean().transpose()
-        df_melt = pd.melt(df_grouped.reset_index(), id_vars='index', value_vars=set(np.hstack(list(group_dict.values()))))
-        
-        fig = px.line(df_melt, x='index', y='value', color='Group')
-
-    if mode == True:
-        df = pd.DataFrame()
-        for segmentation_method in segmentation_methods_dict.keys():
-            df_aux = pd.concat([df_group, scalar_midlines_dict[segmentation_method][scalar]], axis=1).reset_index()
-            df = pd.concat([df, df_aux], axis=0)
-        df_grouped = df.groupby('Method').mean().transpose()
-        df_melt = pd.melt(df_grouped.reset_index(), id_vars='index', value_vars=set(np.hstack(list(segmentation_methods_dict.keys()))))
-
-        fig = px.line(df_melt, x='index', y='value', color='Method')
     
+    if mode == 'Method':
+        for segmentation_method in dict_segmentation_methods.keys():
+            
+            if scalar in ['FA', 'MD', 'AD', 'RD']:
+                df_aux = pd.DataFrame.from_dict(dict(dict_scalar_midlines[segmentation_method][scalar]), orient='index', columns=scalar_midline_names)
+            elif scalar == 'Thickness':
+                df_aux = dict_thickness[segmentation_method]
+            
+            df_aux['Method'] = segmentation_method    
+            df = pd.concat([df, df_aux], axis=0)
+        df = df.dropna(axis=0)
+            
+        df_grouped = df.groupby('Method').mean().transpose()
+        df_melt = pd.melt(df_grouped.reset_index(), id_vars='index', value_vars=set(df[mode]))
+    
+    else:
+        if scalar in ['FA', 'MD', 'AD', 'RD']:
+            df_aux = pd.DataFrame.from_dict(dict(dict_scalar_midlines[segmentation_method][scalar]), orient='index', columns=scalar_midline_names)
+        elif scalar == 'Thickness':
+            df_aux = dict_thickness[segmentation_method]
+            
+        df = pd.concat([df_categories[mode], df_aux], axis=1)
+        df = df.dropna(axis=0)
+
+        df_grouped = df.groupby(mode).mean().transpose()
+        df_melt = pd.melt(df_grouped.reset_index(), id_vars='index', value_vars=set(df[mode]))
+        
+    fig = px.line(df_melt, x='index', y='value', color=mode)
+
     fig.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h")    
     fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
     
+    fig.update_layout(xaxis_title='Points along CC body', yaxis_title=scalar, legend_title=mode)
+    
     return fig
 
-def build_segm_boxplot(scalar, mode=False, segmentation_method='ROQS'):
+def build_bubble_grouped(mode='Method', segmentation_method='ROQS', scalar='Thickness', size=True):
+    
+    def build_bubble_plot(scalar='FA', segmentation_method='Watershed', size = True, category_index = None):
 
-    df = pd.DataFrame()
-    if mode == False:
-        df = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()    
-        fig = px.box(df, y=scalar, color='Group', hover_name=df.index)
-    if mode == True:
-        df = pd.DataFrame()
-        for segmentation_method in segmentation_methods_dict.keys():
-            df_aux = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
-            df = pd.concat([df, df_aux], axis=0)
-        fig = px.box(df, y=scalar, color='Method', hover_name=df.index)
+        df_pts = pd.read_pickle('bubble_plot_xy.pkl')
+        segm_contour = np.load('bubble_plot_contour.npy')
 
-    fig.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
+        if scalar == 'Thickness':
+            df_aux = dict_thickness[segmentation_method][list(np.linspace(0,195,40))+[199]]    
+        else:
+            df_aux = pd.DataFrame.from_dict(dict(dict_scalar_midlines[segmentation_method][scalar]), orient='index', columns=scalar_midline_names)[list(np.linspace(0,195,40))+[199]]
+
+        if category_index is not None:
+            df_aux = df_aux.loc[category_index]
+        df_pts[scalar] = df_aux.mean().reset_index()[0]
+
+        if size == True:
+            fig = px.scatter(df_pts, x="x", y="y", color = scalar, size = df_pts['Thickness'])
+            fig.update_traces(marker=dict(sizeref = 2. * max(df_pts[scalar]) / (45 ** 2)))
+        else:
+            fig = px.scatter(df_pts, x="x", y="y", color=scalar)
+            fig.update_traces(marker=dict(size=25))
+
+        fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h")    
+        fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
+
+        fig.add_trace(go.Contour(z=segm_contour, contours=dict(start=0, end=70, size=70, coloring='none'),
+                                 showscale=False, line_width=3, line=dict(color='rgba(0,0,0,.5)', dash='dot')))
+
+        return fig
+    
+    if mode == 'Method':
+        
+        n_cats = len(dict_segmentation_methods.keys())
+        fig = make_subplots(rows=n_cats, cols=1, vertical_spacing=0, shared_xaxes=True, xaxis_title='Points along CC body')
+        
+        for i, segmentation_method in enumerate(dict_segmentation_methods):
+            fig.add_trace(build_bubble_plot(scalar=scalar, segmentation_method=segmentation_method, size=size)['data'][0], row=i+1, col=1)
+            fig.update_yaxes(title_text="{} for {} method".format(scalar, segmentation_method), row=i+1, col=1)
+        
+    else:
+        
+        df = df_categories[mode]
+        df = df.dropna(axis=0)
+        n_cats = len(set(df))
+        fig = make_subplots(rows=n_cats, cols=1)
+        
+        for i, category in enumerate(set(df)):
+            category_index = df_categories.loc[df_categories[mode] == category].index
+            fig.add_trace(build_bubble_plot(scalar=scalar, segmentation_method=segmentation_method, size=size, category_index=category_index)['data'][0], row=i+1, col=1)
+            fig.update_yaxes(title_text="{} for {} category".format(scalar, category), row=i+1, col=1)
+    
+    fig.update_xaxes(title_text="Points along CC body", row=n_cats, col=1)
+    fig.update_layout(height=300*n_cats, width=800) 
     fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
-    fig.update_layout(margin = dict(l=0, r=0))
+    return fig
+
+def build_bubble_grouped_pvalue(scalar='Thickness', mode='Method', segmentation_method='ROQS', threshold=0.05):
+    
+    def build_bubble_pvalue(pvalue, threshold=0.05, size=False, gray=False):
+
+        df_pts = pd.read_pickle('bubble_plot_xy.pkl')
+        segm_contour = np.load('bubble_plot_contour.npy')
+        marker_color = 'rgba(100,100,100,0.5)'
+
+        df_pts['p-value'] = pvalue
+
+        if gray:
+            fig = px.scatter(df_pts, x="x", y="y", hover_data=['p-value'])
+            fig.update_traces(marker=(dict(color=marker_color)))
+        else:
+            fig = px.scatter(df_pts.loc[df_pts['p-value'] < threshold], x="x", y="y", color = 'p-value')
+        fig.update_traces(marker=dict(size=25))
+
+        fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h")    
+        fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
+
+        return fig
+    
+    if mode == 'Method':
+        categories = list(itertools.combinations(dict_segmentation_methods.keys(), 2))
+        n_cats = len(categories)
+        
+        fig = make_subplots(rows=n_cats, cols=1)
+        
+        for i, category in enumerate(categories):
+            
+            if scalar == 'Thickness':
+                pvalue = ttest_ind(dict_thickness[category[0]], dict_thickness[category[1]]).pvalue
+            else:
+                pvalue = ttest_ind(pd.DataFrame.from_dict(dict(dict_scalar_midlines[category[0]][scalar]), orient='index', columns=scalar_midline_names),
+                                   pd.DataFrame.from_dict(dict(dict_scalar_midlines[category[1]][scalar]), orient='index', columns=scalar_midline_names)).pvalue
+
+            pvalue = np.take(pvalue, list(np.linspace(0,195,40)))
+
+            new_gray_fig = build_bubble_pvalue(pvalue, gray=True)
+            
+            new_fig = build_bubble_pvalue(pvalue, threshold)['data']
+            
+            if len(new_fig) > 0:
+                fig.add_trace(new_gray_fig['data'][0], row=i+1, col=1)
+                fig.add_trace(new_fig[0], row=i+1, col=1)
+            else:
+                fig.add_trace(new_gray_fig['data'][0], row=i+1, col=1)
+                
+            fig.update_yaxes(title_text="{} x {}".format(category[0], category[1]), row=i+1, col=1)
+            
+    else:
+        
+        df = df_categories[mode]
+        df = df.dropna(axis=0)
+        categories = list(itertools.combinations(set(df), 2))
+        n_cats = len(categories)
+        
+        fig = make_subplots(rows=n_cats, cols=1)
+        
+        for i, category in enumerate(categories):
+            
+            if scalar == 'Thickness':
+                pvalue = ttest_ind(dict_thickness[segmentation_method].loc[df_categories[mode] == category[0]], 
+                                   dict_thickness[segmentation_method].loc[df_categories[mode] == category[1]]).pvalue
+            else:
+                pvalue = ttest_ind(pd.DataFrame.from_dict(dict(dict_scalar_midlines[segmentation_method][scalar]), orient='index', columns=scalar_midline_names).loc[df_categories[mode] == category[0]],
+                                   pd.DataFrame.from_dict(dict(dict_scalar_midlines[segmentation_method][scalar]), orient='index', columns=scalar_midline_names).loc[df_categories[mode] == category[1]]).pvalue
+    
+            pvalue = np.take(pvalue, list(np.linspace(0,195,40)))
+
+            new_gray_fig = build_bubble_pvalue(pvalue, gray=True)
+            
+            new_fig = build_bubble_pvalue(pvalue, threshold)['data']
+            
+            if len(new_fig) > 0:
+                fig.add_trace(new_gray_fig['data'][0], row=i+1, col=1)
+                fig.add_trace(new_fig[0], row=i+1, col=1)
+            else:
+                fig.add_trace(new_gray_fig['data'][0], row=i+1, col=1)
+                
+            fig.update_yaxes(title_text="{} x {}".format(category[0], category[1]), row=i+1, col=1)
+           
+    fig.update_layout(height=300*n_cats, width=800) 
+    fig.update_xaxes(title_text="Points along CC body", row=n_cats, col=1)
+    fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h")    
+    fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
 
     return fig
+
+# -----------------------------------------------------------------------------------------
 
 def build_scalar_compare_dropdowns():
 
@@ -364,10 +627,10 @@ def build_quality_images(threshold=0.7):
     
     children = []
 
-    for segmentation_method in segmentation_methods_dict.keys():
+    for segmentation_method in dict_segmentation_functions.keys():
         
         # Get error probs
-        df = error_prob_dict[segmentation_method] 
+        df = dict_error_prob[segmentation_method]
         df.sort_values(by=['error_prob'])
         
         # Order by error probs
@@ -377,7 +640,7 @@ def build_quality_images(threshold=0.7):
         for subject_id in index_label:
 
             folderpath = path_dict[subject_id] + 'inCCsight/'
-            filepath = folderpath + 'segm_' + name_dict[segmentation_method] + '_data.npy'
+            filepath = folderpath + 'segm_' + dict_segmentation_methods[segmentation_method] + '_data.npy'
 
             children.append(html.Div([
                                 html.Div([
@@ -540,21 +803,26 @@ def color_table(df, use_values_limits = True, mean = None, stdev = None):
 
 def build_segm_table(mode = 'method', segmentation_method = 'ROQS', show_stdev = False, color = False, selected_cells = []):
 
+    print(df_categories)
+
     if mode == 'subjects':
-        df = scalar_statistics_dict[segmentation_method].reset_index().round(6)
+        df = dict_scalar_statistics[segmentation_method].reset_index()
         names = ['index','FA','RD','AD','MD']
     elif mode == 'groups':
-        df = scalar_statistics_dict[segmentation_method]
+        df = dict_scalar_statistics[segmentation_method]
         df = pd.concat([df_group, df], axis=1).reset_index()
-        df = df.groupby('Group').mean().reset_index().round(6)
+        df = df.groupby('Group').mean().reset_index()
         names = ['Group','FA','RD','AD','MD']
     elif mode == 'method':
         df = pd.DataFrame()
-        for segmentation_method in segmentation_methods_dict.keys():
-            df_aux = pd.concat([df_group, scalar_statistics_dict[segmentation_method]], axis=1).reset_index()
+        for segmentation_method in dict_segmentation_functions.keys():
+            df_aux = pd.concat([df_group, dict_scalar_statistics[segmentation_method]], axis=1).reset_index()
+            df_aux['Method'] = segmentation_method
             df = pd.concat([df, df_aux], axis=0)
-        df = df.groupby('Method').mean().reset_index().round(6)
+        df = df.groupby('Method').mean().reset_index()
         names = ['Method','FA','RD','AD','MD']
+
+    df = df.round(6)
 
     if mode == 'groups' or mode == 'method':
         style_data_conditional = []
@@ -607,45 +875,48 @@ def build_segm_table(mode = 'method', segmentation_method = 'ROQS', show_stdev =
 
     return layout
 
-def build_parcel_table(mode = 'method', segmentation_method = 'ROQS', parcellation_method = 'Witelson', scalar = 'FA', color = False):
+def build_parcel_table(mode = 'subjects', segmentation_method = 'ROQS', parcellation_method = 'Witelson', scalar = 'FA', color = False):
+    
+    list_regions = ['P1', 'P2', 'P3', 'P4', 'P5']
 
     if mode == 'subjects':
-        df = parcellations_dict[segmentation_method][parcellation_method][scalar].reset_index()
-        names = ['index', 'P1', 'P2', 'P3', 'P4', 'P5']
+        df = pd.DataFrame()
+        for region in list_regions:
+            df = pd.concat([df, dict_parcellations_statistics[segmentation_method][parcellation_method][region][scalar]], axis=1)
+        names = ['Subject'] + list_regions
+
     elif mode == 'groups':
-        df = parcellations_dict[segmentation_method][parcellation_method][scalar]
+        df = dict_parcellations_statistics[segmentation_method][parcellation_method][scalar]
         df = pd.concat([df_group, df], axis=1)
         df = df.groupby('Group').mean().reset_index().round(6)
         names = ['Group', 'P1', 'P2', 'P3', 'P4', 'P5']
     elif mode == 'method':
         df = pd.DataFrame()
-        for segmentation_method in segmentation_methods_dict.keys():
-            df_aux = pd.concat([df_group, parcellations_dict[segmentation_method][parcellation_method][scalar]], axis=1).reset_index()
+        for segmentation_method in dict_segmentation_functions.keys():
+            df_aux = pd.concat([df_group, dict_parcellations_statistics[segmentation_method][parcellation_method][scalar]], axis=1).reset_index()
             df = pd.concat([df, df_aux], axis=0)
         df = df.groupby('Method').mean().reset_index().round(6)
         names = ['Method', 'P1', 'P2', 'P3', 'P4', 'P5']
 
-    if mode == 'groups' or mode == 'method':
-        style_data_conditional = []
+    #if mode == 'groups' or mode == 'method':
+    style_data_conditional = []
 
-        style_data_conditional.append({'if': {'row_index': 'odd'},
-                                          'backgroundColor': 'rgb(248, 248, 248)'})
-        style_data_conditional.append({'if': {'row_index': 'odd', 'state': 'selected'},
-                                       'backgroundColor': 'rgb(248, 248, 248)'})
-        style_data_conditional.append({'if': {'row_index': 'even'},
-                                  'backgroundColor': 'rgb(255, 255, 255)'})
-        style_data_conditional.append({'if': {'row_index': 'even', 'state': 'selected'},
-                                       'backgroundColor': 'rgb(255, 255, 255)'})
-    elif mode == 'subjects':
-        style_data_conditional = color_table(df)
+    style_data_conditional.append({'if': {'row_index': 'odd'},
+                                      'backgroundColor': 'rgb(248, 248, 248)'})
+    style_data_conditional.append({'if': {'row_index': 'odd', 'state': 'selected'},
+                                   'backgroundColor': 'rgb(248, 248, 248)'})
+    style_data_conditional.append({'if': {'row_index': 'even'},
+                              'backgroundColor': 'rgb(255, 255, 255)'})
+    style_data_conditional.append({'if': {'row_index': 'even', 'state': 'selected'},
+                                   'backgroundColor': 'rgb(255, 255, 255)'})
+    #elif mode == 'subjects':
+    #    style_data_conditional = color_table(df)
 
-    style_data_conditional.append({'if': {'state': 'selected'},
-                                   "border": "3px solid blue"})
-
+    
     layout = dash_table.DataTable(
         id = 'parcel_table',
-        columns = [{"name": i, "id": i} for i in names],
-        data = df.to_dict('records'),
+        columns = [{"name": i, "id": i} for i in ['P']],
+        data = df.round(6),
 
         page_action = 'none',
         fixed_rows = {'headers': True},
@@ -668,6 +939,18 @@ def build_parcel_table(mode = 'method', segmentation_method = 'ROQS', parcellati
     )
 
     return layout
+
+def export_parcel_table(segmentation_method = 'ROQS', parcellation_method = 'Witelson'):
+
+    list_regions = ['P1', 'P2', 'P3', 'P4', 'P5']
+
+    df = pd.concat(dict_parcellations_statistics[segmentation_method][parcellation_method].values(), 
+                   axis = 1, 
+                   keys = dict_parcellations_statistics[segmentation_method][parcellation_method].keys())
+
+    filename = "inCCsight_parceldata_{}_{}.xlsx".format(segmentation_method, parcellation_method)
+
+    return send_data_frame(df.to_excel, filename)
 
 # ---------------------------------- LAYOUT -----------------------------------------------
 app.layout = html.Div(
@@ -700,9 +983,9 @@ app.layout = html.Div(
                                 html.Div(className='row', style=dict(justifyContent='center'), 
                                     children=[
                                        dcc.Dropdown(id='dropdown_segm_methods',
-                                             options=[{'label': method, 'value': method} for method in segmentation_methods_dict.keys()],
+                                             options=[{'label': method, 'value': method} for method in dict_segmentation_functions.keys()],
                                              multi=False,
-                                             value=list(segmentation_methods_dict.keys())[0],
+                                             value=list(dict_segmentation_functions.keys())[0],
                                              style={'width':'150px'})
                                 ]),
 
@@ -892,23 +1175,26 @@ app.layout = html.Div(
                                         {'label': 'Hide', 'value': False},
                                     ],
                                     value = False,
-                                ),  
+                                ),
+
                             ],
                         ),
                     ],
                 ),
-
+                
                 html.Div(
                     id = 'parcel_table_super_container',
                     className = 'six columns',
                     children = [
                         build_graph_title("Parcellation data"),
-                        html.Div(
-                            id = 'parcel_table_container',
-                            children = [build_parcel_table(
-                                            segmentation_method = 'ROQS', 
-                                            parcellation_method = 'Witelson', 
-                                            scalar = 'FA')]),
+                        
+                        #html.Div(
+                        #    id = 'parcel_table_container',
+                        #    children = [build_parcel_table(
+                        #                    segmentation_method = 'ROQS', 
+                        #                    parcellation_method = 'Witelson', 
+                        #                    scalar = 'FA')]),
+                        
                         html.Div(
                             id = 'parcel_table_options',
                             className = 'table-options',
@@ -922,7 +1208,7 @@ app.layout = html.Div(
                                     options=[{'label': 'Overall', 'value': 'overall'},
                                              {'label': 'Subjects', 'value': 'subjects'}],
                                     multi=False,
-                                    value='overall',
+                                    value='subjects',
                                 ),
                                 
                                 html.H6('Parcel. method:', className='table-options-title'),
@@ -953,12 +1239,19 @@ app.layout = html.Div(
                                     ],
                                     value = 'FA'
                                 ),                
-                            
+
+                                html.Button(
+                                    id='parcel_download_all_btn',
+                                    children='Download all data', 
+                                ),
+
+                                Download(id="parcel_download_all"),
 
                             ],
                         ),
                     ],
                 )
+                
 
             ]
         ),
@@ -970,36 +1263,13 @@ app.layout = html.Div(
 
                 html.Div(
                         id="boxplot-container1",
-                        className="two columns",
+                        className="eight columns",
                         children=[
-                            build_graph_title("FA BoxPlot"),
-                            dcc.Graph(id="boxplotFA", figure=build_segm_boxplot(scalar="FA")),
+                            build_graph_title("Segmentation BoxPlots"),
+                            dcc.Graph(id="segm_boxplots", figure=build_group_segm_boxplot()),
                         ],
                     ),
-                html.Div(
-                        id="boxplot-container2",
-                        className="two columns",
-                        children=[
-                            build_graph_title("MD BoxPlot"),
-                            dcc.Graph(id="boxplotMD", figure=build_segm_boxplot(scalar="MD")),
-                        ],
-                    ),
-                html.Div(
-                        id="boxplot-container3",
-                        className="two columns",
-                        children=[
-                            build_graph_title("RD BoxPlot"),
-                            dcc.Graph(id="boxplotRD", figure=build_segm_boxplot(scalar="RD")),
-                        ],
-                    ),
-                html.Div(
-                        id="boxplot-container4",
-                        className="two columns",
-                        children=[
-                            build_graph_title("AD BoxPlot"),
-                            dcc.Graph(id="boxplotAD", figure=build_segm_boxplot(scalar="AD")),
-                        ],
-                    ),
+
                 
                 # Midline plots
                 html.Div(
@@ -1074,7 +1344,7 @@ app.layout = html.Div(
 
             ],
         ),
-    ]
+    ],
 )
 
 
@@ -1232,7 +1502,7 @@ def change_segm_table_mode(table_mode, segmentation_method, mode_bool, show_stde
         mode = 'subjects'
 
     return [build_segm_table(mode = mode, segmentation_method = segmentation_method, show_stdev = show_stdev, color = False)]
-
+'''
 # Change parcel table mode
 @app.callback(
     Output("parcel_table_container", "children"),
@@ -1257,8 +1527,8 @@ def change_parcel_table_mode(mode_bool, segmentation_method, table_mode, parcell
                 segmentation_method = segmentation_method, 
                 parcellation_method = parcellation_method,
                 scalar = scalar,
-                color = True)]
-
+                color = False)]
+'''
 # Highlight table row borders upon clicking
 @app.callback(
     Output("segm_table", "style_data_conditional"),
@@ -1283,6 +1553,7 @@ def paint_segm_table(selected_cells, table_data, style_data_conditional):
     
     return style_data_conditional
 
+'''
 # Highlight table row borders upon clicking
 @app.callback(
     Output("parcel_table", "style_data_conditional"),
@@ -1290,7 +1561,6 @@ def paint_segm_table(selected_cells, table_data, style_data_conditional):
     [State("parcel_table", "data"),
      State('parcel_table', 'style_data_conditional')])
 def paint_parcel_table(selected_cells, table_data, style_data_conditional):
- 
     n_rows = len(table_data)
 
     for row in range(n_rows):
@@ -1306,8 +1576,16 @@ def paint_parcel_table(selected_cells, table_data, style_data_conditional):
                                            "border": "3px solid blue"})
     
     return style_data_conditional
-
 '''
+
+@app.callback(
+    Output("parcel_download_all", "data"), 
+    [Input("parcel_download_all_btn", "n_clicks")],
+    [State("dropdown_segm_methods", "value")])
+def download_parceldata(n_clicks, segmentation_method): 
+    return export_parcel_table(segmentation_method, 'Witelson')
+'''
+
 @app.callback(
     [Output('scatter_plot_2', 'figure'),
      Output('scatter_matrix_2', 'figure')],
