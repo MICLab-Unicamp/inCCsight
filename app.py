@@ -270,7 +270,7 @@ def build_group_segm_boxplot(mode='Method', segmentation_method='ROQS', extra_di
                     subplots.data[-1].update(showlegend=False)
 
     subplots.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h")
-    subplots.update_layout(font=dict(family="Open Sans, sans-serif", size=12), margin=dict(r=0, l=0, t=40))
+    subplots.update_layout(font=dict(family="Open Sans, sans-serif", size=12), margin=dict(r=0, l=0, t=60))
     
     return subplots
 
@@ -326,7 +326,7 @@ def build_parcel_boxplot(scalar='FA', mode='Method', segmentation_method='ROQS',
                     subplots.data[-1].update(showlegend=False)
 
     subplots.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h")
-    subplots.update_layout(font=dict(family="Open Sans, sans-serif", size=12), margin=dict(r=0, l=0, t=40))
+    subplots.update_layout(font=dict(family="Open Sans, sans-serif", size=12), margin=dict(r=0, l=0, t=60))
     
     return subplots
 
@@ -354,7 +354,7 @@ def build_segm_scatterplot(mode='Method', segmentation_method = 'ROQS', scalar_x
                     marginal_x="histogram",
                     hover_name=df.index)
 
-    fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
+    fig.update_layout(height=850, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
     fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
     
     return fig
@@ -383,7 +383,12 @@ def build_segm_scattermatrix(mode='Method', segmentation_method = 'ROQS', extra_
                             color=mode,
                             hover_name=df.index)
 
-    fig.update_layout(height=600, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
+    if mode == 'Method':
+        n_cats = len(dict_segmentation_methods.keys())
+    else:
+        n_cats = len(set(df_categories[mode].dropna(axis=0)))
+
+    fig.update_layout(height=250*n_cats, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
     fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12), margin=dict(r=0, l=0))
 
     return fig
@@ -428,7 +433,7 @@ def build_midline_plot(scalar='FA', mode='Method', segmentation_method='ROQS'):
     
     return fig
 
-def build_bubble_grouped(mode='Method', segmentation_method='ROQS', scalar='Thickness', size=True):
+def build_bubble_grouped(mode='Method', segmentation_method='ROQS', scalar='FA', size=False):
     
     def build_bubble_plot(scalar='FA', segmentation_method='Watershed', size = True, category_index = None):
 
@@ -445,7 +450,7 @@ def build_bubble_grouped(mode='Method', segmentation_method='ROQS', scalar='Thic
         df_pts[scalar] = df_aux.mean().reset_index()[0]
 
         if size == True:
-            fig = px.scatter(df_pts, x="x", y="y", color = scalar, size = df_pts['Thickness'])
+            fig = px.scatter(df_pts, x="x", y="y", color = scalar, size = df_pts[scalar])
             fig.update_traces(marker=dict(sizeref = 2. * max(df_pts[scalar]) / (45 ** 2)))
         else:
             fig = px.scatter(df_pts, x="x", y="y", color=scalar)
@@ -462,7 +467,7 @@ def build_bubble_grouped(mode='Method', segmentation_method='ROQS', scalar='Thic
     if mode == 'Method':
         
         n_cats = len(dict_segmentation_methods.keys())
-        fig = make_subplots(rows=n_cats, cols=1, vertical_spacing=0, shared_xaxes=True, xaxis_title='Points along CC body')
+        fig = make_subplots(rows=n_cats, cols=1, vertical_spacing=0.1/n_cats)
         
         for i, segmentation_method in enumerate(dict_segmentation_methods):
             fig.add_trace(build_bubble_plot(scalar=scalar, segmentation_method=segmentation_method, size=size)['data'][0], row=i+1, col=1)
@@ -473,7 +478,7 @@ def build_bubble_grouped(mode='Method', segmentation_method='ROQS', scalar='Thic
         df = df_categories[mode]
         df = df.dropna(axis=0)
         n_cats = len(set(df))
-        fig = make_subplots(rows=n_cats, cols=1)
+        fig = make_subplots(rows=n_cats, cols=1, vertical_spacing=0.1/n_cats)
         
         for i, category in enumerate(set(df)):
             category_index = df_categories.loc[df_categories[mode] == category].index
@@ -481,8 +486,8 @@ def build_bubble_grouped(mode='Method', segmentation_method='ROQS', scalar='Thic
             fig.update_yaxes(title_text="{} for {} category".format(scalar, category), row=i+1, col=1)
     
     fig.update_xaxes(title_text="Points along CC body", row=n_cats, col=1)
-    fig.update_layout(height=300*n_cats, width=800) 
-    fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
+    fig.update_layout(height=250*n_cats, paper_bgcolor='rgba(0,0,0,0)') 
+    fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12), margin=dict(r=0, l=0, t=60))
     return fig
 
 def build_bubble_grouped_pvalue(scalar='Thickness', mode='Method', segmentation_method='ROQS', threshold=0.05):
@@ -542,7 +547,7 @@ def build_bubble_grouped_pvalue(scalar='Thickness', mode='Method', segmentation_
         categories = list(itertools.combinations(set(df), 2))
         n_cats = len(categories)
         
-        fig = make_subplots(rows=n_cats, cols=1)
+        fig = make_subplots(rows=n_cats, cols=1, x_title='Statistic Meaningful Differences (p < 0.05)')
         
         for i, category in enumerate(categories):
             
@@ -576,26 +581,45 @@ def build_bubble_grouped_pvalue(scalar='Thickness', mode='Method', segmentation_
 
 # -----------------------------------------------------------------------------------------
 
-def build_scalar_compare_dropdowns():
+def build_midlineplot_dropdown():
+
+    options = [{'label': scalar, 'value': scalar} for scalar in scalar_list+['Thickness']]
+
+    layout = html.Div([
+                html.Div([
+                    html.H6('Scalar:', className='table-options-title', style={'padding':'0px 10px 0px 10px'}),
+                    dcc.Dropdown(id='dropdown-midline-scalars',
+                                 options=options,
+                                 multi=False,
+                                 value='FA',
+                                 style={'width':'120px'}),
+                ], className='row', style=dict(display='flex', justifyContent='left', verticalAlign='center')),
+            ]
+        )
+    return layout
+
+def build_segm_scatterplot_dropdowns():
 
     options = [{'label': scalar, 'value': scalar} for scalar in scalar_list]
 
     layout = html.Div([
                 html.Div([
+                    html.H6('Scalar Y:', className='table-options-title', style={'padding':'0px 10px 0px 10px'}),
                     dcc.Dropdown(id='dropdown-scalars-left',
                                  options=options,
                                  multi=False,
                                  value='FA',
-                                 style={'float': 'right', 'width':'150px'}),
+                                 style={'width':'120px'}),
+                    html.H6('Scalar X:', className='table-options-title', style={'padding':'0px 10px 0px 30px'}),
                     dcc.Dropdown(id='dropdown-scalars-right',
                                  options=options,
                                  multi=False,
                                  value='RD',
-                                 style={'float': 'right', 'width':'150px', 'margin-left':'20px'})
-                ], className='row', style={'justifyContent':'center'}),
+                                 style={'width':'120px'}),
+                ], className='row', style=dict(display='flex', justifyContent='left', verticalAlign='center')),
             ]
         )
-    return layout
+    return layout 
 
 def build_parcel_boxplot_dropdowns():
 
@@ -621,21 +645,31 @@ def build_parcel_boxplot_dropdowns():
         )
     return layout    
 
-def built_scalar_dropdown():
+def build_bubbleplot_dropdowns():
 
-    options = [{'label': scalar, 'value': scalar} for scalar in scalar_list]
+    options_scalars = [{'label': scalar, 'value': scalar} for scalar in scalar_list+['Thickness']]
+    options_size = [{'label': scalar, 'value': scalar} for scalar in ['True', 'False']]
 
     layout = html.Div([
                 html.Div([
-                    dcc.Dropdown(id='dropdown-scalars',
-                                 options=options,
+                    html.H6('Scalar:', className='table-options-title', style={'padding':'0px 10px 0px 10px'}),
+                    dcc.Dropdown(id='dropdown-bubbleplot-left',
+                                 options=options_scalars,
                                  multi=False,
                                  value='FA',
-                                 style={'float': 'right', 'width':'150px'}),
-                ], className='row', style={'justifyContent':'center'}),
+                                 style={'width':'150px'}),
+                    html.H6('Size:', className='table-options-title', style={'padding':'0px 10px 0px 30px'}),
+                    dcc.Dropdown(id='dropdown-bubbleplot-right',
+                                 options=options_size,
+                                 multi=False,
+                                 value='False',
+                                 style={'width':'120px'})
+                ], className='row', style=dict(display='flex', justifyContent='left', verticalAlign='center')),
             ]
         )
-    return layout
+    return layout    
+
+# -----------------------------------------------------------------------------------------
 
 def build_quality_collapse():
 
@@ -1314,26 +1348,41 @@ app.layout = html.Div(
             children=[
 
                 html.Div(
-                        id="boxplot-container1",
-                        className="eight columns",
-                        children=[
-                            build_graph_title("Segmentation BoxPlots"),
-                            dcc.Graph(id="segm_boxplots", figure=build_group_segm_boxplot()),
-                        ],
-                    ),
-
-                
-                # Midline plots
-                html.Div(
-                    id="midline-container",
-                    className="four columns",
+                    id="bottom-row-left-column",
+                    className="eight columns",
                     children=[
-                        build_graph_title("Midline Plots"),
-                        dcc.Graph(id="midline_graph", figure=build_midline_plot()),
-                        built_scalar_dropdown(),
+                    
+                        html.Div(
+                            id="boxplot-container1",
+                            style=dict(marginBottom='-30px'),
+                            children=[
+                                build_graph_title("Segmentation BoxPlots"),
+                                dcc.Graph(id="segm_boxplots", figure=build_group_segm_boxplot()),
+                            ],
+                        ),
+
+                        html.Div(
+                            id="boxplot-container2",
+                            #style=dict(maginTop='0px'),
+                            children=[
+                                build_graph_title("Parcellation BoxPlots"),
+                                dcc.Graph(id="parc_boxplots", figure=build_parcel_boxplot()),
+                                build_parcel_boxplot_dropdowns(),
+                            ],
+                        ),
                     ],
                 ),
-
+                
+                # Scatterplot
+                html.Div(
+                    id="scatterplot-container",
+                    className="four columns",
+                    children=[
+                        build_graph_title("Scatter Plot"),
+                        dcc.Graph(id="scatter_plot", figure=build_segm_scatterplot()),
+                        build_segm_scatterplot_dropdowns(),
+                    ],
+                ),
             ],
         ),
 
@@ -1341,9 +1390,8 @@ app.layout = html.Div(
             className="row",
             id="second-bottom-row",
             children=[
-
             
-                # Scatter boxplot
+                # Scattermatrix
                 html.Div(
                     id="scattermatrix-container",
                     className="eight columns",
@@ -1352,14 +1400,15 @@ app.layout = html.Div(
                         dcc.Graph(id="scatter_matrix", figure=build_segm_scattermatrix()),
                     ],
                 ),
-                # Selected well productions
+
+                # Bubble plot
                 html.Div(
-                    id="scatterplot-container",
+                    id="bubbleplot-container",
                     className="four columns",
                     children=[
-                        build_graph_title("Scatter Plot"),
-                        dcc.Graph(id="scatter_plot", figure=build_segm_scatterplot()),
-                        build_scalar_compare_dropdowns(),
+                        build_graph_title("Bubble Plots"),
+                        dcc.Graph(id="bubble_plots", figure=build_bubble_grouped()),
+                        build_bubbleplot_dropdowns(),
                     ],
                 ),
 
@@ -1371,18 +1420,20 @@ app.layout = html.Div(
             id="third-bottom-row",
             children=[
 
-                html.Div(
-                        id="boxplot-container2",
-                        className="eight columns",
-                        children=[
-                            build_graph_title("Parcellation BoxPlots"),
-                            dcc.Graph(id="parc_boxplots", figure=build_parcel_boxplot()),
-                            build_parcel_boxplot_dropdowns(),
-                        ],
-                    ),
 
-                ],
-            ),        
+
+                # Midline plots
+                html.Div(
+                    id="midline-container",
+                    className="four columns",
+                    children=[
+                        build_graph_title("Midline Plots"),
+                        dcc.Graph(id="midline_graph", figure=build_midline_plot()),
+                        build_midlineplot_dropdown(),
+                    ],
+                ),
+            ],
+        ),        
     ],
 )
 
@@ -1421,7 +1472,7 @@ def update_segm_boxplots(segm_method, mode, parc_method, scalar):
     Output("midline_graph", "figure"),
     [Input("dropdown_segm_methods","value"),
      Input("dropdown_category","value"),
-     Input("dropdown-scalars","value")])
+     Input("dropdown-midline-scalars","value")])
 def update_midlineplot(segm_method, mode, scalar):
     return build_midline_plot(mode=mode, segmentation_method=segm_method, scalar=scalar)
 
@@ -1442,6 +1493,19 @@ def update_scattermatrix(segm_method, mode):
      Input("dropdown-scalars-left","value")])
 def update_scatterplot(segm_method, mode, scalar_x, scalar_y):
     return build_segm_scatterplot(mode=mode, segmentation_method=segm_method, scalar_x=scalar_x, scalar_y=scalar_y)
+
+@app.callback(
+    Output("bubble_plots","figure"),
+    [Input("dropdown_segm_methods","value"),
+     Input("dropdown_category","value"),
+     Input("dropdown-bubbleplot-left", "value"),
+     Input("dropdown-bubbleplot-right", "value")])
+def update_bubbleplot(segm_method, mode, scalar, size):
+    if size == 'True':
+        size = True
+    elif size == 'False':
+        size = False
+    return build_bubble_grouped(mode=mode, segmentation_method=segm_method, scalar=scalar, size=size)
 
 # Update number of quality warnings
 @app.callback(
