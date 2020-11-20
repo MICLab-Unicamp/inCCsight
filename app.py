@@ -127,6 +127,7 @@ dict_error_prob = {}
 dict_parcellations_masks = {}
 dict_parcellations_statistics = {}
 dict_thickness = {}
+dict_removed_subjects = {}
 
 # Segment and get info
 
@@ -142,6 +143,7 @@ for subject_path in tqdm(path_dict.values()):
             dict_error_prob[segmentation_method] = {}
             dict_parcellations_masks[segmentation_method] = {}
             dict_thickness[segmentation_method] = {}
+            dict_removed_subjects[segmentation_method] = []
 
 
         # Get data path info
@@ -354,7 +356,7 @@ def build_segm_scatterplot(mode='Method', segmentation_method = 'ROQS', scalar_x
                     marginal_x="histogram",
                     hover_name=df.index)
 
-    fig.update_layout(height=850, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
+    fig.update_layout(height=800, paper_bgcolor='rgba(0,0,0,0)')
     fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
     
     return fig
@@ -683,28 +685,30 @@ def build_quality_collapse():
                                  options= [{'label': num/100, 'value': num/100} for num in np.arange(95, 5, -5)],
                                  multi=False,
                                  value='0.7',
-                                 style={'float': 'right', 'width':'150px', 'margin-left':'10px'})
+                                 style={'float': 'right', 'width':'150px', 'margin-left':'10px'}),
+                    dbc.Button("Remove Selected", color='dark', size='lg', style={'margin-left':'40px'}, id='remove_btn'),
                     ], className='row', 
                     style=dict(margin="1rem 0 0 3rem", display="flex", alignItems="center")),
                 
                 html.Div(children=build_quality_images(), 
-                    className="row", 
+                    className="twelve columns", 
                     id='photo-container',
-                    style=dict(margin="2rem 1rem 2rem 3rem", height=400, width="95%", overflowY="auto"))
+                    style=dict(margin="2rem 0rem 2rem 0rem", height="100vh", width="100%"))
             
-            ], style={'margin':'20px', 'backgroundColor':'#FAFAFA', 'border-radius':'20px'})
+            ], style={'margin':'20px', 'height':"100vh", 'backgroundColor':'#FAFAFA', 'border-radius':'20px'})
 
     return layout
 
 def build_quality_images(threshold=0.7):
     
-    children = []
-
-    for segmentation_method in dict_segmentation_functions.keys():
+    def get_quality_tab_children(segmentation_method):
         
+        children = []
+
         # Get error probs
         df = dict_error_prob[segmentation_method]
-        df.sort_values(by=['error_prob'])
+        df = df.drop(dict_removed_subjects[segmentation_method])
+        df = df.sort_values(by=['error_prob'])
         
         # Order by error probs
         index_label = df.query('error_prob > '+str(threshold)).index.tolist()
@@ -717,12 +721,47 @@ def build_quality_images(threshold=0.7):
 
             children.append(html.Div([
                                 html.Div([
-                                    html.H6("Subject: {} - Method: {}".format(subject_id, segmentation_method)),
-                                    dbc.Button("Remove", color='dark', size='lg', id={'type': 'remove_button', 'index': 'btn_{}_{}'.format(segmentation_method, subject_id)}),
-                                    ], className='row', style=dict(width='100%', display='flex', alignItems='center', justifyContent='space-between')),
+                                    html.H6("Subject: {} - Method: {}".format(subject_id, segmentation_method), 
+                                        style=dict(padding="0px 30px 0px 0px", 
+                                        fontSize='1.8rem')),
+                                    dcc.Checklist(
+                                        id={'type': 'remove-cbx', 'index': 'cbx-{}-{}'.format(segmentation_method, subject_id)},
+                                        options=[{'label': 'Remove', 'value': 'Remove'}], 
+                                        value=[], 
+                                        style=dict(fontSize='1.8rem'), inputStyle=dict(marginRight="10px")),  
+
+                                    ], className='row', style=dict(width='100%', display='flex', verticalAlign='center', justifyContent='flex-end')),
                                 dcc.Graph(figure=build_fissure_image(filepath))
-                            ], className = 'three columns'))
-    return children
+                            ], className = 'twelve columns'))
+        return children
+
+
+    def get_quality_tab(segmentation_method):
+        tab = dcc.Tab(label=segmentation_method, children=html.Div(get_quality_tab_children(segmentation_method), style=dict(height='80vh', overflowY="auto", padding='40px 20px 20px 20px')))
+        return tab
+
+    tabs = []
+
+    for segmentation_method in dict_segmentation_functions.keys():
+        tabs.append(get_quality_tab(segmentation_method))
+
+    return dcc.Tabs(tabs, style=dict(height='40px', verticalAlign='center', padding='0px 10px 0px 10px'))
+
+def build_fissure_image(filepath, scalar = 'wFA'):
+
+    scalar_maps_list = ['wFA','FA','MD','RD','AD']
+    segmentation, scalar_maps = np.load(filepath, allow_pickle=True)[:2]
+    img = scalar_maps[scalar_maps_list.index(scalar)]
+
+    contours = measure.find_contours(segmentation, 0.1)
+    contour = sorted(contours, key=lambda x: len(x))[-1]
+
+    fig = px.imshow(img, color_continuous_scale='gray', aspect='auto')
+    fig.add_trace(go.Scatter(x=contour[:, 1], y=contour[:, 0]))
+    fig.update_layout(height=200, paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h", coloraxis_showscale=False)
+    fig.update_layout(margin = dict(l=0, r=0,t=0,b=0))
+
+    return fig 
 
 def build_3d_visualization(subject_id):
 
@@ -768,7 +807,7 @@ def build_3d_visualization(subject_id):
 def build_subject_collapse(segmentation_method='ROQS', scalar_map='wFA', subject_id = list(path_dict.keys())[0]):
 
     folderpath = path_dict[subject_id] + 'inCCsight/'
-    filepath = folderpath + 'segm_' + name_dict[segmentation_method] + '_data.npy'
+    filepath = folderpath + 'segm_' + dict_segmentation_methods[segmentation_method] + '_data.npy'
 
     layout = dbc.Card([
                 build_graph_title("Subject " + subject_id),
@@ -783,22 +822,6 @@ def build_subject_collapse(segmentation_method='ROQS', scalar_map='wFA', subject
 
             ], style={'margin':'20px', 'backgroundColor':'#FAFAFA', 'border-radius':'20px'})
     return layout
-
-def build_fissure_image(filepath, scalar = 'wFA'):
-
-    scalar_maps_list = ['wFA','FA','MD','RD','AD']
-    segmentation, scalar_maps = np.load(filepath, allow_pickle=True)[:2]
-    img = scalar_maps[scalar_maps_list.index(scalar)]
-
-    contours = measure.find_contours(segmentation, 0.1)
-    contour = sorted(contours, key=lambda x: len(x))[-1]
-
-    fig = px.imshow(img, color_continuous_scale='gray', aspect='auto')
-    fig.add_trace(go.Scatter(x=contour[:, 1], y=contour[:, 0]))
-    fig.update_layout(height=300, paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h", coloraxis_showscale=False)
-    fig.update_layout(margin = dict(l=0, r=0,t=0,b=0))
-
-    return fig 
 
 # DataTable functions ---------------------------------------------------------------------
 
@@ -1213,231 +1236,284 @@ app.layout = html.Div(
             ],
         ),
         
-        dbc.Collapse(
-            dbc.Card(dbc.CardBody(build_quality_collapse())),
-            id="quality-collapse",
-        ),
-
-        dbc.Collapse(
-            dbc.Card(dbc.CardBody("very cool thingy")),
-            id="subject-collapse",
-        ),
-
+        # Dashboard row
         html.Div(
-            className = 'row',
-            id = 'tables-row',
-            children = [
+            className='row',
+            children=[    
 
-                html.Div(
-                    id = 'segm_table_super_container',
-                    className = 'six columns',
-                    children = [
-                        build_graph_title("Segmentation data"),
-                        html.Div(
-                            id = 'segm_table_container',
-                            children = [build_segm_table(show_stdev = False, color = True)]),
-                        html.Div(
-                            id = 'segm_table_options',
-                            className = 'table-options',
-                            children = [
-
-                                html.H6('Mode:', className='table-options-title'),
-
-                                dcc.Dropdown(
-                                    id='segm_table_dropdown_mode',
-                                    className = 'options-dropdown',
-                                    options=[{'label': 'Overall', 'value': 'overall'},
-                                              {'label': 'Subjects', 'value': 'subjects'}],
-                                    multi=False,
-                                    value='overall'),
-
-                                html.H6('Std.Dev.:', className='table-options-title'),
-
-                                dcc.Dropdown(
-                                    id = 'segm_table_dropdown_stdev',
-                                    className = 'options-dropdown',
-                                    options = [
-                                        {'label': 'Show', 'value': True},
-                                        {'label': 'Hide', 'value': False},
-                                    ],
-                                    value = False,
-                                ),
-
-                            ],
+                dbc.Collapse(
+                    dbc.Card(
+                        dbc.CardBody(
+                            children=[build_quality_collapse()],
+                            style=dict(padding = '0'),
+                            ),
                         ),
-                    ],
+                    style=dict(borderWidth='0'),
+                    id="quality-collapse",
+                    className='three columns',
                 ),
-                
+
                 html.Div(
-                    id = 'parcel_table_super_container',
-                    className = 'six columns',
-                    children = [
-                        build_graph_title("Parcellation data"),
-                        
+                    id='dashboard',
+                    style=dict(height='100vh', overflowY='auto', overflowX='hidden'),
+                    className='twelve columns',
+                    children=[
+
+                        dbc.Collapse(
+                            dbc.Card(dbc.CardBody("very cool thingy")),
+                            id="subject-collapse",
+                        ),
+
                         html.Div(
-                            id = 'parcel_table_container',
-                            children = [build_parcel_table(
-                                            segmentation_method = 'ROQS', 
-                                            parcellation_method = 'Witelson', 
-                                            scalar = 'FA')]),
-                        
-                        html.Div(
-                            id = 'parcel_table_options',
-                            className = 'table-options',
+                            className = 'row',
+                            id = 'tables-row',
                             children = [
-                                
-                                html.H6('Mode:', className='table-options-title'),
 
-                                dcc.Dropdown(
-                                    id='parcel_table_dropdown_mode',
-                                    className = 'options-dropdown',
-                                    options=[{'label': 'Overall', 'value': 'overall'},
-                                             {'label': 'Subjects', 'value': 'subjects'}],
-                                    multi=False,
-                                    value='overall',
-                                ),
-                                
-                                html.H6('Parcel. method:', className='table-options-title'),
+                                html.Div(
+                                    id = 'segm_table_super_container',
+                                    className = 'six columns',
+                                    children = [
+                                        build_graph_title("Segmentation data"),
+                                        html.Div(
+                                            id = 'segm_table_container',
+                                            children = [build_segm_table(show_stdev = False, color = True)]),
+                                        html.Div(
+                                            id = 'segm_table_options',
+                                            className = 'table-options',
+                                            children = [
 
-                                dcc.Dropdown(
-                                    id = 'parcel_table_dropdown_method',
-                                    className = 'options-dropdown',
-                                    options = [
-                                        {'label': 'Witelson', 'value': 'Witelson'},
-                                        {'label': 'Hofer & Frahm', 'value': 'Hofer'},
-                                        {'label': 'Chao et al.', 'value': 'Chao'},
-                                        {'label': 'Cover et al.', 'value': 'Cover'},
-                                        {'label': 'Freesurfer', 'value': 'Freesurfer'},
+                                                html.H6('Mode:', className='table-options-title'),
+
+                                                dcc.Dropdown(
+                                                    id='segm_table_dropdown_mode',
+                                                    className = 'options-dropdown',
+                                                    options=[{'label': 'Overall', 'value': 'overall'},
+                                                              {'label': 'Subjects', 'value': 'subjects'}],
+                                                    multi=False,
+                                                    value='overall'),
+
+                                                html.H6('Std.Dev.:', className='table-options-title'),
+
+                                                dcc.Dropdown(
+                                                    id = 'segm_table_dropdown_stdev',
+                                                    className = 'options-dropdown',
+                                                    options = [
+                                                        {'label': 'Show', 'value': True},
+                                                        {'label': 'Hide', 'value': False},
+                                                    ],
+                                                    value = False,
+                                                ),
+
+                                            ],
+                                        ),
                                     ],
-                                    value = 'Witelson',
                                 ),
+                                
+                                html.Div(
+                                    id = 'parcel_table_super_container',
+                                    className = 'six columns',
+                                    children = [
+                                        build_graph_title("Parcellation data"),
+                                        
+                                        html.Div(
+                                            id = 'parcel_table_container',
+                                            children = [build_parcel_table(
+                                                            segmentation_method = 'ROQS', 
+                                                            parcellation_method = 'Witelson', 
+                                                            scalar = 'FA')]),
+                                        
+                                        html.Div(
+                                            id = 'parcel_table_options',
+                                            className = 'table-options',
+                                            children = [
+                                                
+                                                html.H6('Mode:', className='table-options-title'),
 
-                                html.H6('Scalar:', className='table-options-title'),
+                                                dcc.Dropdown(
+                                                    id='parcel_table_dropdown_mode',
+                                                    className = 'options-dropdown',
+                                                    options=[{'label': 'Overall', 'value': 'overall'},
+                                                             {'label': 'Subjects', 'value': 'subjects'}],
+                                                    multi=False,
+                                                    value='overall',
+                                                ),
+                                                
+                                                html.H6('Parcel. method:', className='table-options-title'),
 
-                                dcc.Dropdown(
-                                    id = 'parcel_table_dropdown_scalar',
-                                    className = 'options-dropdown',
-                                    options = [
-                                        {'label': 'FA', 'value': 'FA'},
-                                        {'label': 'MD', 'value': 'MD'},
-                                        {'label': 'RD', 'value': 'RD'},
-                                        {'label': 'AD', 'value': 'AD'},
+                                                dcc.Dropdown(
+                                                    id = 'parcel_table_dropdown_method',
+                                                    className = 'options-dropdown',
+                                                    options = [
+                                                        {'label': 'Witelson', 'value': 'Witelson'},
+                                                        {'label': 'Hofer & Frahm', 'value': 'Hofer'},
+                                                        {'label': 'Chao et al.', 'value': 'Chao'},
+                                                        {'label': 'Cover et al.', 'value': 'Cover'},
+                                                        {'label': 'Freesurfer', 'value': 'Freesurfer'},
+                                                    ],
+                                                    value = 'Witelson',
+                                                ),
+
+                                                html.H6('Scalar:', className='table-options-title'),
+
+                                                dcc.Dropdown(
+                                                    id = 'parcel_table_dropdown_scalar',
+                                                    className = 'options-dropdown',
+                                                    options = [
+                                                        {'label': 'FA', 'value': 'FA'},
+                                                        {'label': 'MD', 'value': 'MD'},
+                                                        {'label': 'RD', 'value': 'RD'},
+                                                        {'label': 'AD', 'value': 'AD'},
+                                                    ],
+                                                    value = 'FA'
+                                                ),                
+
+                                                html.Button(
+                                                    id='parcel_download_all_btn',
+                                                    children='Download all data', 
+                                                ),
+
+                                                Download(id="parcel_download_all"),
+
+                                            ],
+                                        ),
                                     ],
-                                    value = 'FA'
-                                ),                
+                                )
+                                
 
-                                html.Button(
-                                    id='parcel_download_all_btn',
-                                    children='Download all data', 
+                            ]
+                        ),
+
+                        html.Div(
+                            className="row",
+                            id="bottom-row",
+                            style=dict(marginRight='20px'),
+                            children=[
+
+                                html.Div(
+                                    id="bottom-row-left-column",
+                                    className="eight columns",
+                                    children=[
+                                    
+                                        html.Div(
+                                            id="boxplot-container1",
+                                            style=dict(marginBottom='-30px'),
+                                            children=[
+                                                build_graph_title("Segmentation BoxPlots"),
+                                                dcc.Graph(id="segm_boxplots", figure=build_group_segm_boxplot()),
+                                            ],
+                                        ),
+
+                                        html.Div(
+                                            id="boxplot-container2",
+                                            #style=dict(maginTop='0px'),
+                                            children=[
+                                                build_graph_title("Parcellation BoxPlots"),
+                                                dcc.Graph(id="parc_boxplots", figure=build_parcel_boxplot()),
+                                                build_parcel_boxplot_dropdowns(),
+                                            ],
+                                        ),
+                                    ],
+                                ),
+                                
+                                # Scatterplot
+                                html.Div(
+                                    id="scatterplot-container",
+                                    className="four columns",
+                                    children=[
+                                        build_graph_title("Scatter Plot"),
+                                        dcc.Graph(id="scatter_plot", figure=build_segm_scatterplot()),
+                                        build_segm_scatterplot_dropdowns(),
+                                    ],
+                                ),
+                            ],
+                        ),
+
+                        html.Div(
+                            className="row",
+                            id="second-bottom-row",
+                            style=dict(marginRight='20px'),
+                            children=[
+                            
+                                # Scattermatrix
+                                html.Div(
+                                    id="scattermatrix-container",
+                                    className="eight columns",
+                                    children=[
+                                        build_graph_title("Scatter Matrix"),
+                                        dcc.Graph(id="scatter_matrix", figure=build_segm_scattermatrix()),
+                                    ],
                                 ),
 
-                                Download(id="parcel_download_all"),
+                                # Bubble plot
+                                html.Div(
+                                    id="bubbleplot-container",
+                                    className="four columns",
+                                    children=[
+                                        build_graph_title("Bubble Plots"),
+                                        dcc.Graph(id="bubble_plots", figure=build_bubble_grouped()),
+                                        build_bubbleplot_dropdowns(),
+                                    ],
+                                ),
 
                             ],
                         ),
-                    ],
+
+                        html.Div(
+                            className="row",
+                            id="third-bottom-row",
+                            style=dict(marginRight='20px'),
+                            children=[
+
+
+
+                                # Midline plots
+                                html.Div(
+                                    id="midline-container",
+                                    className="four columns",
+                                    children=[
+                                        build_graph_title("Midline Plots"),
+                                        dcc.Graph(id="midline_graph", figure=build_midline_plot()),
+                                        build_midlineplot_dropdown(),
+                                    ],
+                                ),
+
+                                html.Div(id='example_div'),
+                            ],
+                        ),        
+                    ]
                 )
-                
-
             ]
-        ),
-
-        html.Div(
-            className="row",
-            id="bottom-row",
-            children=[
-
-                html.Div(
-                    id="bottom-row-left-column",
-                    className="eight columns",
-                    children=[
-                    
-                        html.Div(
-                            id="boxplot-container1",
-                            style=dict(marginBottom='-30px'),
-                            children=[
-                                build_graph_title("Segmentation BoxPlots"),
-                                dcc.Graph(id="segm_boxplots", figure=build_group_segm_boxplot()),
-                            ],
-                        ),
-
-                        html.Div(
-                            id="boxplot-container2",
-                            #style=dict(maginTop='0px'),
-                            children=[
-                                build_graph_title("Parcellation BoxPlots"),
-                                dcc.Graph(id="parc_boxplots", figure=build_parcel_boxplot()),
-                                build_parcel_boxplot_dropdowns(),
-                            ],
-                        ),
-                    ],
-                ),
-                
-                # Scatterplot
-                html.Div(
-                    id="scatterplot-container",
-                    className="four columns",
-                    children=[
-                        build_graph_title("Scatter Plot"),
-                        dcc.Graph(id="scatter_plot", figure=build_segm_scatterplot()),
-                        build_segm_scatterplot_dropdowns(),
-                    ],
-                ),
-            ],
-        ),
-
-        html.Div(
-            className="row",
-            id="second-bottom-row",
-            children=[
-            
-                # Scattermatrix
-                html.Div(
-                    id="scattermatrix-container",
-                    className="eight columns",
-                    children=[
-                        build_graph_title("Scatter Matrix"),
-                        dcc.Graph(id="scatter_matrix", figure=build_segm_scattermatrix()),
-                    ],
-                ),
-
-                # Bubble plot
-                html.Div(
-                    id="bubbleplot-container",
-                    className="four columns",
-                    children=[
-                        build_graph_title("Bubble Plots"),
-                        dcc.Graph(id="bubble_plots", figure=build_bubble_grouped()),
-                        build_bubbleplot_dropdowns(),
-                    ],
-                ),
-
-            ],
-        ),
-
-        html.Div(
-            className="row",
-            id="third-bottom-row",
-            children=[
-
-
-
-                # Midline plots
-                html.Div(
-                    id="midline-container",
-                    className="four columns",
-                    children=[
-                        build_graph_title("Midline Plots"),
-                        dcc.Graph(id="midline_graph", figure=build_midline_plot()),
-                        build_midlineplot_dropdown(),
-                    ],
-                ),
-            ],
-        ),        
+        )
     ],
 )
 
 # --------------------------------- CALLBACKS ---------------------------------------------
+
+@app.callback(
+    Output('photo-container', 'children'),
+    [Input('remove_btn', 'n_clicks'),
+     Input('dropdown-quality-threshold', 'value')],
+    [State({'type': 'remove-cbx', 'index': ALL}, 'id'),
+     State({'type': 'remove-cbx', 'index': ALL}, 'value'),
+     State('photo-container', 'children')])
+def display_output(n_clicks, threshold, ids, values, children):
+    if n_clicks is not None:
+
+        print(type(children))
+        try:
+            print(len(children))
+        except:
+            pass
+        removed_counter = 0
+        for dict_id, value in zip(ids,values):
+            if value == ['Remove']:
+                segmentation_method, subject_key = dict_id['index'].rsplit('-')[-2:]
+                dict_removed_subjects[segmentation_method].append(subject_key)
+                dict_removed_subjects[segmentation_method] = list(set(dict_removed_subjects[segmentation_method]))
+                removed_counter += 1
+
+        if removed_counter > 0:
+            return build_quality_images(threshold)
 
 # Enable/Disable segm method dropdown
 @app.callback(
@@ -1516,20 +1592,14 @@ def update_quality_counter(quality_photos):
 
 # Open quality collapse
 @app.callback(
-    Output("quality-collapse","is_open"),
+    [Output("dashboard", "className"),
+     Output("quality-collapse","is_open")],
     [Input("quality-button","n_clicks")])
 def open_quality_collapse(n_clicks):
     if n_clicks == None or n_clicks%2 == 0:
-        return False
+        return ["twelve columns", False]
     else: 
-        return True
-
-# Update quality threshold
-@app.callback(
-    Output("photo-container","children"),
-    [Input("dropdown-quality-threshold","value")])
-def update_quality_threshold(threshold):
-    return build_quality_images(threshold)
+        return ["nine columns", True]
 
 # Open subject collapse
 @app.callback(
