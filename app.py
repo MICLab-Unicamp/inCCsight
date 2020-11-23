@@ -175,7 +175,9 @@ for subject_path in tqdm(path_dict.values()):
         # Save array with subject keys
         loaded_subjects.append(subject_name)
     
-    
+loaded_subjects.sort()
+loaded_subjects = list(set(loaded_subjects))
+
 for segmentation_method in dict_segmentation_methods.keys():
 
     # Convert to pandas dataframe
@@ -237,6 +239,7 @@ def build_group_segm_boxplot(mode='Method', segmentation_method='ROQS', extra_di
             for j, segmentation_method in enumerate(dict_segmentation_methods.keys()):
                 
                 df = dict_scalar_statistics[segmentation_method]
+                df = df.drop(dict_removed_subjects[segmentation_method])
                 
                 subplots.add_trace(go.Box(y=df[scalar], name=segmentation_method, legendgroup=segmentation_method, marker=dict(color=std_colors[j])), row=1, col=i+1)
 
@@ -256,6 +259,7 @@ def build_group_segm_boxplot(mode='Method', segmentation_method='ROQS', extra_di
             df = df_numerical[extra_dims]
     
         df = pd.concat([df, df_categories[mode], dict_scalar_statistics[segmentation_method]], axis=1)
+        df = df.drop(dict_removed_subjects[segmentation_method])
         df = df.dropna(axis=0)
         
         categories = set(df[mode])
@@ -289,6 +293,7 @@ def build_parcel_boxplot(scalar='FA', mode='Method', segmentation_method='ROQS',
             
             for j, segmentation_method in enumerate(dict_segmentation_methods.keys()):
                 df = dict_parcellations_statistics[segmentation_method][parcellation_method][region][scalar]
+                df = df.drop(dict_removed_subjects[segmentation_method])
                 df = df.dropna(axis=0)
                 subplots.add_trace(go.Box(y=df, name=segmentation_method, legendgroup=segmentation_method, marker=dict(color=std_colors[j])), row=1, col=i+1)
 
@@ -310,7 +315,9 @@ def build_parcel_boxplot(scalar='FA', mode='Method', segmentation_method='ROQS',
             df_aux[mode] = category
             df = pd.concat([df, df_aux], axis=0)
         
+        df = df.drop(dict_removed_subjects[segmentation_method])
         df = df.dropna(axis=0)
+
         names = list_regions + [mode]
         df.columns = names
 
@@ -347,7 +354,9 @@ def build_segm_scatterplot(mode='Method', segmentation_method = 'ROQS', scalar_x
         df = pd.concat([df_categories[mode], dict_scalar_statistics[segmentation_method]], axis=1)
         df = pd.concat([df, df_numerical], axis=1)        
         
+    df = df.drop(dict_removed_subjects[segmentation_method])
     df = df.dropna(axis=0)
+
     fig = px.scatter(df, 
                     x=scalar_x, 
                     y=scalar_y, 
@@ -379,7 +388,9 @@ def build_segm_scattermatrix(mode='Method', segmentation_method = 'ROQS', extra_
             dimensions = ['FA','MD','RD','AD'] + extra_dims
             df = pd.concat([df, df_numerical], axis=1)
 
+    df = df.drop(dict_removed_subjects[segmentation_method])
     df = df.dropna(axis=0)
+
     fig = px.scatter_matrix(df, 
                             dimensions=dimensions,
                             color=mode,
@@ -409,6 +420,7 @@ def build_midline_plot(scalar='FA', mode='Method', segmentation_method='ROQS'):
             
             df_aux['Method'] = segmentation_method    
             df = pd.concat([df, df_aux], axis=0)
+        df = df.drop(dict_removed_subjects[segmentation_method])
         df = df.dropna(axis=0)
             
         df_grouped = df.groupby('Method').mean().transpose()
@@ -421,6 +433,7 @@ def build_midline_plot(scalar='FA', mode='Method', segmentation_method='ROQS'):
             df_aux = dict_thickness[segmentation_method]
             
         df = pd.concat([df_categories[mode], df_aux], axis=1)
+        df = df.drop(dict_removed_subjects[segmentation_method])
         df = df.dropna(axis=0)
 
         df_grouped = df.groupby(mode).mean().transpose()
@@ -446,9 +459,14 @@ def build_bubble_grouped(mode='Method', segmentation_method='ROQS', scalar='FA',
             df_aux = dict_thickness[segmentation_method][list(np.linspace(0,195,40))+[199]]    
         else:
             df_aux = pd.DataFrame.from_dict(dict(dict_scalar_midlines[segmentation_method][scalar]), orient='index', columns=scalar_midline_names)[list(np.linspace(0,195,40))+[199]]
+        
+        df_aux = df_aux.drop(dict_removed_subjects[segmentation_method])
 
         if category_index is not None:
             df_aux = df_aux.loc[category_index]
+
+        df_aux = df_aux.dropna(axis=0)
+
         df_pts[scalar] = df_aux.mean().reset_index()[0]
 
         if size == True:
@@ -458,7 +476,7 @@ def build_bubble_grouped(mode='Method', segmentation_method='ROQS', scalar='FA',
             fig = px.scatter(df_pts, x="x", y="y", color=scalar)
             fig.update_traces(marker=dict(size=25))
 
-        fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h")    
+        fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h")
         fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
 
         fig.add_trace(go.Contour(z=segm_contour, contours=dict(start=0, end=70, size=70, coloring='none'),
@@ -478,7 +496,9 @@ def build_bubble_grouped(mode='Method', segmentation_method='ROQS', scalar='FA',
     else:
         
         df = df_categories[mode]
+        df = df.drop(dict_removed_subjects[segmentation_method])
         df = df.dropna(axis=0)
+
         n_cats = len(set(df))
         fig = make_subplots(rows=n_cats, cols=1, vertical_spacing=0.1/n_cats)
         
@@ -673,6 +693,21 @@ def build_bubbleplot_dropdowns():
 
 # -----------------------------------------------------------------------------------------
 
+def build_subjects_list():
+    '''
+    button_group = dbc.ButtonGroup(
+        [dbc.Button(i, color='light', size='lg', style=dict(width='100%')) for i in loaded_subjects],
+        vertical=True,
+        style=dict(width='100%')
+    )
+    '''
+    button_group = html.Div(
+        [dbc.Button(i, color='secondary', size='lg', block=True, style=dict(fontSize='1.8rem')) for i in loaded_subjects],
+        style=dict(width='100%')
+    )
+
+    return button_group
+
 def build_quality_collapse():
 
     layout = dbc.Card([
@@ -685,7 +720,7 @@ def build_quality_collapse():
                                  options= [{'label': num/100, 'value': num/100} for num in np.arange(95, 5, -5)],
                                  multi=False,
                                  value='0.7',
-                                 style={'float': 'right', 'width':'150px', 'margin-left':'10px'}),
+                                 style={'float': 'right', 'width':'100px', 'margin-left':'10px'}),
                     dbc.Button("Remove Selected", color='dark', size='lg', style={'margin-left':'40px'}, id='remove_btn'),
                     ], className='row', 
                     style=dict(margin="1rem 0 0 3rem", display="flex", alignItems="center")),
@@ -737,7 +772,7 @@ def build_quality_images(threshold=0.7):
 
 
     def get_quality_tab(segmentation_method):
-        tab = dcc.Tab(label=segmentation_method, children=html.Div(get_quality_tab_children(segmentation_method), style=dict(height='80vh', overflowY="auto", padding='40px 20px 20px 20px')))
+        tab = dbc.Tab(label=segmentation_method, children=html.Div(dcc.Loading(get_quality_tab_children(segmentation_method)), style=dict(height='80vh', overflowY="auto", padding='40px 20px 20px 20px')))
         return tab
 
     tabs = []
@@ -745,7 +780,7 @@ def build_quality_images(threshold=0.7):
     for segmentation_method in dict_segmentation_functions.keys():
         tabs.append(get_quality_tab(segmentation_method))
 
-    return dcc.Tabs(tabs, style=dict(height='40px', verticalAlign='center', padding='0px 10px 0px 10px'))
+    return dbc.Tabs(tabs, style=dict(height='40px', verticalAlign='center', padding='0px 10px 0px 10px'))
 
 def build_fissure_image(filepath, scalar = 'wFA'):
 
@@ -969,7 +1004,6 @@ def build_segm_table(mode = 'Method', segmentation_method = 'ROQS', show_stdev =
         export_headers='display',
         style_data_conditional = stripped_rows(),
     )
-
     return layout
 
 def build_parcel_table(mode = 'Method', segmentation_method = 'ROQS', parcellation_method = 'Witelson', scalar = 'FA', color = False):
@@ -1123,92 +1157,16 @@ app.layout = html.Div(
 
                             #Subjects list
                             html.Div([
+                                build_graph_title("Subjects"),
                                 html.Div(
-                                    id="subject-list-container",
-                                    children=[
-                                        build_graph_title("Subjects"),
-                                        html.Div(                                              
-                                             dash_table.DataTable(
-                                                id='table-subjects',
-                                                columns=(
-                                                    [{'id': 'Subjects', 
-                                                      'name': 'Subjects'}]
-                                                ),
-                                                data=[{"Subjects": i} for i in list(path_dict.keys())],
-                                                style_header={'display':'none'},
-                                                style_table={'overflowY': 'scroll',
-                                                             'overflowX': 'hidden', 
-                                                             'height': '500px',
-                                                             'border-width': '1px',
-                                                             'border-style': 'solid',
-                                                             'border-radius': '5px',
-                                                             'border-color': 'white'},
-                                                style_data_conditional=[{
-                                                    'if':{'row_index':'odd'}, 'backgroundColor':'rgb(60,60,70)'}],
-                                                style_cell={'fontSize': 21,
-                                                            'border': 'none',
-                                                            'border-radius':'5px', 
-                                                            'font-family': 'Open Sans',
-                                                            'textAlign': 'center',
-                                                            'color':'rgb(255,255,255)',
-                                                            'backgroundColor':'rgb(50,50,70)'},
-                                            ), id='subject-table-container',
-                                        )
-                                    ],
-                                ),
-                            ], className = "four columns"),
+                                    build_subjects_list(), 
+                                    style=dict(height='500px', overflowY='auto'),
+                                    id="subject-table-container")], 
+                                className = "four columns", 
+                                id="subject-list-container",
+                            ),
 
-                            # Create buttons
-                            html.Div([
-                                html.Button('>>', 
-                                    id='group-button',
-                                ),                            
-                            ], id = "button-container", className = "two columns"),
-
-                            # Groups list
-                            html.Div([
-                                html.Div(
-                                    id="group-list-container",
-                                    children=[
-                                        html.Div(
-                                            id="group-list-header",
-                                            children=[
-                                                build_graph_title("Groups"),
-                                                html.Div(                                              
-                                                    dash_table.DataTable(
-                                                        id='table-groups',
-                                                        columns=(
-                                                            [{'id': 'Groups', 
-                                                              'name': 'Groups', 
-                                                              'selectable': True}]
-                                                        ),
-                                                        data = [{"Groups": i} for i in set(np.hstack(list(group_dict.values())))],
-                                                        style_header={'display':'none'},
-                                                        style_table={'overflowY': 'scroll',
-                                                                     'overflowX': 'hidden', 
-                                                                     'height': '500px',
-                                                                     'border-width': '1px',
-                                                                     'border-style': 'solid',
-                                                                     'border-radius': '5px',
-                                                                     'border-color': 'white'},
-                                                        style_data_conditional=[{
-                                                            'if':{'row_index':'odd'}, 'backgroundColor':'rgb(60,60,70)'}],
-                                                        style_cell={'fontSize': 21,
-                                                                    'border': 'none',
-                                                                    'border-radius':'5px', 
-                                                                    'font-family': 'Open Sans',
-                                                                    'textAlign': 'center',
-                                                                    'color':'rgb(255,255,255)',
-                                                                    'backgroundColor':'rgb(50,50,70)'},
-                                                        #editable = True
-                                                    )
-                                            )
-
-                                            ],
-                                        ),
-                                    ],
-                                ),
-                            ], className = "four columns"),
+                            html.Div(className="four columns"),
 
                         ], className="one-half column", id="left-panel"),
 
@@ -1225,7 +1183,7 @@ app.layout = html.Div(
                                         html.H1(str(len(set(list(path_dict.keys())))), className='numcard'),
                                         html.H5("Subjects", className='titlecard'),
                                         html.H1(str(len(set(np.hstack(list(group_dict.values()))))), className='numcard', style={'margin-top': '10px'}),
-                                        html.H5("Groups", className='titlecard'),
+                                        html.H5("Folders", className='titlecard'),
                                     ],
                                 ),
                             ]),
@@ -1240,7 +1198,7 @@ app.layout = html.Div(
         html.Div(
             className='row',
             children=[    
-
+        
                 dbc.Collapse(
                     dbc.Card(
                         dbc.CardBody(
@@ -1248,11 +1206,11 @@ app.layout = html.Div(
                             style=dict(padding = '0'),
                             ),
                         ),
-                    style=dict(borderWidth='0'),
+                    style=dict(border='0px'),
                     id="quality-collapse",
                     className='three columns',
                 ),
-
+            
                 html.Div(
                     id='dashboard',
                     style=dict(height='100vh', overflowY='auto', overflowX='hidden'),
@@ -1496,10 +1454,10 @@ app.layout = html.Div(
     [State({'type': 'remove-cbx', 'index': ALL}, 'id'),
      State({'type': 'remove-cbx', 'index': ALL}, 'value'),
      State('photo-container', 'children')])
-def display_output(n_clicks, threshold, ids, values, children):
+def remove_quality_images(n_clicks, threshold, ids, values, children):
     if n_clicks is not None:
 
-        print(type(children))
+        print(children.keys())
         try:
             print(len(children))
         except:
