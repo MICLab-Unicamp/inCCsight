@@ -21,7 +21,7 @@ def get_parser():
 
     parser.add_argument('-m', '--mask', help='String contained in the filename of the masks files located in the directories loaded using [-d] or [-p]', nargs='?', type=str, dest='mark_str')
     parser.add_argument('-s', '--segm', help='Segmentation methods to be performed (ROQS, Watershed), default is both', nargs='+', dest='segm', default=['ROQS', 'Watershed'])
-    parser.add_argument('--staple', help='Will create a segmentation consensus between the methods selected and the mask (if inputted). Only possible with multiple segmentations')
+    parser.add_argument('--staple', help='Will create a segmentation consensus between the methods selected and the mask (if inputted). Only possible with multiple segmentations', action='store_true')
     
     parser.add_argument('-3d', help='3D Segmentation methods to be performed (Watershed3d), default is None', dest='segm3d', default=[None])
 

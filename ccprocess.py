@@ -27,21 +27,24 @@ def segment(subject_path, segmentation_method, segmentation_methods_dict, parcel
 	# If there is no data available, segment
 	else:
 
-		# Read data, get scalar maps and eigs.
-		wFA_v, FA_v, MD_v, RD_v, AD_v, fissure, eigvals, eigvects, affine = libcc.run_analysis(subject_path, basename)
-		
-		wFA = wFA_v[fissure,:,:]
-		FA = FA_v[fissure,:,:]
-		MD = MD_v[fissure,:,:]
-		RD = RD_v[fissure,:,:]
-		AD = AD_v[fissure,:,:]
-		eigvects_ms = abs(eigvects[0,:,fissure]) 
-
+		# STAPLE segmentation
 		if segmentation_method == 'STAPLE':
-			segmentation = libcc.segm_staple()
-		else:	
-			segmentation = segmentation_methods_dict[segmentation_method](wFA, eigvects_ms)
+			segmentation = segmentation_methods_dict[segmentation_method](subject_path, name_dict, fissure, segm_import=None)
 
+		else:
+	
+			# Read data, get scalar maps and eigs.
+			wFA_v, FA_v, MD_v, RD_v, AD_v, fissure, eigvals, eigvects, affine = libcc.run_analysis(subject_path, basename)
+			
+			wFA = wFA_v[fissure,:,:]
+			FA = FA_v[fissure,:,:]
+			MD = MD_v[fissure,:,:]
+			RD = RD_v[fissure,:,:]
+			AD = AD_v[fissure,:,:]
+			eigvects_ms = abs(eigvects[0,:,fissure]) 
+
+			# Segment
+			segmentation = segmentation_methods_dict[segmentation_method](wFA, eigvects_ms)
 
 		# Check segmentation errors (True/False)
 		error_flag = False

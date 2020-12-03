@@ -65,10 +65,16 @@ dict_parcellation_methods = {'Witelson': 'witelson', 'Hofer & Frahm': 'hofer', '
 dict_segmentation_methods = {'ROQS': 'roqs', 'Watershed': 'watershed'}
 dict_3d_segmentation_methods = {'Watershed3d':'watershed3d'}
 
+selected_subject_path = ''
+
 # DATA IMPORTING -----------------------------------------------------------------------------
 
 # Arg parser
 opts = inputfuncs.get_parser().parse_args()
+
+if opts.staple is True:
+    dict_segmentation_functions['STAPLE'] = segmfuncs.segm_staple
+    dict_segmentation_methods['STAPLE'] = 'staple'
 
 df_categories = pd.DataFrame()
 df_numerical = pd.DataFrame()
@@ -175,8 +181,8 @@ for subject_path in tqdm(path_dict.values()):
         # Save array with subject keys
         loaded_subjects.append(subject_name)
     
-loaded_subjects.sort()
 loaded_subjects = list(set(loaded_subjects))
+loaded_subjects.sort()
 
 for segmentation_method in dict_segmentation_methods.keys():
 
@@ -241,7 +247,7 @@ def build_group_segm_boxplot(mode='Method', segmentation_method='ROQS', extra_di
                 df = dict_scalar_statistics[segmentation_method]
                 df = df.drop(dict_removed_subjects[segmentation_method])
                 
-                subplots.add_trace(go.Box(y=df[scalar], name=segmentation_method, legendgroup=segmentation_method, marker=dict(color=std_colors[j])), row=1, col=i+1)
+                subplots.add_trace(go.Box(y=df[scalar], name=segmentation_method, legendgroup=segmentation_method, hovertext=df.index, marker=dict(color=std_colors[j])), row=1, col=i+1)
 
                 if i == 0:
                     subplots.data[-1].update(name=segmentation_method, legendgroup=segmentation_method)
@@ -268,7 +274,7 @@ def build_group_segm_boxplot(mode='Method', segmentation_method='ROQS', extra_di
             
             for j, category in enumerate(categories):
                 
-                subplots.add_trace(go.Box(y=df[df[mode] == category][scalar], name=category, legendgroup=category, marker=dict(color=std_colors[j])), row=1, col=i+1)
+                subplots.add_trace(go.Box(y=df[df[mode] == category][scalar], name=category, legendgroup=category, hovertext=df.index, marker=dict(color=std_colors[j])), row=1, col=i+1)
 
                 if i == 0:
                     subplots.data[-1].update(name=category, legendgroup=category)
@@ -295,7 +301,7 @@ def build_parcel_boxplot(scalar='FA', mode='Method', segmentation_method='ROQS',
                 df = dict_parcellations_statistics[segmentation_method][parcellation_method][region][scalar]
                 df = df.drop(dict_removed_subjects[segmentation_method])
                 df = df.dropna(axis=0)
-                subplots.add_trace(go.Box(y=df, name=segmentation_method, legendgroup=segmentation_method, marker=dict(color=std_colors[j])), row=1, col=i+1)
+                subplots.add_trace(go.Box(y=df, name=segmentation_method, legendgroup=segmentation_method, hovertext=df.index, marker=dict(color=std_colors[j])), row=1, col=i+1)
 
                 if i == 0:
                     subplots.data[-1].update(name=segmentation_method, legendgroup=segmentation_method)
@@ -327,7 +333,7 @@ def build_parcel_boxplot(scalar='FA', mode='Method', segmentation_method='ROQS',
             
             for j, category in enumerate(categories):
                 
-                subplots.add_trace(go.Box(y=df[df[mode] == category][region], name=category, legendgroup=category, marker=dict(color=std_colors[j])), row=1, col=i+1)
+                subplots.add_trace(go.Box(y=df[df[mode] == category][region], name=category, legendgroup=category, hovertext=df.index, marker=dict(color=std_colors[j])), row=1, col=i+1)
 
                 if i == 0:
                     subplots.data[-1].update(name=category, legendgroup=category)
@@ -691,6 +697,87 @@ def build_bubbleplot_dropdowns():
         )
     return layout    
 
+def build_fissure_image_dropdown():
+
+    options = [{'label': segmentation_method, 'value': segmentation_method} for segmentation_method in list(dict_segmentation_methods.keys())+['None']]
+    options_scalars = [{'label': scalar, 'value': scalar} for scalar in ['wFA']+scalar_list]
+
+    layout = html.Div([
+                html.Div([
+                    html.H6('Segm. Method:', className='table-options-title', style={'padding':'0px 10px 0px 10px'}),
+                    dcc.Dropdown(id='dropdown-subj-collapse-segm-methods',
+                                 options=options,
+                                 multi=False,
+                                 value=list(dict_segmentation_methods.keys())[0],
+                                 style={'width':'120px'}),
+                    html.H6('Scalar:', className='table-options-title', style={'padding':'0px 10px 0px 30px'}),
+                    dcc.Dropdown(id='dropdown-subj-collapse-scalars',
+                                 options=options_scalars,
+                                 multi=False,
+                                 value='wFA',
+                                 style={'width':'150px'})
+                ], className='row', style=dict(display='flex', justifyContent='left', verticalAlign='center')),
+            ]
+        )
+
+    return layout   
+
+def build_individual_subject_segm_table_dropdown():
+
+    options = [{'label': segmentation_method, 'value': segmentation_method} for segmentation_method in dict_segmentation_methods.keys()]
+    options_stddev = [{'label': scalar, 'value': scalar} for scalar in ['Show', 'Hide']]
+
+    layout = html.Div([
+                html.Div([
+                    html.H6('Segm. method:', className='table-options-title', style={'padding':'0px 10px 0px 10px'}),
+                    dcc.Dropdown(id='dropdown-subj-collapse-table-segm-methods',
+                                 options=options,
+                                 multi=False,
+                                 value=list(dict_segmentation_methods.keys())[0],
+                                 style={'width':'150px'}),
+                    html.H6('Show Std.Dev.:', className='table-options-title', style={'padding':'0px 10px 0px 30px'}),
+                    dcc.Dropdown(id='dropdown-subj-collapse-table-segm-std-dev',
+                                 options=options_stddev,
+                                 multi=False,
+                                 value='Hide',
+                                 style={'width':'120px'})
+                ], className='row', style=dict(display='flex', justifyContent='left', verticalAlign='center')),
+            ]
+        )
+
+    return layout
+
+def build_individual_subject_parcel_table_dropdown():
+
+    options = [{'label': segmentation_method, 'value': segmentation_method} for segmentation_method in dict_segmentation_methods.keys()]
+    options_scalars = [{'label': scalar, 'value': scalar} for scalar in scalar_list]
+    options_parcel_method = [{'label': parc, 'value': parc} for parc in dict_parcellations_statistics[segmentation_method].keys()]
+
+    layout = html.Div([
+                html.Div([
+                    html.H6('Segm. method:', className='table-options-title', style={'padding':'0px 10px 0px 10px'}),
+                    dcc.Dropdown(id='dropdown-subj-collapse-table-parcel-segm-methods',
+                                 options=options,
+                                 multi=False,
+                                 value=list(dict_segmentation_methods.keys())[0],
+                                 style={'width':'150px'}),
+                    html.H6('Parcel. method:', className='table-options-title', style={'padding':'0px 10px 0px 30px'}),
+                    dcc.Dropdown(id='dropdown-subj-collapse-table-parcel-methods',
+                                 options=options_parcel_method,
+                                 multi=False,
+                                 value=list(dict_parcellation_methods.keys())[0],
+                                 style={'width':'150px'}),
+                    html.H6('Scalar:', className='table-options-title', style={'padding':'0px 10px 0px 30px'}),
+                    dcc.Dropdown(id='dropdown-subj-collapse-table-parcel-scalars',
+                                 options=options_scalars,
+                                 multi=False,
+                                 value='FA',
+                                 style={'width':'120px'})
+                ], className='row', style=dict(display='flex', justifyContent='left', verticalAlign='center')),
+            ]
+        )
+    return layout 
+
 # -----------------------------------------------------------------------------------------
 
 def build_subjects_list():
@@ -701,12 +788,21 @@ def build_subjects_list():
         style=dict(width='100%')
     )
     '''
-    button_group = html.Div(
-        [dbc.Button(i, color='secondary', size='lg', block=True, style=dict(fontSize='1.8rem')) for i in loaded_subjects],
-        style=dict(width='100%')
-    )
 
-    return button_group
+    button_group = []
+    for i, subject_id in enumerate(loaded_subjects):
+
+        if i%2 == 0:
+            background = 'rgba(50,50,70,.5)'
+        else:
+            background = 'rgba(60,60,70,.5)'
+
+        button_group.append(html.Button(subject_id, 
+            style=dict(fontSize='1.8rem', width='100%', backgroundColor=background, marginBottom='2px', color='rgb(255,255,255)'), 
+            id={'type': 'subject-list-btns', 'index': 'btn-subj-list-{}'.format(subject_id)}))
+        
+
+    return html.Div(button_group, style=dict(width='100%'))
 
 def build_quality_collapse():
 
@@ -751,9 +847,6 @@ def build_quality_images(threshold=0.7):
         # Retrieve images and segmentation
         for subject_id in index_label:
 
-            folderpath = path_dict[subject_id] + 'inCCsight/'
-            filepath = folderpath + 'segm_' + dict_segmentation_methods[segmentation_method] + '_data.npy'
-
             children.append(html.Div([
                                 html.Div([
                                     html.H6("Subject: {} - Method: {}".format(subject_id, segmentation_method), 
@@ -766,7 +859,7 @@ def build_quality_images(threshold=0.7):
                                         style=dict(fontSize='1.8rem'), inputStyle=dict(marginRight="10px")),  
 
                                     ], className='row', style=dict(width='100%', display='flex', verticalAlign='center', justifyContent='flex-end')),
-                                dcc.Graph(figure=build_fissure_image(filepath))
+                                dcc.Graph(figure=build_fissure_image(subject_id, segmentation_method))
                             ], className = 'twelve columns'))
         return children
 
@@ -782,19 +875,25 @@ def build_quality_images(threshold=0.7):
 
     return dbc.Tabs(tabs, style=dict(height='40px', verticalAlign='center', padding='0px 10px 0px 10px'))
 
-def build_fissure_image(filepath, scalar = 'wFA'):
+def build_fissure_image(subject_id, segmentation_method, scalar = 'wFA'):
 
+    scalar_maps = dict_scalar_maps['ROQS'][subject_id]
     scalar_maps_list = ['wFA','FA','MD','RD','AD']
-    segmentation, scalar_maps = np.load(filepath, allow_pickle=True)[:2]
-    img = scalar_maps[scalar_maps_list.index(scalar)]
+    scalar_map = scalar_maps[scalar_maps_list.index(scalar)]
 
-    contours = measure.find_contours(segmentation, 0.1)
-    contour = sorted(contours, key=lambda x: len(x))[-1]
+    fig = px.imshow(scalar_map, color_continuous_scale='gray', aspect='auto')
 
-    fig = px.imshow(img, color_continuous_scale='gray', aspect='auto')
-    fig.add_trace(go.Scatter(x=contour[:, 1], y=contour[:, 0]))
-    fig.update_layout(height=200, paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h", coloraxis_showscale=False)
-    fig.update_layout(margin = dict(l=0, r=0,t=0,b=0))
+    if segmentation_method != 'None':
+
+        segmentation = dict_segmentation_masks[segmentation_method][subject_id]
+
+        contours = measure.find_contours(segmentation, 0.1)
+        contour = sorted(contours, key=lambda x: len(x))[-1]
+
+        fig.add_trace(go.Scatter(x=contour[:, 1], y=contour[:, 0]))
+    
+    fig.update_layout(height=300, paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h", coloraxis_showscale=True)
+    fig.update_layout(margin = dict(l=0, r=0,t=0,b=30))
 
     return fig 
 
@@ -841,21 +940,41 @@ def build_3d_visualization(subject_id):
 
 def build_subject_collapse(segmentation_method='ROQS', scalar_map='wFA', subject_id = list(path_dict.keys())[0]):
 
-    folderpath = path_dict[subject_id] + 'inCCsight/'
-    filepath = folderpath + 'segm_' + dict_segmentation_methods[segmentation_method] + '_data.npy'
-
     layout = dbc.Card([
-                build_graph_title("Subject " + subject_id),
+
+                html.Div([
+                    build_graph_title("Subject " + subject_id),
+                    html.Button('X', style=dict(fontSize='1.5rem', margin='10px'), id=dict(type='btn-exit-subject', index=subject_id))
+                
+                ], className='twelve columns', style=dict(display='flex', justifyContent='space-between')),
+
                 html.Div([                
     
                     # Segmentation image
                     html.Div([
-                        dcc.Graph(figure=build_3d_visualization(subject_id))
+                        build_graph_title("Scalar maps"),
+                        #dcc.Graph(figure=build_3d_visualization(subject_id))
+                        dcc.Graph(figure=build_fissure_image(subject_id, segmentation_method, scalar = scalar_map), id='subject_collapse_fissure_img'),
+                        build_fissure_image_dropdown(),
+
                     ], className = 'three columns'),
+
+                    html.Div(className='one column'),
+
+                    html.Div([
+                        build_graph_title("Segmentation data"),
+                        build_individual_subject_segm_table(subject_id, segmentation_method),
+                        build_individual_subject_segm_table_dropdown(),
+
+                        build_graph_title("Parcellation data"),
+                        build_individual_subject_parcel_table(subject_id, segmentation_method, parcellation_method='Witelson', scalar='FA'),
+                        build_individual_subject_parcel_table_dropdown(),
+
+                    ], className='six columns'),
 
                 ], className='row', style={'justifyContent':'center'}),
 
-            ], style={'margin':'20px', 'backgroundColor':'#FAFAFA', 'border-radius':'20px'})
+            ], style={'margin':'20px', 'backgroundColor':'#FAFAFA', 'border-radius':'20px', 'padding':'0px 0px 50px 0px'})
     return layout
 
 # DataTable functions ---------------------------------------------------------------------
@@ -1087,6 +1206,85 @@ def export_parcel_table(segmentation_method = 'ROQS', parcellation_method = 'Wit
 
     return send_data_frame(df.to_excel, filename)
 
+def build_individual_subject_segm_table(subject_id, segmentation_method = 'ROQS', show_stdev=False):
+
+    df = dict_scalar_statistics[segmentation_method].reset_index() 
+    df = df[df['index'] == subject_id].rename(columns={'index':'Subject'})
+    
+    if show_stdev is True:
+        names = ['Subject'] + scalar_statistics_names
+    else:
+        names = ['Subject', 'FA', 'RD', 'AD', 'MD']
+
+    layout = dash_table.DataTable(
+        id = 'individual_subject_segm_table',
+        columns = [{"name": name, "id": name} for name in names],
+        data = df.round(6).reset_index().to_dict('records'),
+
+        page_action = 'none',
+        fixed_rows = {'headers': True},
+        style_table={
+            'maxHeight': '300px', 
+            'overflowY': 'auto'},
+        style_header = {
+            'fontWeight': 'bold',
+        },
+        style_cell = {
+            'font_family': 'Open Sans',
+            'font_size': '18px',
+            'text_align': 'center'
+        },
+        style_as_list_view = True,
+        export_format='xlsx',
+        export_headers='display',
+        style_data_conditional=stripped_rows()
+        
+    )
+
+    return html.Div(layout, style=dict(margin='-30px 0px 2px 0px'), id='individual_subject_segm_table_container')
+
+def build_individual_subject_parcel_table(subject_id, segmentation_method = 'ROQS', parcellation_method='Witelson', scalar='FA'):
+
+    list_regions = ['P1', 'P2', 'P3', 'P4', 'P5']
+
+    df = pd.DataFrame()
+    for region in list_regions:
+        df = pd.concat([df, dict_parcellations_statistics[segmentation_method][parcellation_method][region][scalar]], axis=1)
+    df.columns = list_regions
+    
+    df = df.reset_index()
+    df = df[df['index'] == subject_id].rename(columns={'index':'Subject'})
+    
+
+    names = ['Subject'] + list_regions
+
+    layout = dash_table.DataTable(
+        id = 'individual_subject_parcel_table',
+        columns = [{"name": name, "id": name} for name in names],
+        data = df.round(6).reset_index().to_dict('records'),
+
+        page_action = 'none',
+        fixed_rows = {'headers': True},
+        style_table={
+            'maxHeight': '300px', 
+            'overflowY': 'auto'},
+        style_header = {
+            'fontWeight': 'bold',
+        },
+        style_cell = {
+            'font_family': 'Open Sans',
+            'font_size': '18px',
+            'text_align': 'center'
+        },
+        style_as_list_view = True,
+        export_format='xlsx',
+        export_headers='display',
+        style_data_conditional=stripped_rows()
+        
+    )
+
+    return html.Div(layout, style=dict(margin='-30px 0px 2px 0px'), id='individual_subject_parcel_table_container')
+
 # ---------------------------------- LAYOUT -----------------------------------------------
 app.layout = html.Div(
     children=[
@@ -1218,7 +1416,7 @@ app.layout = html.Div(
                     children=[
 
                         dbc.Collapse(
-                            dbc.Card(dbc.CardBody("very cool thingy")),
+                            dbc.Card(dbc.CardBody()), 
                             id="subject-collapse",
                         ),
 
@@ -1448,6 +1646,33 @@ app.layout = html.Div(
 # --------------------------------- CALLBACKS ---------------------------------------------
 
 @app.callback(
+    Output('individual_subject_segm_table_container', 'children'),
+    [Input('dropdown-subj-collapse-table-segm-methods', 'value'),
+     Input('dropdown-subj-collapse-table-segm-std-dev', 'value')])
+def update_segm_table_subj_collapse(segmentation_method, show_stdev):
+    if show_stdev == 'Show':
+        show_stdev = True
+    else:
+        show_stdev = False
+
+    return build_individual_subject_segm_table(selected_subject_id, segmentation_method, show_stdev)
+
+@app.callback(
+    Output('individual_subject_parcel_table_container', 'children'),
+    [Input('dropdown-subj-collapse-table-parcel-scalars', 'value'),
+     Input('dropdown-subj-collapse-table-parcel-segm-methods', 'value'),
+     Input('dropdown-subj-collapse-table-parcel-methods', 'value')])
+def update_parc_table_subj_collapse(scalar, segmentation_method, parcellation_method):
+    return build_individual_subject_parcel_table(selected_subject_id, segmentation_method, parcellation_method, scalar)
+
+@app.callback(
+    Output('subject_collapse_fissure_img', 'figure'),
+    [Input('dropdown-subj-collapse-segm-methods', 'value'),
+     Input('dropdown-subj-collapse-scalars', 'value')])
+def update_fissure_image(segmentation_method, scalar):
+    return build_fissure_image(subject_id=selected_subject_id, segmentation_method=segmentation_method, scalar=scalar)
+
+@app.callback(
     Output('photo-container', 'children'),
     [Input('remove_btn', 'n_clicks'),
      Input('dropdown-quality-threshold', 'value')],
@@ -1563,14 +1788,23 @@ def open_quality_collapse(n_clicks):
 @app.callback(
     [Output("subject-collapse", "is_open"),
      Output("subject-collapse", "children")],
-    [Input("table-subjects","selected_cells")])
-def open_subject_collapse(selected_cells):
-    if len(selected_cells) == 1:
-        subject_list = list(path_dict.keys())
-        subject_id = subject_list[selected_cells[0]['row']]
-        return True, [build_subject_collapse(subject_id = subject_id)]
-    else:
+    [Input({'type': 'subject-list-btns', 'index': ALL}, 'n_clicks'),
+     Input({'type': 'btn-exit-subject', 'index': ALL}, 'n_clicks')],
+    [State({'type': 'subject-list-btns', 'index': ALL}, 'id')])
+def open_subject_collapse(n_clicks, exit_clicks, ids):
+
+    trigger = dash.callback_context.triggered[0] 
+    print(trigger["prop_id"].split(".")[0][-18:-2])
+    if trigger["prop_id"].split(".")[0][-18:-2] == 'btn-exit-subject':
         return False, []
+
+    subject_id = [t["prop_id"].rsplit('"')[3].rsplit('-')[-1] for t in dash.callback_context.triggered][0]
+    
+    global selected_subject_id
+    selected_subject_id = subject_id
+    
+    return True, [build_subject_collapse(subject_id = subject_id)]
+
 
 # Remove subject in quality view
 @app.callback(
