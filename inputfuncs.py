@@ -13,13 +13,13 @@ def get_parser():
                       '(dti_L1.nii.gz, dti_L2.nii.gz, dti_L3.nii.gz, dti_V1.nii.gz, dti_V2.nii.gz, dti_V3.nii.gz.', formatter_class=argparse.RawTextHelpFormatter)
                     
 
-    parser.add_argument('-f', '--folders', help='Directory(ies) that contain the eigenvectors and values files.', nargs='*', dest='dirs')
+    parser.add_argument('-f', '--folders', help='Directory(ies) that contain the eigenvectors and values files.', nargs='*', dest='folders')
     parser.add_argument('-d', '--extra-data', help='xlsm or csv file with extra data to be imported, must contain a column named Subjects with the same name as the folders that contain the eigenvectors', nargs='?', default=None, dest='ext_data')
     parser.add_argument('-p', '--parent', help='Directory(ies)that contain subdirectories with the eigenvectors and values files. Use this to easily import lots of data.', nargs='*', dest='parents')
     
     parser.add_argument('-b', '--basename', help='Basename for the FSL files (basename default is \'dti\', e.g. dti_L1.nii.gz', nargs='?', default='dti', dest='basename')
 
-    parser.add_argument('-m', '--mask', help='String contained in the filename of the masks files located in the directories loaded using [-d] or [-p]', nargs='?', type=str, dest='mark_str')
+    parser.add_argument('-m', '--maskname', help='String contained in the filename of the masks files located in the directories loaded using [-d] or [-p]', nargs='?', type=str, dest='maskname')
     parser.add_argument('-s', '--segm', help='Segmentation methods to be performed (ROQS, Watershed), default is both', nargs='+', dest='segm', default=['ROQS', 'Watershed'])
     parser.add_argument('--staple', help='Will create a segmentation consensus between the methods selected and the mask (if inputted). Only possible with multiple segmentations', action='store_true')
     

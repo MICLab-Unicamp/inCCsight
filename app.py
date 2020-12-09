@@ -65,8 +65,6 @@ dict_parcellation_methods = {'Witelson': 'witelson', 'Hofer & Frahm': 'hofer', '
 dict_segmentation_methods = {'ROQS': 'roqs', 'Watershed': 'watershed'}
 dict_3d_segmentation_methods = {'Watershed3d':'watershed3d'}
 
-selected_subject_path = ''
-
 # DATA IMPORTING -----------------------------------------------------------------------------
 
 # Arg parser
@@ -92,7 +90,7 @@ if opts.ext_data is not None:
 
 # Get indicated directories
 path_dict = {}
-if opts.dirs is not None:
+if opts.folders is not None:
     for directory in opts.dirs:
         if directory is not None:
             if inputfuncs.check_directory(directory, opts.basename):
@@ -808,8 +806,14 @@ def build_quality_collapse():
 
     layout = dbc.Card([
                 
-                build_graph_title("Quality evaluation"),
+                html.Div([
+                    build_graph_title("Quality evaluation"),
+                    html.Button('X', style=dict(fontSize='1.5rem', margin='10px', padding='0 13px', fontFamily= 'Open Sans', borderRadius='20px'),
+                                id='btn-exit-quality')
                 
+                ], className='twelve columns', style=dict(display='flex', justifyContent='space-between')),
+
+
                 html.Div([
                     html.H5("Threshold:"), 
                     dcc.Dropdown(id='dropdown-quality-threshold',
@@ -875,7 +879,7 @@ def build_quality_images(threshold=0.7):
 
     return dbc.Tabs(tabs, style=dict(height='40px', verticalAlign='center', padding='0px 10px 0px 10px'))
 
-def build_fissure_image(subject_id, segmentation_method, scalar = 'wFA'):
+def build_fissure_image(subject_id, segmentation_method, scalar = 'FA'):
 
     scalar_maps = dict_scalar_maps['ROQS'][subject_id]
     scalar_maps_list = ['wFA','FA','MD','RD','AD']
@@ -892,7 +896,7 @@ def build_fissure_image(subject_id, segmentation_method, scalar = 'wFA'):
 
         fig.add_trace(go.Scatter(x=contour[:, 1], y=contour[:, 0]))
     
-    fig.update_layout(height=300, paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h", coloraxis_showscale=True)
+    fig.update_layout(height=250, width=450, paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h", coloraxis_showscale=True)
     fig.update_layout(margin = dict(l=0, r=0,t=0,b=30))
 
     return fig 
@@ -943,8 +947,18 @@ def build_subject_collapse(segmentation_method='ROQS', scalar_map='wFA', subject
     layout = dbc.Card([
 
                 html.Div([
-                    build_graph_title("Subject " + subject_id),
-                    html.Button('X', style=dict(fontSize='1.5rem', margin='10px'), id=dict(type='btn-exit-subject', index=subject_id))
+                    html.Div([
+                        build_graph_title("Subject " + subject_id),
+                        dbc.Button(
+                                'Remove subject', 
+                                outline=True,
+                                color='danger',
+                                id=dict(type='btn-remove-subject', index=subject_id),
+                                style=dict(padding='0 15px', margin='25px 0px 0px 20px', fontSize='1.2rem')
+                            ),
+                        ], className='row'),
+                    html.Button('X', style=dict(fontSize='1.5rem', margin='10px', padding='0 13px', fontFamily= 'Open Sans', borderRadius='20px'),
+                                id=dict(type='btn-exit-subject', index=subject_id))
                 
                 ], className='twelve columns', style=dict(display='flex', justifyContent='space-between')),
 
@@ -1072,14 +1086,17 @@ def build_segm_table(mode = 'Method', segmentation_method = 'ROQS', show_stdev =
     list_scalars = ['FA','RD','AD','MD']
 
     if mode == 'subjects':
-        df = dict_scalar_statistics[segmentation_method].reset_index()
-        df = df.rename(columns={"index": "Subject"})
+        df = dict_scalar_statistics[segmentation_method]
+        df = df.drop(dict_removed_subjects[segmentation_method], errors='ignore')
+        df = df.reset_index().rename(columns={"index": "Subject"})
         names = ['Subject'] + list_scalars
     
     elif mode == 'Method':
         df = pd.DataFrame()
         for segmentation_method in dict_segmentation_functions.keys():
-            df_aux = dict_scalar_statistics[segmentation_method].reset_index()
+            df_aux = dict_scalar_statistics[segmentation_method]
+            df_aux = df_aux.drop(dict_removed_subjects[segmentation_method], errors='ignore')
+            df_aux = df_aux.reset_index()
             df_aux['Method'] = segmentation_method
             df = pd.concat([df, df_aux], axis=0)
         df = df.groupby('Method').mean().reset_index()
@@ -1087,11 +1104,12 @@ def build_segm_table(mode = 'Method', segmentation_method = 'ROQS', show_stdev =
 
     else:
         df = dict_scalar_statistics[segmentation_method]
+        df = df.drop(dict_removed_subjects[segmentation_method], errors='ignore')
         df = pd.concat([df_categories[mode], df], axis=1)
         df = df.groupby(mode).mean().reset_index()
         names = [mode] + list_scalars
     
-    df = df.round(6)
+    df = df.round(6).sort_index()
 
     if show_stdev is False:
         columns=[{"name": i, "id": i, "selectable": True} for i in names]
@@ -1134,6 +1152,7 @@ def build_parcel_table(mode = 'Method', segmentation_method = 'ROQS', parcellati
         for region in list_regions:
             df = pd.concat([df, dict_parcellations_statistics[segmentation_method][parcellation_method][region][scalar]], axis=1)
         df.columns = list_regions
+        df = df.drop(dict_removed_subjects[segmentation_method], errors='ignore')
         df = df.reset_index()
         df = df.rename(columns={"index": "Subject"})
         names = ['Subject'] + list_regions
@@ -1145,6 +1164,7 @@ def build_parcel_table(mode = 'Method', segmentation_method = 'ROQS', parcellati
             df_aux = pd.DataFrame()
             for region in list_regions:
                 df_aux = pd.concat([df_aux, dict_parcellations_statistics[segmentation_method][parcellation_method][region][scalar]], axis=1)
+            df_aux = df_aux.drop(dict_removed_subjects[segmentation_method], errors='ignore')
             df_aux['Method'] = segmentation_method
             df = pd.concat([df, df_aux], axis=0)
         df = df.groupby('Method').mean()
@@ -1162,6 +1182,7 @@ def build_parcel_table(mode = 'Method', segmentation_method = 'ROQS', parcellati
                 df_aux = pd.concat([df_aux, dict_parcellations_statistics[segmentation_method][parcellation_method][region][scalar][df_categories[mode] == category]], axis=1)
             df_aux[mode] = category
             df = pd.concat([df, df_aux], axis=0)
+        df = df.drop(dict_removed_subjects[segmentation_method], errors='ignore')
         df = df.groupby(mode).mean()
         df.columns = list_regions
         names = [mode] + list_regions            
@@ -1201,6 +1222,7 @@ def export_parcel_table(segmentation_method = 'ROQS', parcellation_method = 'Wit
     df = pd.concat(dict_parcellations_statistics[segmentation_method][parcellation_method].values(), 
                    axis = 1, 
                    keys = dict_parcellations_statistics[segmentation_method][parcellation_method].keys())
+    df.at[dict_removed_subjects[segmentation_method], df.columns] = ''
 
     filename = "inCCsight_parceldata_{}_{}.xlsx".format(segmentation_method, parcellation_method)
 
@@ -1261,7 +1283,7 @@ def build_individual_subject_parcel_table(subject_id, segmentation_method = 'ROQ
     layout = dash_table.DataTable(
         id = 'individual_subject_parcel_table',
         columns = [{"name": name, "id": name} for name in names],
-        data = df.round(6).reset_index().to_dict('records'),
+        data = df.round(6).reset_index().sort_index().to_dict('records'),
 
         page_action = 'none',
         fixed_rows = {'headers': True},
@@ -1680,13 +1702,10 @@ def update_fissure_image(segmentation_method, scalar):
      State({'type': 'remove-cbx', 'index': ALL}, 'value'),
      State('photo-container', 'children')])
 def remove_quality_images(n_clicks, threshold, ids, values, children):
+    global dict_removed_subjects
+
     if n_clicks is not None:
 
-        print(children.keys())
-        try:
-            print(len(children))
-        except:
-            pass
         removed_counter = 0
         for dict_id, value in zip(ids,values):
             if value == ['Remove']:
@@ -1697,6 +1716,7 @@ def remove_quality_images(n_clicks, threshold, ids, values, children):
 
         if removed_counter > 0:
             return build_quality_images(threshold)
+
 
 # Enable/Disable segm method dropdown
 @app.callback(
@@ -1712,8 +1732,9 @@ def update_dropdown_disabled(mode):
 @app.callback(
     Output("segm_boxplots", "figure"),
     [Input("dropdown_segm_methods","value"),
-     Input("dropdown_category","value")])
-def update_segm_boxplots(segm_method, mode):
+     Input("dropdown_category","value"),
+     Input('photo-container', 'children')])
+def update_segm_boxplots(segm_method, mode, removed):
     return build_group_segm_boxplot(mode=mode, segmentation_method=segm_method)
 
 # Update segm box-plots
@@ -1722,8 +1743,9 @@ def update_segm_boxplots(segm_method, mode):
     [Input("dropdown_segm_methods","value"),
      Input("dropdown_category","value"),
      Input("dropdown-parcel-boxplot-left","value"),
-     Input("dropdown-parcel-scalars-right","value")])
-def update_segm_boxplots(segm_method, mode, parc_method, scalar):
+     Input("dropdown-parcel-scalars-right","value"),
+     Input('photo-container', 'children')])
+def update_segm_boxplots(segm_method, mode, parc_method, scalar, removed):
     return build_parcel_boxplot(scalar=scalar, mode=mode, segmentation_method=segm_method, parcellation_method=parc_method)
 
 # Update midline plot
@@ -1731,16 +1753,18 @@ def update_segm_boxplots(segm_method, mode, parc_method, scalar):
     Output("midline_graph", "figure"),
     [Input("dropdown_segm_methods","value"),
      Input("dropdown_category","value"),
-     Input("dropdown-midline-scalars","value")])
-def update_midlineplot(segm_method, mode, scalar):
+     Input("dropdown-midline-scalars","value"),
+     Input('photo-container', 'children')])
+def update_midlineplot(segm_method, mode, scalar, removed):
     return build_midline_plot(mode=mode, segmentation_method=segm_method, scalar=scalar)
 
 # Update scatter matrix
 @app.callback(
     Output("scatter_matrix", "figure"),
     [Input("dropdown_segm_methods", "value"),
-     Input("dropdown_category","value")])
-def update_scattermatrix(segm_method, mode):
+     Input("dropdown_category","value"),
+     Input('photo-container', 'children')])
+def update_scattermatrix(segm_method, mode, removed):
     return build_segm_scattermatrix(mode=mode, segmentation_method=segm_method)
 
 # Update scatter plot
@@ -1749,40 +1773,51 @@ def update_scattermatrix(segm_method, mode):
     [Input("dropdown_segm_methods","value"),
      Input("dropdown_category","value"),
      Input("dropdown-scalars-right","value"),
-     Input("dropdown-scalars-left","value")])
-def update_scatterplot(segm_method, mode, scalar_x, scalar_y):
+     Input("dropdown-scalars-left","value"),
+     Input('photo-container', 'children')])
+def update_scatterplot(segm_method, mode, scalar_x, scalar_y, removed):
     return build_segm_scatterplot(mode=mode, segmentation_method=segm_method, scalar_x=scalar_x, scalar_y=scalar_y)
 
+# Update bubble plot
 @app.callback(
     Output("bubble_plots","figure"),
     [Input("dropdown_segm_methods","value"),
      Input("dropdown_category","value"),
      Input("dropdown-bubbleplot-left", "value"),
-     Input("dropdown-bubbleplot-right", "value")])
-def update_bubbleplot(segm_method, mode, scalar, size):
+     Input("dropdown-bubbleplot-right", "value"),
+     Input('photo-container', 'children')])
+def update_bubbleplot(segm_method, mode, scalar, size, removed):
     if size == 'True':
         size = True
     elif size == 'False':
         size = False
     return build_bubble_grouped(mode=mode, segmentation_method=segm_method, scalar=scalar, size=size)
 
+'''
 # Update number of quality warnings
 @app.callback(
     Output("quality-count", 'children'),
     [Input("photo-container", 'children')])
 def update_quality_counter(quality_photos):
     return len(quality_photos)
+'''
 
 # Open quality collapse
 @app.callback(
     [Output("dashboard", "className"),
      Output("quality-collapse","is_open")],
-    [Input("quality-button","n_clicks")])
-def open_quality_collapse(n_clicks):
-    if n_clicks == None or n_clicks%2 == 0:
-        return ["twelve columns", False]
-    else: 
-        return ["nine columns", True]
+    [Input("quality-button","n_clicks"),
+     Input("btn-exit-quality","n_clicks")],
+    [State("dashboard", "className")])
+def open_quality_collapse(n_clicks, exit_clicks, className):
+    trigger = dash.callback_context.triggered[0] 
+    if trigger["prop_id"].split(".")[0][-18:-2] == 'btn-exit-quality':
+        return ["twelve columns", False]    
+    else:
+        if className == 'nine columns':
+            return ["twelve columns", False]
+        elif className == 'twelve columns':
+            return ["nine columns", True]
 
 # Open subject collapse
 @app.callback(
@@ -1794,7 +1829,6 @@ def open_quality_collapse(n_clicks):
 def open_subject_collapse(n_clicks, exit_clicks, ids):
 
     trigger = dash.callback_context.triggered[0] 
-    print(trigger["prop_id"].split(".")[0][-18:-2])
     if trigger["prop_id"].split(".")[0][-18:-2] == 'btn-exit-subject':
         return False, []
 
@@ -1804,14 +1838,6 @@ def open_subject_collapse(n_clicks, exit_clicks, ids):
     selected_subject_id = subject_id
     
     return True, [build_subject_collapse(subject_id = subject_id)]
-
-
-# Remove subject in quality view
-@app.callback(
-    Output('subject_list', 'children'),
-    [Input({'type': 'remove_button', 'id': ALL}, 'n_clicks')])
-def remove_subject_from_quality(value):
-    print(value)
 
 # Add group
 @app.callback(
@@ -1844,8 +1870,9 @@ def update_groups(n_clicks, selected_cells):
     [Input("segm_table_dropdown_mode", "value"),
      Input("dropdown_segm_methods", "value"),
      Input("dropdown_category","value"),
-     Input("segm_table_dropdown_stdev", "value")])
-def change_segm_table_mode(table_mode, segmentation_method, mode, show_stdev):
+     Input("segm_table_dropdown_stdev", "value"),
+     Input('photo-container', 'children')])
+def change_segm_table_mode(table_mode, segmentation_method, mode, show_stdev, removed):
     if table_mode == 'subjects':
         mode = 'subjects'
     return [build_segm_table(mode = mode, segmentation_method = segmentation_method, show_stdev = show_stdev, color = False)]
@@ -1857,8 +1884,9 @@ def change_segm_table_mode(table_mode, segmentation_method, mode, show_stdev):
      Input("dropdown_segm_methods", "value"),
      Input("parcel_table_dropdown_mode", "value"),
      Input("parcel_table_dropdown_method", "value"),
-     Input("parcel_table_dropdown_scalar", "value")])
-def change_parcel_table_mode(mode, segmentation_method, table_mode, parcellation_method, scalar):
+     Input("parcel_table_dropdown_scalar", "value"),
+     Input('photo-container', 'children')])
+def change_parcel_table_mode(mode, segmentation_method, table_mode, parcellation_method, scalar, removed):
     
     if table_mode == 'subjects':
         mode = 'subjects'
@@ -1919,9 +1947,10 @@ def paint_parcel_table(selected_cells, table_data, style_data_conditional):
 @app.callback(
     Output("parcel_download_all", "data"), 
     [Input("parcel_download_all_btn", "n_clicks")],
-    [State("dropdown_segm_methods", "value")])
-def download_parceldata(n_clicks, segmentation_method): 
-    return export_parcel_table(segmentation_method, 'Witelson')
+    [State("dropdown_segm_methods", "value"),
+     State("parcel_table_dropdown_method", "value")])
+def download_parceldata(n_clicks, segmentation_method, parcellation_method): 
+    return export_parcel_table(segmentation_method, parcellation_method)
 '''
 
 @app.callback(

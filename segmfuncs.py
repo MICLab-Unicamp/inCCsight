@@ -129,8 +129,8 @@ def segm_roqs(wFA_ms, eigvects_ms):
     return segm
 
 
-def segm_staple(path, name_dict, fissure, segm_import=None):
-    
+def segm_staple(path, fissure, segm_import=None):
+
     import tempfile
     import numpy as np
     import nibabel as nib
@@ -144,22 +144,23 @@ def segm_staple(path, name_dict, fissure, segm_import=None):
                  'Watershed': 'watershed'}
     
     nii_list = []
-    for name in name_dict.values():
+    for segmentation_method in name_dict.keys():
         folderpath = path + 'inCCsight/'
-        filename = 'segm_' + name_dict[segmentation_method] + '.nii.gz'
-        reader.SetFileName(filename)
+        filename = 'segm_' + name_dict[segmentation_method] + '_data.npy.nii.gz'
+        reader.SetFileName(folderpath + filename)
         nii_list.append(reader.Execute())
 
     if segm_import is not None:
-        reader.SetFileName(filename)
+        filename = 'segm_import.nii.gz'
+        reader.SetFileName(folderpath + filename)
         nii_list.append(reader.Execute())
     
     nii_staple = staple.Execute(nii_list)
-    writer.SetFileName('{}/segm_staple.nii.gz'.format(folderpath))
+    writer.SetFileName('{}/segm_staple.npy.nii.gz'.format(folderpath))
     writer.Execute(nii_staple)
 
-    nii_staple = nib.load('{}/segm_staple.nii.gz'.format(folder)).get_data()
-    seg_staple = nii_staple[fissure,:,:]
+    seg_staple = nib.load('{}/segm_staple.npy.nii.gz'.format(folderpath)).get_data()
+    seg_staple = seg_staple[fissure,:,:]
 
     seg_staple[seg_staple == np.min(seg_staple)] = 0
     seg_staple[seg_staple > 0] = 1
