@@ -122,8 +122,18 @@ We can also indicate auxiliary flags:
 * `-b`, or `--basename` : string indicating the basename used in the eigenvectors/eigenvalues files (default is `'dti'`). See the Input Data section for more information;
 * `-s`, or `--segm` : segmentation methods to be performed on the data (default is all available: _ROQS_ and _Watershed_);
 * `--staple` : if used will create a consensus using the STAPLE method between the segmentations available (including imported masks);
-* `-m`, or `--maskname` : string contained in the file name of imported masks. See the Importing Masks section for more information;
 * `-d`, or `--extra-data` : path to sheet file (.xls, .xlsm or .csv) with additional information to be imported and visualized. See the Importing External Data section for more information;
+* `-m`, or `--maskname` : string contained in the file name of imported masks. See the Importing Masks section for more information;
 
 After calling the initial command, data will be processed and your default browser will open, showing the interactive dashboard for data exploration and visualization. While the Terminal or Command Prompt where the program is running is kept open, you can access the dashboard on `http://127.0.0.1:5050/`.
 
+### Importing external data
+
+We often would like to cross categorical data (such as sex or race), or numerical data (such as age), with information extracted through DTI processing. Using **inCCsight** we can import such types of data and visualize relations between them and the processed data by importing a sheet file, such as .xlsm, .xls or .csv, that must have a column called 'Subjects' with the names of the imported Subject folders.
+
+Columns with categorical data will be listed as a View Category that, when selected, will make all graphs compare the groups in this category. For example, if you select the category 'Sex' and your columns divided subjects between 'M' and 'F', all graphs will compare these two groups.
+
+To import external data you can use the flag `-d` or `--extra-data`, as shown:
+```
+python app.py -p ./HEALTH_CONTROLS ./CONDITION_X ./CONDITION_Y -d ./subjects_informations.xls
+```
