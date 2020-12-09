@@ -3,7 +3,7 @@
 # inCCsight
 inCCsight is a web-based software for processing, exploring e visualizing data for Corpus Callosum analysis using Diffusion Tensor Images (DTI) implemented in Python/Dash/Plotly. 
 
-
+![Software screenshot](https://github.com/thaiscaldeira/ccinsight/blob/master/assets/inccsight_screenshot.png)
 
 ***
 
