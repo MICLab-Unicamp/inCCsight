@@ -169,7 +169,6 @@ scipy==1.2.1
 seaborn==0.9.0
 SecretStorage==3.1.1
 Send2Trash==1.5.0
-siamxt==1.0.0
 simplegeneric==0.8.1
 SimpleITK==1.2.0
 singledispatch==3.4.0.3
@@ -202,7 +201,6 @@ TractSeg==2.0
 traitlets==4.3.2
 unicodecsv==0.14.1
 urllib3==1.24.1
-virtualenv==20.0.20
 vtk==8.1.2
 wcwidth==0.1.7
 webencodings==0.5.1
