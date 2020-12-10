@@ -24,7 +24,7 @@ cd ccinsight
 ```
 Create a new virtual environment:
 ```
-python3 -m virtualenv venv
+python -m virtualenv venv
 venv\Scripts\activate
 ```
 Update pip and install app requirements
