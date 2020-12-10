@@ -18,7 +18,6 @@ boto==2.49.0
 Bottleneck==1.2.1
 Brotli==1.0.7
 certifi==2019.3.9
-cffi==1.12.2
 chardet==3.0.4
 Click==7.0
 cloudpickle==0.8.0
