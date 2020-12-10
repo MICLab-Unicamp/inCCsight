@@ -12,7 +12,10 @@ inCCsight is a web-based software for processing, exploring e visualizing data f
 We suggest you to create a separate virtual environment running Python 3 for this app, and install all of the required dependencies there. 
 
 ### In Windows:
-You will need *Python3* and *git* installed in your machine in order to install this app, please refer to https://docs.python.org/3/using/windows.html and https://git-scm.com/book/en/v2/Getting-Started-Installing-Git if you need help installing these tools.
+You will need `Python3`, `pip`, `git` and `virtualenv` installed in your machine in order to install this app, please refer to https://docs.python.org/3/using/windows.html and https://git-scm.com/book/en/v2/Getting-Started-Installing-Git if you need help installing these tools. In Windows we recommend you install the latest Python3 version (available in https://www.python.org/downloads/windows/), selecting the conventional install which will include `pip` and allowing the installer to modify system variables. Later you'll only need to install the `virtualenv` package by typing:
+```
+pip install virtualenv
+```
 
 Run in Command Prompt. Clone the git repository:
 ```
@@ -32,7 +35,10 @@ pip install -r requirements.txt
 
 
 ### In UNIX-based systems:
-You will need *Python3* and *git* installed in your machine in order to install this app, please refer to https://docs.python.org/3/using/unix.html and https://git-scm.com/book/en/v2/Getting-Started-Installing-Git if you need help installing these tools.
+You will need `Python3`, `pip`, `git` and `virtualenv` installed in your machine in order to install this app, please refer to https://docs.python.org/3/using/unix.html and https://git-scm.com/book/en/v2/Getting-Started-Installing-Git if you need help installing these tools. If you already have `Python3` and `pip` installed, you can install `virtualenv` by typing:
+```
+pip install virtualenv
+```
 
 Run in Terminal. Clone the git repository:
 ```
