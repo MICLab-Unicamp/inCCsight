@@ -94,7 +94,7 @@ if opts.folders is not None:
     for directory in opts.dirs:
         if directory is not None:
             if inputfuncs.check_directory(directory, opts.basename):
-                path_dict[directory.rsplit('/', 2)[1]] = directory
+                path_dict[os.path.basename(os.path.dirname(directory))] = directory
 
 # Import the subjects inside the parents folders
 
@@ -107,7 +107,7 @@ if opts.parents is not None:
             path_dict.update(directory_dict)
 
             # Create dict with subjects as keys and group (parents names) as values
-            dict_folders = dict.fromkeys(directory_dict.keys(), [parent.rsplit('/', 1)[1]])
+            dict_folders = dict.fromkeys(directory_dict.keys(), [os.path.basename(os.path.dirname(parent))])
             group_dict.update(dict_folders)
 
 
@@ -153,7 +153,7 @@ for subject_path in tqdm(path_dict.values()):
         # Get data path info
         folderpath = subject_path + 'inCCsight/'
         filename = 'segm_' + dict_segmentation_methods[segmentation_method] + '_data.npy'
-        subject_name = subject_path.rsplit('/', 2)[1]
+        subject_name = os.path.basename(os.path.dirname(subject_path))
 
         # Process/Load data
         segmentation_mask, scalar_maps, scalar_statistics, scalar_midlines, error_prob, parcellations_masks = ccprocess.segment(subject_path, 

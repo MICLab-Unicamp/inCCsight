@@ -54,7 +54,7 @@ def import_parent(parent_path, basename):
 
         for directory_path in dirs:
             if check_directory(directory_path, basename):
-                directory_dict[directory_path.rsplit('/', 2)[1]] = directory_path
+                directory_dict[os.path.basename(os.path.dirname(directory_path))] = directory_path
 
     return directory_dict
 
