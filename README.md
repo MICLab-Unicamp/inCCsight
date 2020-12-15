@@ -15,7 +15,8 @@ We suggest you to create a separate virtual environment running Python 3 for thi
 You will need `Python3`, `pip`, `git` and `virtualenv` installed in your machine in order to install this app, please refer to https://docs.python.org/3/using/windows.html and https://git-scm.com/book/en/v2/Getting-Started-Installing-Git if you need help installing these tools. In Windows we recommend you install the latest Python3 version (available in https://www.python.org/downloads/windows/), selecting the conventional install which will include `pip` and allowing the installer to modify system variables. Later you'll only need to install the `virtualenv` package by typing:
 ```
 pip install virtualenv
-```
+``` 
+Additionally you'll need to have Microsoft's _C++ Build Tools_ installed in order to install some of the required packages, you can download it here: https://visualstudio.microsoft.com/visual-cpp-build-tools/ 
 
 Run in Command Prompt. Clone the git repository:
 ```
