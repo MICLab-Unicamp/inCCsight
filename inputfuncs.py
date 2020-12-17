@@ -15,9 +15,11 @@ def get_parser():
                     
 
     parser.add_argument('-f', '--folders', help='Directory(ies) that contain the eigenvectors and values files.', nargs='*', dest='folders')
-    parser.add_argument('-d', '--extra-data', help='xlsm or csv file with extra data to be imported, must contain a column named Subjects with the same name as the folders that contain the eigenvectors', nargs='?', default=None, dest='ext_data')
     parser.add_argument('-p', '--parent', help='Directory(ies)that contain subdirectories with the eigenvectors and values files. Use this to easily import lots of data.', nargs='*', dest='parents')
     
+    parser.add_argument('-d', '--extra-data', help='xlsm or csv file with extra data to be imported, must contain a column named Subjects with the same name as the folders that contain the eigenvectors', nargs='?', default=None, dest='ext_data')
+    parser.add_argument('--port', help='Changes the localhost port the software will be available at. Default is 8000.', nargs='?', type=int, dest='port', default=8000)
+
     parser.add_argument('-b', '--basename', help='Basename for the FSL files (basename default is \'dti\', e.g. dti_L1.nii.gz', nargs='?', default='dti', dest='basename')
 
     parser.add_argument('-m', '--maskname', help='String contained in the filename of the masks files located in the directories loaded using [-d] or [-p]', nargs='?', type=str, dest='maskname')

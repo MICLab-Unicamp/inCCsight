@@ -2034,11 +2034,10 @@ html.Div([
 
 # SERVER CONFIG ---------------------------------------------------------------------------------
 
-#port = 5000 + random.randint(0, 999)
-port = 5050
+port = opts.port
 
 def open_browser():
-    url = "http://127.0.0.1:{0}".format(port)
+    url = "http://localhost:{0}".format(port)
     webbrowser.open(url)
 
 if __name__ == "__main__":
