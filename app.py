@@ -210,7 +210,7 @@ for segmentation_method in dict_segmentation_methods.keys():
 app = dash.Dash(__name__, 
                meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=.8, maximum-scale=.8"}],
                external_stylesheets = [dbc.themes.BOOTSTRAP],
-               prevent_initial_callbacks=False)
+               prevent_initial_callbacks=True)
 server = app.server
 app.config["suppress_callback_exceptions"] = True
 app.title = 'inCCsight'
@@ -654,7 +654,7 @@ def build_segm_scatterplot_dropdowns():
                         dcc.Dropdown(id='dropdown-scalars-right',
                                      options=options,
                                      multi=False,
-                                     value='RD',
+                                     value='MD',
                                      style={'width':'90px'}),
                     ], className='row', style={'margin':'0px 0px 0px 30px'}),
                     html.Div([
@@ -839,20 +839,21 @@ def build_quality_collapse():
 
 
                 html.Div([
-                    html.H5("Threshold:"), 
-                    dcc.Dropdown(id='dropdown-quality-threshold',
-                                 options= [{'label': num/100, 'value': num/100} for num in np.arange(95, 5, -5)],
-                                 multi=False,
-                                 value='0.7',
-                                 style={'float': 'right', 'width':'100px', 'margin-left':'10px'}),
-                    dbc.Button("Remove Selected", color='dark', size='lg', style={'margin-left':'40px'}, id='remove_btn'),
-                    ], className='row', 
-                    style=dict(margin="1rem 0 0 3rem", display="flex", alignItems="center")),
+                        html.Div([
+                            html.H5("Threshold:"), 
+                            dcc.Dropdown(id='dropdown-quality-threshold',
+                                         options= [{'label': num/100, 'value': num/100} for num in np.arange(95, 5, -5)],
+                                         multi=False,
+                                         value='0.7',
+                                         style={'width':'100px', 'marginLeft':'5px'}),
+                            ], className='row', style=dict(marginLeft='2rem')),
+                        dbc.Button("Remove Selected", color='dark', size='lg', id='remove_btn', style=dict(marginRight='2rem'))
+                ], className='twelve columns', style=dict(display="flex", justifyContent="space-between")),
                 
                 html.Div(children=build_quality_images(), 
                     className="twelve columns", 
                     id='photo-container',
-                    style=dict(margin="2rem 0rem 2rem 0rem", height="100vh", width="100%"))
+                    style=dict(margin="2rem 0rem 2rem 0rem")),
             
             ], style={'margin':'20px', 'height':"100vh", 'backgroundColor':'#FAFAFA', 'border-radius':'20px'})
 
@@ -874,26 +875,26 @@ def build_quality_images(threshold=0.7):
 
         # Retrieve images and segmentation
         for subject_id in index_label:
-
             children.append(html.Div([
                                 html.Div([
-                                    html.H6("Subject: {} - Method: {}".format(subject_id, segmentation_method), 
-                                        style=dict(padding="0px 30px 0px 0px", 
-                                        fontSize='1.8rem')),
+                                    html.H6("Subject: {}".format(subject_id), 
+                                        style=dict(fontSize='2rem')),
                                     dcc.Checklist(
                                         id={'type': 'remove-cbx', 'index': 'cbx-{}-{}'.format(segmentation_method, subject_id)},
                                         options=[{'label': 'Remove', 'value': 'Remove'}], 
                                         value=[], 
                                         style=dict(fontSize='1.8rem'), inputStyle=dict(marginRight="10px")),  
 
-                                    ], className='row', style=dict(width='100%', display='flex', verticalAlign='center', justifyContent='flex-end')),
-                                dcc.Graph(figure=build_fissure_image(subject_id, segmentation_method))
+                                    ], className='twelve columns', style=dict(width='100%', display='flex', verticalAlign='center', justifyContent='space-between')),
+                                html.Div([
+                                    dcc.Graph(figure=build_fissure_image(subject_id, segmentation_method))
+                                    ], className='twlve columns'),
                             ], className = 'twelve columns'))
         return children
 
 
     def get_quality_tab(segmentation_method):
-        tab = dbc.Tab(label=segmentation_method, children=html.Div(dcc.Loading(get_quality_tab_children(segmentation_method)), style=dict(height='80vh', overflowY="auto", padding='40px 20px 20px 20px')))
+        tab = dbc.Tab(label=segmentation_method, children=html.Div(get_quality_tab_children(segmentation_method), style=dict(height='80vh', overflowY="auto", padding='40px 20px 20px 20px')))
         return tab
 
     tabs = []
@@ -1387,7 +1388,7 @@ app.layout = html.Div(
                                 html.Div(className='row', id='quality-button-container', 
                                     children=[
                                        dbc.Button(
-                                            ["Check quality  ", dbc.Badge("0", color="warning", className="ml-1", id='quality-count')],
+                                            "Check quality",
                                             size='lg',
                                             color="light",
                                             id='quality-button'
@@ -1454,8 +1455,7 @@ app.layout = html.Div(
                 dbc.Collapse(
                     dbc.Card(
                         dbc.CardBody(
-                            children=[build_quality_collapse()],
-                            style=dict(padding = '0'),
+                            children=build_quality_collapse(),
                             ),
                         ),
                     style=dict(border='0px'),
@@ -1699,56 +1699,7 @@ app.layout = html.Div(
 
 # --------------------------------- CALLBACKS ---------------------------------------------
 
-@app.callback(
-    Output('individual_subject_segm_table_container', 'children'),
-    [Input('dropdown-subj-collapse-table-segm-methods', 'value'),
-     Input('dropdown-subj-collapse-table-segm-std-dev', 'value')])
-def update_segm_table_subj_collapse(segmentation_method, show_stdev):
-    if show_stdev == 'Show':
-        show_stdev = True
-    else:
-        show_stdev = False
-
-    return build_individual_subject_segm_table(selected_subject_id, segmentation_method, show_stdev)
-
-@app.callback(
-    Output('individual_subject_parcel_table_container', 'children'),
-    [Input('dropdown-subj-collapse-table-parcel-scalars', 'value'),
-     Input('dropdown-subj-collapse-table-parcel-segm-methods', 'value'),
-     Input('dropdown-subj-collapse-table-parcel-methods', 'value')])
-def update_parc_table_subj_collapse(scalar, segmentation_method, parcellation_method):
-    return build_individual_subject_parcel_table(selected_subject_id, segmentation_method, parcellation_method, scalar)
-
-@app.callback(
-    Output('subject_collapse_fissure_img', 'figure'),
-    [Input('dropdown-subj-collapse-segm-methods', 'value'),
-     Input('dropdown-subj-collapse-scalars', 'value')])
-def update_fissure_image(segmentation_method, scalar):
-    return build_fissure_image(subject_id=selected_subject_id, segmentation_method=segmentation_method, scalar=scalar)
-
-@app.callback(
-    Output('photo-container', 'children'),
-    [Input('remove_btn', 'n_clicks'),
-     Input('dropdown-quality-threshold', 'value')],
-    [State({'type': 'remove-cbx', 'index': ALL}, 'id'),
-     State({'type': 'remove-cbx', 'index': ALL}, 'value'),
-     State('photo-container', 'children')])
-def remove_quality_images(n_clicks, threshold, ids, values, children):
-
-    global dict_removed_subjects
-
-    if n_clicks is not None:
-
-        removed_counter = 0
-        for dict_id, value in zip(ids,values):
-            if value == ['Remove']:
-                segmentation_method, subject_key = dict_id['index'].rsplit('-')[-2:]
-                dict_removed_subjects[segmentation_method].append(subject_key)
-                dict_removed_subjects[segmentation_method] = list(set(dict_removed_subjects[segmentation_method]))
-                removed_counter += 1
-
-        if removed_counter > 0:
-            return build_quality_images(threshold)
+# Banner --------------------------------------------------------------
 
 # Enable/Disable segm method dropdown
 @app.callback(
@@ -1759,6 +1710,8 @@ def update_dropdown_disabled(mode):
         return True
     else:
         return False
+
+# Graph updates -------------------------------------------------------
 
 # Update segm box-plots
 @app.callback(
@@ -1830,34 +1783,7 @@ def update_bubbleplot(segm_method, mode, scalar, size, removed):
         size = False
     return build_bubble_grouped(mode=mode, segmentation_method=segm_method, scalar=scalar, size=size)
 
-'''
-# Update number of quality warnings
-@app.callback(
-    Output("quality-count", 'children'),
-    [Input("photo-container", 'children')])
-def update_quality_counter(quality_photos):
-    return len(quality_photos)
-'''
-
-# Open quality collapse
-@app.callback(
-    [Output("dashboard", "className"),
-     Output("quality-collapse","is_open")],
-    [Input("quality-button","n_clicks"),
-     Input("btn-exit-quality","n_clicks")],
-    [State("dashboard", "className")])
-def open_quality_collapse(n_clicks, exit_clicks, className):
-    if n_clicks is not None:
-        trigger = dash.callback_context.triggered[0] 
-        if trigger["prop_id"].split(".")[0][-18:-2] == 'btn-exit-quality':
-            return ["twelve columns", False]    
-        else:
-            if className == 'nine columns':
-                return ["twelve columns", False]
-            elif className == 'twelve columns':
-                return ["nine columns", True]
-    else:
-        return ["twelve columns", False]
+# Subject collapse ----------------------------------------------------
 
 # Open subject collapse
 @app.callback(
@@ -1887,6 +1813,83 @@ def open_subject_collapse(n_clicks, exit_clicks, ids):
         return True, [build_subject_collapse(subject_id = subject_id)]
     else:
         return False, []
+
+@app.callback(
+    Output('individual_subject_segm_table_container', 'children'),
+    [Input('dropdown-subj-collapse-table-segm-methods', 'value'),
+     Input('dropdown-subj-collapse-table-segm-std-dev', 'value')])
+def update_segm_table_subj_collapse(segmentation_method, show_stdev):
+    if show_stdev == 'Show':
+        show_stdev = True
+    else:
+        show_stdev = False
+
+    return build_individual_subject_segm_table(selected_subject_id, segmentation_method, show_stdev)
+
+@app.callback(
+    Output('individual_subject_parcel_table_container', 'children'),
+    [Input('dropdown-subj-collapse-table-parcel-scalars', 'value'),
+     Input('dropdown-subj-collapse-table-parcel-segm-methods', 'value'),
+     Input('dropdown-subj-collapse-table-parcel-methods', 'value')])
+def update_parc_table_subj_collapse(scalar, segmentation_method, parcellation_method):
+    return build_individual_subject_parcel_table(selected_subject_id, segmentation_method, parcellation_method, scalar)
+
+@app.callback(
+    Output('subject_collapse_fissure_img', 'figure'),
+    [Input('dropdown-subj-collapse-segm-methods', 'value'),
+     Input('dropdown-subj-collapse-scalars', 'value')])
+def update_fissure_image(segmentation_method, scalar):
+    return build_fissure_image(subject_id=selected_subject_id, segmentation_method=segmentation_method, scalar=scalar)
+
+@app.callback(
+    Output('photo-container', 'children'),
+    [Input('remove_btn', 'n_clicks'),
+     Input('dropdown-quality-threshold', 'value')],
+    [State({'type': 'remove-cbx', 'index': ALL}, 'id'),
+     State({'type': 'remove-cbx', 'index': ALL}, 'value'),
+     State('photo-container', 'children')])
+def remove_quality_images(n_clicks, threshold, ids, values, children):
+
+    global dict_removed_subjects
+
+    if n_clicks is not None:
+
+        removed_counter = 0
+        for dict_id, value in zip(ids,values):
+            if value == ['Remove']:
+                segmentation_method, subject_key = dict_id['index'].rsplit('-')[-2:]
+                dict_removed_subjects[segmentation_method].append(subject_key)
+                dict_removed_subjects[segmentation_method] = list(set(dict_removed_subjects[segmentation_method]))
+                removed_counter += 1
+
+        if removed_counter > 0:
+            return build_quality_images(threshold)
+    else:
+        build_quality_images(0.7)
+
+# Quality collapse ----------------------------------------------------
+
+# Open quality collapse
+@app.callback(
+    [Output("dashboard", "className"),
+     Output("quality-collapse","is_open")],
+    [Input("quality-button","n_clicks"),
+     Input("btn-exit-quality","n_clicks")],
+    [State("dashboard", "className")])
+def open_quality_collapse(n_clicks, exit_clicks, className):
+    if n_clicks is not None:
+        trigger = dash.callback_context.triggered[0] 
+        if trigger["prop_id"].split(".")[0][-18:-2] == 'btn-exit-quality':
+            return ["twelve columns", False]    
+        else:
+            if className == 'nine columns':
+                return ["twelve columns", False]
+            elif className == 'twelve columns':
+                return ["nine columns", True]
+    else:
+        return ["twelve columns", False]
+
+# Tables --------------------------------------------------------------
 
 # Change segm table mode
 @app.callback(
@@ -2024,23 +2027,6 @@ def update_selected_points(selection1, selection2, scalar_x, scalar_y):
     return build_segm_scattermatrix(selected_points=selected_points)
 '''
 
-'''
-# Quality control
-html.Div([
-    html.Div(
-        id='quality-container',
-        children=[
-            build_graph_title("Quality Check"),
-            dcc.Tabs([
-                dcc.Tab(label='ROQS', children='Oi bonita', className='tabclass', selected_className='tabclass-selected'),
-                dcc.Tab(label='Watershed', children='Oi bonita2', className='tabclass', selected_className='tabclass-selected'),
-                dcc.Tab(label='STAPLE', children='Oi bonita3', className='tabclass', selected_className='tabclass-selected'),
-                dcc.Tab(label='Mask', children='Oi bonita4', className='tabclass', selected_className='tabclass-selected'),
-            ])
-        ]
-    )
-], className = "eight columns"),
-'''
 
 # SERVER CONFIG ---------------------------------------------------------------------------------
 
