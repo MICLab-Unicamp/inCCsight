@@ -212,6 +212,7 @@ app = dash.Dash(__name__,
                prevent_initial_callbacks=True)
 server = app.server
 app.config["suppress_callback_exceptions"] = True
+app.title = 'inCCsight'
 
 
 # ------------------------------- BUILD FUNCS  -----------------------------------------------
