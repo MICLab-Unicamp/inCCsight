@@ -1,6 +1,7 @@
  #!/usr/bin/env python -W ignore::DeprecationWarning
 
 import os
+import ast
 import pathlib
 import pandas as pd
 import numpy as np
@@ -1733,6 +1734,7 @@ def update_fissure_image(segmentation_method, scalar):
      State({'type': 'remove-cbx', 'index': ALL}, 'value'),
      State('photo-container', 'children')])
 def remove_quality_images(n_clicks, threshold, ids, values, children):
+
     global dict_removed_subjects
 
     if n_clicks is not None:
@@ -1854,6 +1856,8 @@ def open_quality_collapse(n_clicks, exit_clicks, className):
                 return ["twelve columns", False]
             elif className == 'twelve columns':
                 return ["nine columns", True]
+    else:
+        return ["twelve columns", False]
 
 # Open subject collapse
 @app.callback(
@@ -1863,42 +1867,26 @@ def open_quality_collapse(n_clicks, exit_clicks, className):
      Input({'type': 'btn-exit-subject', 'index': ALL}, 'n_clicks')],
     [State({'type': 'subject-list-btns', 'index': ALL}, 'id')])
 def open_subject_collapse(n_clicks, exit_clicks, ids):
+    if n_clicks is not None:
 
-    trigger = dash.callback_context.triggered[0] 
-    if trigger["prop_id"].split(".")[0][-18:-2] == 'btn-exit-subject':
+        trigger = dash.callback_context.triggered[0] 
+        
+        if (trigger['value'] is None): 
+            return False, []
+
+        btn_id = ast.literal_eval(trigger["prop_id"][:-9])
+
+        if btn_id['type'] == 'btn-exit-subject':
+            return False, []        
+
+        subject_id = btn_id['index'].rsplit('-')[-1]
+        
+        global selected_subject_id
+        selected_subject_id = subject_id
+        
+        return True, [build_subject_collapse(subject_id = subject_id)]
+    else:
         return False, []
-
-    subject_id = [t["prop_id"].rsplit('"')[3].rsplit('-')[-1] for t in dash.callback_context.triggered][0]
-    
-    global selected_subject_id
-    selected_subject_id = subject_id
-    
-    return True, [build_subject_collapse(subject_id = subject_id)]
-
-# Add group
-@app.callback(
-    [Output("table-groups", "data"),
-     Output("table-subjects", "selected_cells")],
-    [Input("group-button", "n_clicks")],
-    [State("table-subjects","selected_cells")])
-def update_groups(n_clicks, selected_cells):
-    
-    new_group_name = "New Group"
-    k = 1
-    while new_group_name in set(np.hstack(list(group_dict.values()))):
-        new_group_name = "New Group " + str(k)
-        k += 1
-
-    subject_list = list(path_dict.keys())
-
-    if selected_cells is not None:
-        for i, cell_dict in enumerate(selected_cells):
-            subject_key = subject_list[cell_dict['row']]
-            group_dict[subject_key] += [new_group_name] 
-
-    df_group = pd.DataFrame.from_dict(group_dict, orient='index', columns=["Group"])
-
-    return [{"Groups": i} for i in set(np.hstack(list(group_dict.values())))], {}
 
 # Change segm table mode
 @app.callback(
