@@ -209,7 +209,7 @@ for segmentation_method in dict_segmentation_methods.keys():
 app = dash.Dash(__name__, 
                meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=.8, maximum-scale=.8"}],
                external_stylesheets = [dbc.themes.BOOTSTRAP],
-               prevent_initial_callbacks=True)
+               prevent_initial_callbacks=False)
 server = app.server
 app.config["suppress_callback_exceptions"] = True
 app.title = 'inCCsight'
@@ -351,7 +351,7 @@ def build_parcel_boxplot(scalar='FA', mode='Method', segmentation_method='ROQS',
     
     return subplots
 
-def build_segm_scatterplot(mode='Method', segmentation_method = 'ROQS', scalar_x = 'FA', scalar_y = 'MD'):
+def build_segm_scatterplot(mode='Method', segmentation_method = 'ROQS', scalar_x = 'FA', scalar_y = 'MD', trendline=None):
 
     df = pd.DataFrame()
 
@@ -375,7 +375,8 @@ def build_segm_scatterplot(mode='Method', segmentation_method = 'ROQS', scalar_x
                     color=mode, 
                     marginal_y="violin", 
                     marginal_x="histogram",
-                    hover_name=df.index)
+                    hover_name=df.index,
+                    trendline=trendline)
 
     fig.update_layout(height=800, paper_bgcolor='rgba(0,0,0,0)')
     fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
@@ -635,21 +636,35 @@ def build_midlineplot_dropdown():
 def build_segm_scatterplot_dropdowns():
 
     options = [{'label': scalar, 'value': scalar} for scalar in scalar_list]
+    options_trendlines = [{'label': scalar, 'value': scalar} for scalar in ['None', 'OLS', 'Lowess']]
 
     layout = html.Div([
                 html.Div([
-                    html.H6('Scalar Y:', className='table-options-title', style={'padding':'0px 10px 0px 10px'}),
-                    dcc.Dropdown(id='dropdown-scalars-left',
-                                 options=options,
-                                 multi=False,
-                                 value='FA',
-                                 style={'width':'120px'}),
-                    html.H6('Scalar X:', className='table-options-title', style={'padding':'0px 10px 0px 30px'}),
-                    dcc.Dropdown(id='dropdown-scalars-right',
-                                 options=options,
-                                 multi=False,
-                                 value='RD',
-                                 style={'width':'120px'}),
+                    html.Div([
+                        html.H6('Scalar Y:', className='table-options-title', style={'padding':'0px 10px 0px 0px'}),
+                        dcc.Dropdown(id='dropdown-scalars-left',
+                                     options=options,
+                                     multi=False,
+                                     value='FA',
+                                     style={'width':'90px'}),
+                    ], className='row', style={'margin':'0px 0px 0px 10px'}),
+                    html.Div([
+                        html.H6('Scalar X:', className='table-options-title', style={'padding':'0px 10px 0px 0px'}),
+                        dcc.Dropdown(id='dropdown-scalars-right',
+                                     options=options,
+                                     multi=False,
+                                     value='RD',
+                                     style={'width':'90px'}),
+                    ], className='row', style={'margin':'0px 0px 0px 30px'}),
+                    html.Div([
+                        html.H6('Trendline:', className='table-options-title', style={'padding':'0px 10px 0px 0px'}),
+                        dcc.Dropdown(id='dropdown-scalars-trendline',
+                                     options=options_trendlines,
+                                     multi=False,
+                                     value='None',
+                                     style={'width':'120px'}),
+
+                    ], className='row', style={'margin':'0px 0px 0px 30px'}),
                 ], className='row', style=dict(display='flex', justifyContent='left', verticalAlign='center')),
             ]
         )
@@ -1733,7 +1748,6 @@ def remove_quality_images(n_clicks, threshold, ids, values, children):
         if removed_counter > 0:
             return build_quality_images(threshold)
 
-
 # Enable/Disable segm method dropdown
 @app.callback(
     Output("dropdown_segm_methods","disabled"),
@@ -1790,9 +1804,14 @@ def update_scattermatrix(segm_method, mode, removed):
      Input("dropdown_category","value"),
      Input("dropdown-scalars-right","value"),
      Input("dropdown-scalars-left","value"),
+     Input("dropdown-scalars-trendline","value"),
      Input('photo-container', 'children')])
-def update_scatterplot(segm_method, mode, scalar_x, scalar_y, removed):
-    return build_segm_scatterplot(mode=mode, segmentation_method=segm_method, scalar_x=scalar_x, scalar_y=scalar_y)
+def update_scatterplot(segm_method, mode, scalar_x, scalar_y, trendline, removed):
+    if trendline == 'None':
+        trendline = None
+    else:
+        trendline = trendline.lower()
+    return build_segm_scatterplot(mode=mode, segmentation_method=segm_method, scalar_x=scalar_x, scalar_y=scalar_y, trendline=trendline)
 
 # Update bubble plot
 @app.callback(
@@ -1826,14 +1845,15 @@ def update_quality_counter(quality_photos):
      Input("btn-exit-quality","n_clicks")],
     [State("dashboard", "className")])
 def open_quality_collapse(n_clicks, exit_clicks, className):
-    trigger = dash.callback_context.triggered[0] 
-    if trigger["prop_id"].split(".")[0][-18:-2] == 'btn-exit-quality':
-        return ["twelve columns", False]    
-    else:
-        if className == 'nine columns':
-            return ["twelve columns", False]
-        elif className == 'twelve columns':
-            return ["nine columns", True]
+    if n_clicks is not None:
+        trigger = dash.callback_context.triggered[0] 
+        if trigger["prop_id"].split(".")[0][-18:-2] == 'btn-exit-quality':
+            return ["twelve columns", False]    
+        else:
+            if className == 'nine columns':
+                return ["twelve columns", False]
+            elif className == 'twelve columns':
+                return ["nine columns", True]
 
 # Open subject collapse
 @app.callback(
@@ -1966,7 +1986,8 @@ def paint_parcel_table(selected_cells, table_data, style_data_conditional):
     [State("dropdown_segm_methods", "value"),
      State("parcel_table_dropdown_method", "value")])
 def download_parceldata(n_clicks, segmentation_method, parcellation_method): 
-    return export_parcel_table(segmentation_method, parcellation_method)
+    if n_clicks is not None:
+        return export_parcel_table(segmentation_method, parcellation_method)
 '''
 
 @app.callback(
