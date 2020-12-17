@@ -1,3 +1,4 @@
+ #!/usr/bin/env python -W ignore::DeprecationWarning
 
 import os
 import pathlib
@@ -7,12 +8,15 @@ import random
 from tqdm import tqdm
 from skimage import measure
 
+def warn(*args, **kwargs):
+    pass
 import warnings
-warnings.filterwarnings('ignore') 
+warnings.warn = warn
 
 import logging
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
+logging.captureWarnings(True)
 
 import inputfuncs
 import ccprocess
@@ -91,10 +95,10 @@ if opts.ext_data is not None:
 # Get indicated directories
 path_dict = {}
 if opts.folders is not None:
-    for directory in opts.dirs:
+    for directory in opts.folders:
         if directory is not None:
             if inputfuncs.check_directory(directory, opts.basename):
-                path_dict[os.path.basename(os.path.dirname(directory))] = directory
+                path_dict[os.path.basename(directory)] = os.path.join(directory, '')
 
 # Import the subjects inside the parents folders
 
@@ -103,11 +107,10 @@ if opts.parents is not None:
     for parent in opts.parents:
         if parent is not None:
             
-            directory_dict = inputfuncs.import_parent(parent, opts.basename)
+            directory_dict, dict_folders = inputfuncs.import_parent(parent, opts.basename)
             path_dict.update(directory_dict)
 
             # Create dict with subjects as keys and group (parents names) as values
-            dict_folders = dict.fromkeys(directory_dict.keys(), [os.path.basename(os.path.dirname(parent))])
             group_dict.update(dict_folders)
 
 
@@ -156,11 +159,15 @@ for subject_path in tqdm(path_dict.values()):
         subject_name = os.path.basename(os.path.dirname(subject_path))
 
         # Process/Load data
-        segmentation_mask, scalar_maps, scalar_statistics, scalar_midlines, error_prob, parcellations_masks = ccprocess.segment(subject_path, 
-                                                                                                                               segmentation_method, 
-                                                                                                                               dict_segmentation_functions, 
-                                                                                                                               dict_parcellation_functions, 
-                                                                                                                               opts.basename)        
+        try:
+            segmentation_mask, scalar_maps, scalar_statistics, scalar_midlines, error_prob, parcellations_masks = ccprocess.segment(subject_path, 
+                                                                                                                                   segmentation_method, 
+                                                                                                                                   dict_segmentation_functions, 
+                                                                                                                                   dict_parcellation_functions, 
+                                                                                                                                   opts.basename)
+        except:
+            print('Segmentation failed for subject {} with method {}'.format(subject_name, segmentation_method))
+
         # Get thickness
         try:
             thick, _, _ = thickness(segmentation_mask, 200)
@@ -1307,6 +1314,14 @@ def build_individual_subject_parcel_table(subject_id, segmentation_method = 'ROQ
 
     return html.Div(layout, style=dict(margin='-30px 0px 2px 0px'), id='individual_subject_parcel_table_container')
 
+# Extra functions
+
+def get_number_of_folders():
+    if len(list(group_dict.values())) > 0:
+        return len(set(np.hstack(list(group_dict.values()))))
+    else:
+        return 1
+
 # ---------------------------------- LAYOUT -----------------------------------------------
 app.layout = html.Div(
     children=[
@@ -1402,7 +1417,7 @@ app.layout = html.Div(
                                     children = [
                                         html.H1(str(len(set(list(path_dict.keys())))), className='numcard'),
                                         html.H5("Subjects", className='titlecard'),
-                                        html.H1(str(len(set(np.hstack(list(group_dict.values()))))), className='numcard', style={'margin-top': '10px'}),
+                                        html.H1(str(get_number_of_folders()), className='numcard', style={'margin-top': '10px'}),
                                         html.H5("Folders", className='titlecard'),
                                     ],
                                 ),
@@ -2028,4 +2043,4 @@ def open_browser():
 
 if __name__ == "__main__":
     Timer(1.25, open_browser).start()
-    app.run_server(debug=False, port=port)
+    app.run_server(debug=False, port=port, host='0.0.0.0')

@@ -4,6 +4,7 @@ import glob
 import numpy as np
 import libcc
 import pandas as pd
+from pathlib import Path
 
 def get_parser():
     
@@ -30,12 +31,12 @@ def get_parser():
 
 def check_directory(path, basename):
 
-    if (os.path.exists(path + '{}_L1.nii.gz'.format(basename)) and
-        os.path.exists(path + '{}_L2.nii.gz'.format(basename)) and
-        os.path.exists(path + '{}_L3.nii.gz'.format(basename)) and
-        os.path.exists(path + '{}_V1.nii.gz'.format(basename)) and
-        os.path.exists(path + '{}_V2.nii.gz'.format(basename)) and
-        os.path.exists(path + '{}_V3.nii.gz'.format(basename))):
+    if (os.path.exists(os.path.join(path, '{}_L1.nii.gz'.format(basename))) and
+        os.path.exists(os.path.join(path, '{}_L2.nii.gz'.format(basename))) and
+        os.path.exists(os.path.join(path, '{}_L3.nii.gz'.format(basename))) and
+        os.path.exists(os.path.join(path, '{}_V1.nii.gz'.format(basename))) and
+        os.path.exists(os.path.join(path, '{}_V2.nii.gz'.format(basename))) and
+        os.path.exists(os.path.join(path, '{}_V3.nii.gz'.format(basename)))):
         
         return True
     else:
@@ -46,17 +47,20 @@ def check_directory(path, basename):
 def import_parent(parent_path, basename):
 
     directory_dict = {}
+    group_dict = {}
     
     if (os.path.exists(parent_path)):
 
-        dirs = [directory for directory in glob.glob(parent_path+'/*/')]
+        dirs = [directory for directory in glob.glob(parent_path+'/**/*/', recursive=True) if os.path.basename(os.path.dirname(directory)) != 'inCCsight']
         dirs.sort()        
 
         for directory_path in dirs:
             if check_directory(directory_path, basename):
-                directory_dict[os.path.basename(os.path.dirname(directory_path))] = directory_path
+                subject_name = os.path.basename(os.path.dirname(directory_path))
+                directory_dict[subject_name] = directory_path
+                group_dict[subject_name] = os.path.basename(Path(directory_path).parent)
 
-    return directory_dict
+    return directory_dict, group_dict
 
 
 def parcellations_dfs_dicts(scalar_maps_dict, parcellations_dict, segmentation_method):

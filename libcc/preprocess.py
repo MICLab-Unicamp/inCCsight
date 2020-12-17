@@ -57,23 +57,24 @@ def loadNiftiDTI(basedir, basename='dti', reorient=False):
     
     import nibabel as nib
     import numpy as np
+    import os
     
     # ====== MAIN FUNCTION START ===========================
     # PRE-LOAD THE FIRST EIGENVALUE VOLUME TO GET HEADER PARAMS
-    L = nib.load('{}{}_L1.nii.gz'.format(basedir, basename))
+    L = nib.load(os.path.join(basedir, '{}_L1.nii.gz'.format(basename)))
     s,m,n = L.get_data().shape
 
     # LOAD AND BUILD EIGENVALUES VOLUME
     evl = [L.get_data()]
-    evl.append(nib.load('{}/{}_L2.nii.gz'.format(basedir, basename)).get_data())
-    evl.append(nib.load('{}/{}_L3.nii.gz'.format(basedir, basename)).get_data())
+    evl.append(nib.load(os.path.join(basedir, '{}_L2.nii.gz'.format(basename))).get_data())
+    evl.append(nib.load(os.path.join(basedir, '{}_L3.nii.gz'.format(basename))).get_data())
     evl = np.array(evl)
     evl[evl<0] = 0
 
     # LOAD AND BUILD EIGENVECTORS VOLUME
-    evt = [nib.load('{}/{}_V1.nii.gz'.format(basedir, basename)).get_data()]
-    evt.append(nib.load('{}/{}_V2.nii.gz'.format(basedir, basename)).get_data())
-    evt.append(nib.load('{}/{}_V3.nii.gz'.format(basedir, basename)).get_data())
+    evt = [nib.load(os.path.join(basedir, '{}_V1.nii.gz'.format(basename))).get_data()]
+    evt.append(nib.load(os.path.join(basedir, '{}_V2.nii.gz'.format(basename))).get_data())
+    evt.append(nib.load(os.path.join(basedir, '{}_V3.nii.gz'.format(basename))).get_data())
     evt = np.array(evt).transpose(0,4,1,2,3)
 
     T = np.diag(np.ones(4))

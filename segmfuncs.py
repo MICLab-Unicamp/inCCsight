@@ -12,7 +12,8 @@ def segm_watershed(wFA_ms, eigenvects_ms, gaussian_sigma=0.3):
     import siamxt
     from libcc.preprocess import run_analysis, grad_morf
     from libcc.gets import getTheCC
-    from skimage.morphology import watershed, disk, square, erosion, dilation
+    from skimage.morphology import disk, square, erosion, dilation
+    from skimage.segmentation import watershed
     from skimage.measure import label, regionprops	
 
 
@@ -211,7 +212,8 @@ def segm_watershed_3d(wFA, gaussian_sigma=0.3):
     import siamxt
     from libcc.preprocess import run_analysis, grad_morf
     from libcc.gets import getTheCC, getLargestConnectedComponent
-    from skimage.morphology import watershed, disk, square, erosion, dilation
+    from skimage.morphology import disk, square, erosion, dilation
+    from skimage.segmentation import watershed
     from skimage.measure import label, regionprops  
 
 
