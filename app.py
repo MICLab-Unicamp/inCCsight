@@ -46,9 +46,12 @@ import plotly.express as px
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 
+class Error(Exception):
+    pass
 
 theme = 'plotly'
 
+print(' ')
 
 # GENERAL DEFINITIONS -------------------------------------------------------------------------
 
@@ -102,7 +105,6 @@ if opts.folders is not None:
                 path_dict[os.path.basename(directory)] = os.path.join(directory, '')
 
 # Import the subjects inside the parents folders
-
 group_dict = {}
 if opts.parents is not None:
     for parent in opts.parents:
@@ -117,6 +119,12 @@ if opts.parents is not None:
 
 df_group = pd.DataFrame.from_dict(group_dict, orient='index', columns=["Folder"])
 df_categories = pd.concat([df_categories, df_group], axis = 1)
+
+# Warning for no imported subjects
+if len(path_dict.values()) == 0:
+    print('Error: No subjects were imported')
+    print('Terminating program.\n')
+    raise SystemExit(0)
 
 # DATA PROCESSING -----------------------------------------------------------------------------
 
