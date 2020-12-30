@@ -16,8 +16,8 @@ def segment(subject_path, segmentation_method, segmentation_methods_dict, parcel
 	             'STAPLE':'staple'}
 
 	folderpath = subject_path + 'inCCsight/'
-	filename = 'segm_' + name_dict[segmentation_method] + '_data.npy'
-
+	segmname = 'segm_' + name_dict[segmentation_method]
+	filename = segmname + '_data.npy'
 
 	# Check if segmentation has already been done
 	if os.path.exists(folderpath + filename):
@@ -83,7 +83,7 @@ def segment(subject_path, segmentation_method, segmentation_methods_dict, parcel
 		if segmentation_method != 'S_MASK':
 			canvas = np.zeros(wFA_v.shape, dtype = 'int32')
 			canvas[fissure,:,:] = segmentation
-			save_nii(subject_path, filename, canvas, affine)
+			save_nii(subject_path, segmname, canvas, affine)
 
 		save_os(subject_path, filename, data_tuple)
 
