@@ -861,10 +861,15 @@ def build_quality_collapse():
                     dbc.Button("Remove Selected", color='danger', outline=True, size='lg', id='remove_btn', style=dict(marginRight='2rem')),
                 ], className='twelve columns', style=dict(display='flex', justifyContent='flex-end')),
 
+                html.Div([
+                    dbc.Button("Unselect all", color='primary', outline=True, size='lg', id='unselect_all_btn', style=dict(marginRight='1rem')),
+                    dbc.Button("Select all", color='primary', outline=True, size='lg', id='select_all_btn', style=dict(marginRight='2rem')),
+                ], className='twelve columns', style=dict(display='flex', verticalAlign='center', justifyContent='flex-end', padding='10px 0px 10px 0px', marginBottom='-1rem')),
+
                 html.Div(children=build_quality_images(), 
                     className="twelve columns", 
                     id='photo-container',
-                    style=dict(margin="2rem 0rem 2rem 0rem")),
+                    style=dict(margin="0rem 0rem 2rem 0rem")),
             
             ], style={'margin':'20px', 'height':"100vh", 'backgroundColor':'#FAFAFA', 'border-radius':'20px', 'border':'1px solid rgba(0,0,0,.125)'})
 
@@ -886,7 +891,8 @@ def build_quality_images(threshold=0.7):
 
         # Retrieve images and segmentation
         for subject_id in index_label:
-            children.append(html.Div([
+            children.append(dcc.Loading(
+                            html.Div([
                                 html.Div([
                                     html.H6("Subject: {}".format(subject_id), 
                                         style=dict(fontSize='2rem')),
@@ -897,15 +903,17 @@ def build_quality_images(threshold=0.7):
                                         style=dict(fontSize='1.8rem'), inputStyle=dict(marginRight="10px")),  
 
                                     ], className='twelve columns', style=dict(width='100%', display='flex', verticalAlign='center', justifyContent='space-between')),
+                                
                                 html.Div([
                                     dcc.Graph(figure=build_fissure_image(subject_id, segmentation_method))
                                     ], className='twlve columns'),
-                            ], className = 'twelve columns'))
+                            
+                            ], className = 'twelve columns')))
         return children
 
 
     def get_quality_tab(segmentation_method):
-        tab = dbc.Tab(label=segmentation_method, children=html.Div(get_quality_tab_children(segmentation_method), style=dict(height='80vh', overflowY="auto", padding='40px 20px 20px 20px')))
+        tab = dbc.Tab(label=segmentation_method, children=html.Div(get_quality_tab_children(segmentation_method), style=dict(height='80vh', overflowY="auto", padding='20px 20px 20px 20px')))
         return tab
 
     tabs = []
@@ -1855,6 +1863,7 @@ def update_fissure_image(segmentation_method, scalar):
 
 # Quality collapse ----------------------------------------------------
 
+# Remove selected subjects
 @app.callback(
     Output('photo-container', 'children'),
     [Input('remove_btn', 'n_clicks'),
@@ -1887,6 +1896,25 @@ def remove_quality_images(n_clicks, restore_clicks, threshold, ids, values, chil
 
     if removed_counter > 0:
         return build_quality_images(threshold)
+    else:
+        return dash.no_update
+
+# (Un)Select all subjects (check all remove checkboxes)
+@app.callback(
+    Output({'type': 'remove-cbx', 'index': ALL}, 'value'),
+    [Input('select_all_btn', 'n_clicks'),
+     Input('unselect_all_btn', 'n_clicks')],
+    [State({'type': 'remove-cbx', 'index': ALL}, 'value')])
+def select_all_subjects(select_clicks, unselect_clicks, list_bts):
+    
+    trigger = dash.callback_context.triggered[0]
+
+    if select_clicks is not None and trigger['prop_id'] == 'select_all_btn.n_clicks':
+        return [['Remove']] * len(list_bts)
+
+    elif unselect_clicks is not None and trigger['prop_id'] == 'unselect_all_btn.n_clicks':
+        return [[]] * len(list_bts)
+
     else:
         return dash.no_update
 
