@@ -73,6 +73,9 @@ html,body
   .ten.columns                    { width: 81.3333333333%; }
   .eleven.columns                 { width: 91.6666666667%; }
   .twelve.columns                 { width: 100%; margin-left: 0; }
+  
+  .quality.columns                { width: 26%; margin-left: 1%; }
+  .notquality.columns             { width: 73%; margin-left: 0 }
 
   .one-third.column               { width: 31.3333333333%; }
   .two-thirds.column              { width: 64.6666666667%; }

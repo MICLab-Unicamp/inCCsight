@@ -836,7 +836,7 @@ def build_subjects_list():
 
 def build_quality_collapse():
 
-    layout = dbc.Card([
+    layout = html.Div([
                 
                 html.Div([
                     build_graph_title("Quality evaluation"),
@@ -866,7 +866,7 @@ def build_quality_collapse():
                     id='photo-container',
                     style=dict(margin="2rem 0rem 2rem 0rem")),
             
-            ], style={'margin':'20px', 'height':"100vh", 'backgroundColor':'#FAFAFA', 'border-radius':'20px'})
+            ], style={'margin':'20px', 'height':"100vh", 'backgroundColor':'#FAFAFA', 'border-radius':'20px', 'border':'1px solid rgba(0,0,0,.125)'})
 
     return layout
 
@@ -1467,11 +1467,12 @@ app.layout = html.Div(
                     dbc.Card(
                         dbc.CardBody(
                             children=build_quality_collapse(),
+                            style=dict(padding='0')
                             ),
+                        style=dict(border='1px solid rgba(0,0,0,0)'),
                         ),
-                    style=dict(border='0px'),
                     id="quality-collapse",
-                    className='three columns',
+                    className='quality columns',
                 ),
             
                 html.Div(
@@ -1898,14 +1899,14 @@ def remove_quality_images(n_clicks, restore_clicks, threshold, ids, values, chil
     [State("dashboard", "className")])
 def open_quality_collapse(n_clicks, exit_clicks, className):
     if n_clicks is not None:
-        trigger = dash.callback_context.triggered[0] 
+        trigger = dash.callback_context.triggered[0]
         if trigger["prop_id"].split(".")[0][-18:-2] == 'btn-exit-quality':
-            return ["twelve columns", False]    
+            return ["twelve columns", False]
         else:
-            if className == 'nine columns':
+            if className == 'notquality columns':
                 return ["twelve columns", False]
             elif className == 'twelve columns':
-                return ["nine columns", True]
+                return ["notquality columns", True]
     else:
         return ["twelve columns", False]
 
