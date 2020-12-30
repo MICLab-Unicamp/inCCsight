@@ -845,19 +845,22 @@ def build_quality_collapse():
                 
                 ], className='twelve columns', style=dict(display='flex', justifyContent='space-between')),
 
-
                 html.Div([
                         html.Div([
-                            html.H5("Threshold:"), 
+                            html.H6("Threshold:"), 
                             dcc.Dropdown(id='dropdown-quality-threshold',
                                          options= [{'label': num/100, 'value': num/100} for num in np.arange(95, 5, -5)],
                                          multi=False,
                                          value='0.7',
                                          style={'width':'100px', 'marginLeft':'5px'}),
                             ], className='row', style=dict(marginLeft='2rem')),
-                        dbc.Button("Remove Selected", color='dark', size='lg', id='remove_btn', style=dict(marginRight='2rem'))
                 ], className='twelve columns', style=dict(display="flex", justifyContent="space-between")),
                 
+                html.Div([
+                    dbc.Button("Restore Removed", color='info', outline=True, size='lg', id='restore_btn', style=dict(marginRight='1rem')),
+                    dbc.Button("Remove Selected", color='danger', outline=True, size='lg', id='remove_btn', style=dict(marginRight='2rem')),
+                ], className='twelve columns', style=dict(display='flex', justifyContent='flex-end')),
+
                 html.Div(children=build_quality_images(), 
                     className="twelve columns", 
                     id='photo-container',
@@ -1849,20 +1852,31 @@ def update_parc_table_subj_collapse(scalar, segmentation_method, parcellation_me
 def update_fissure_image(segmentation_method, scalar):
     return build_fissure_image(subject_id=selected_subject_id, segmentation_method=segmentation_method, scalar=scalar)
 
+# Quality collapse ----------------------------------------------------
+
 @app.callback(
     Output('photo-container', 'children'),
     [Input('remove_btn', 'n_clicks'),
+     Input('restore_btn', 'n_clicks'),
      Input('dropdown-quality-threshold', 'value')],
     [State({'type': 'remove-cbx', 'index': ALL}, 'id'),
      State({'type': 'remove-cbx', 'index': ALL}, 'value'),
      State('photo-container', 'children')])
-def remove_quality_images(n_clicks, threshold, ids, values, children):
+def remove_quality_images(n_clicks, restore_clicks, threshold, ids, values, children):
 
     global dict_removed_subjects
 
-    if n_clicks is not None:
+    trigger = dash.callback_context.triggered[0]
+    removed_counter = 0
 
-        removed_counter = 0
+    if restore_clicks is not None and trigger['prop_id'] == 'restore_btn.n_clicks':
+
+        for segmentation_method in dict_segmentation_methods.keys():
+            removed_counter += len(dict_removed_subjects[segmentation_method])
+            dict_removed_subjects[segmentation_method] = []
+
+    elif n_clicks is not None and trigger['prop_id'] == 'remove_btn.n_clicks':
+
         for dict_id, value in zip(ids,values):
             if value == ['Remove']:
                 segmentation_method, subject_key = dict_id['index'].rsplit('-')[-2:]
@@ -1870,12 +1884,10 @@ def remove_quality_images(n_clicks, threshold, ids, values, children):
                 dict_removed_subjects[segmentation_method] = list(set(dict_removed_subjects[segmentation_method]))
                 removed_counter += 1
 
-        if removed_counter > 0:
-            return build_quality_images(threshold)
+    if removed_counter > 0:
+        return build_quality_images(threshold)
     else:
-        build_quality_images(0.7)
-
-# Quality collapse ----------------------------------------------------
+        return dash.no_update
 
 # Open quality collapse
 @app.callback(
