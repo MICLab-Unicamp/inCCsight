@@ -147,7 +147,7 @@ def segm_staple(path, fissure, segm_import=None):
     nii_list = []
     for segmentation_method in name_dict.keys():
         folderpath = path + 'inCCsight/'
-        filename = 'segm_' + name_dict[segmentation_method] + '_data.npy.nii.gz'
+        filename = 'segm_' + name_dict[segmentation_method] + '.nii.gz'
         reader.SetFileName(folderpath + filename)
         nii_list.append(reader.Execute())
 
@@ -157,10 +157,10 @@ def segm_staple(path, fissure, segm_import=None):
         nii_list.append(reader.Execute())
     
     nii_staple = staple.Execute(nii_list)
-    writer.SetFileName('{}/segm_staple.npy.nii.gz'.format(folderpath))
+    writer.SetFileName('{}/segm_staple.nii.gz'.format(folderpath))
     writer.Execute(nii_staple)
 
-    seg_staple = nib.load('{}/segm_staple.npy.nii.gz'.format(folderpath)).get_data()
+    seg_staple = nib.load('{}/segm_staple.nii.gz'.format(folderpath)).get_data()
     seg_staple = seg_staple[fissure,:,:]
 
     seg_staple[seg_staple == np.min(seg_staple)] = 0
