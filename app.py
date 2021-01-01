@@ -1259,18 +1259,152 @@ def build_parcel_table(mode = 'Method', segmentation_method = 'ROQS', parcellati
 
     return layout
 
-def export_parcel_table(segmentation_method = 'ROQS', parcellation_method = 'Witelson'):
+def export_parcel_table(segmentation_method = 'ROQS', parcellation_method = 'Witelson', include_segm=True, include_parc=True, include_cat=True, groupby_cat=None):
 
-    list_regions = ['P1', 'P2', 'P3', 'P4', 'P5']
+    # Get data, organize with multiindex columns
+    if include_parc is True:
+        df = pd.concat(dict_parcellations_statistics[segmentation_method][parcellation_method].values(), 
+               axis = 1, 
+               keys = dict_parcellations_statistics[segmentation_method][parcellation_method].keys())
+    
+    # Include info for whole CC
+    if include_segm is True:
+        df_segm = pd.concat(dict(CC = dict_scalar_statistics[segmentation_method].drop(columns=['Method'])), axis=1)
+        
+        if include_parc is True:
+            df = pd.concat([df_segm, df], axis=1)
+        else:
+            df = df_segm
 
-    df = pd.concat(dict_parcellations_statistics[segmentation_method][parcellation_method].values(), 
-                   axis = 1, 
-                   keys = dict_parcellations_statistics[segmentation_method][parcellation_method].keys())
-    df.at[dict_removed_subjects[segmentation_method], df.columns] = ''
+    # Remove info from removed subjects
+    if groupby_cat is None:
+        df.at[dict_removed_subjects[segmentation_method], df.columns] = ''
+    else:
+        df = df.drop(dict_removed_subjects[segmentation_method])
 
-    filename = "inCCsight_parceldata_{}_{}.xlsx".format(segmentation_method, parcellation_method)
+                
+    # Add categories info
+    if include_cat is True or groupby_cat is not None:
+        df_aux = pd.concat(dict(Categories=df_categories), axis=1)
+        df = pd.concat([df_aux, df], axis=1)
+
+    # Group by category
+    if groupby_cat is not None:
+        print('got here')
+        df = df.groupby(('Categories', groupby_cat)).mean()    
+
+    # Define filename
+    if include_segm is True and include_parc is False:
+        filename = "inCCsight_data_{}.xlsx".format(segmentation_method)
+    elif include_segm is False and include_parc is True:
+        filename = "inCCsight_data_{}.xlsx".format(parcellation_method)
+    elif include_segm is True and include_parc is True:
+        filename = "inCCsight_data_{}_{}.xlsx".format(segmentation_method, parcellation_method)
+    else:
+        filename = "inCCsight_data.xlsx"
 
     return send_data_frame(df.to_excel, filename)
+
+def build_export_parcel_table_modal():
+
+    options_segm_config = [{'label': item, 'value': item} for item in dict_segmentation_methods.keys()]
+    options_parc_config = [{'label': item, 'value': value} for item, value in zip(list(dict_parcellation_methods.keys()), ['Witelson', 'Hofer', 'Chao', 'Cover', 'Freesurfer'])]
+    options_data_config = [{'label': item, 'value': item} for item in ['Categories', 'Segmentation', 'Parcellation']]
+    options_stdv_config = [{'label': item, 'value': item} for item in ['Show Std. Dev.']]
+    
+    options_groupby_check = [{'label': item, 'value': item} for item in ['Group by:']]
+    options_groupby_config = [{'label': item, 'value': item} for item in df_categories.columns]
+
+    segm_config = dbc.FormGroup(
+        row=True,
+        children = [
+            dbc.Label("Segmentation Method:", width=4, style=dict(justifyContent='flex-end')),
+            dbc.Col(
+                dcc.Dropdown(
+                    id="export_segm_method",
+                    options=options_segm_config,
+                    value='ROQS'),
+                
+                width=8)], 
+            )
+
+    parc_config = dbc.FormGroup(
+        row=True,
+        children = [
+            dbc.Label("Parcellation Method:", width=4, style=dict(justifyContent='flex-end')),
+            dbc.Col(
+                dcc.Dropdown(
+                    id="export_parc_method",
+                    options=options_parc_config,
+                    value='Witelson'),
+                
+                width=8)], 
+            )
+
+    data_config = dbc.FormGroup(
+        row=True,
+        children = [
+            dbc.Label("Include data from:", width=4, style=dict(justifyContent='flex-end')),
+            dbc.Col(
+                dcc.Checklist(
+                    id="export_data_config",
+                    options=options_data_config,
+                    value=['Categories', 'Segmentation', 'Parcellation'],
+                    inputStyle=dict(marginRight='5px')),
+                
+                width=8)], 
+            )
+
+    extra_config = dbc.FormGroup(
+        row=True,
+        children = [
+            dbc.Col(
+                width=4,
+                children = [
+                    dcc.Checklist(
+                        id="export_show_stdev",
+                        options=options_stdv_config,
+                        inputStyle=dict(marginRight='5px'))
+                    ],
+                ),
+
+            dbc.Col(
+                width=8,
+                children = [
+                    dcc.Checklist(
+                        id="export_groupby_check",
+                        options=options_groupby_check,
+                        inputStyle=dict(marginRight='5px')),
+                    dcc.Dropdown(
+                        id="export_groupby_config",
+                        options=options_groupby_config,
+                        value='Folder'),
+                    ],
+                )
+            ])
+
+
+    form = dbc.Form([segm_config, parc_config, data_config, extra_config])
+
+    modal = dbc.Modal([
+                
+                dbc.ModalHeader("Download table data"),
+                dbc.ModalBody(form, style=dict(fontSize='14pt')),
+                dbc.ModalFooter(
+                        children=[
+                            dbc.Label(id='disable_download_message', style=dict(marginRight='10px', opacity='0.5')),
+                            dbc.Button("Download", id="download_data_btn", size='lg', style=dict(marginRight='10px')),
+                            Download(id="parcel_download_all"),
+                            dbc.Button("Close", id="close_modal_btn", size='lg')
+                            ], 
+                        style=dict(justifyContent='flex-end'))
+                ], 
+
+                size='lg',
+                centered=True,
+                id="export_data_modal"),
+
+    return modal
 
 def build_individual_subject_segm_table(subject_id, segmentation_method = 'ROQS', show_stdev=False):
 
@@ -1406,12 +1540,21 @@ app.layout = html.Div(
 
                                 html.Div(className='row', id='quality-button-container', 
                                     children=[
-                                       dbc.Button(
+                                        dbc.Button(
                                             "Check quality",
                                             size='lg',
                                             color="light",
-                                            id='quality-button'
-                                        )
+                                            id='quality-button',
+                                            style=dict(marginRight='20px')
+                                        ),
+                                        
+                                        dbc.Button(
+                                            'Download tabled data', 
+                                            size='lg',
+                                            color="light",
+                                            id='parcel_download_all_btn',
+                                        ),
+
                                 ]),
                             
                             ],
@@ -1597,13 +1740,6 @@ app.layout = html.Div(
                                                     value = 'FA'
                                                 ),                
 
-                                                html.Button(
-                                                    id='parcel_download_all_btn',
-                                                    children='Download all data', 
-                                                ),
-
-                                                Download(id="parcel_download_all"),
-
                                             ],
                                         ),
                                     ],
@@ -1707,7 +1843,7 @@ app.layout = html.Div(
                                     ],
                                 ),
 
-                                html.Div(id='example_div'),
+                                html.Div(build_export_parcel_table_modal(), id='example_div'),
                             ],
                         ),        
                     ]
@@ -2020,16 +2156,62 @@ def paint_parcel_table(selected_cells, table_data, style_data_conditional):
     
     return style_data_conditional
 
+# Open export data modal
+@app.callback(
+    Output("export_data_modal", "is_open"),
+    [Input("parcel_download_all_btn", "n_clicks"),
+     Input("close_modal_btn", "n_clicks")])
+def toggle_export_modal(open_clicks, close_clicks):
+    if open_clicks is not None:
+        
+        trigger = dash.callback_context.triggered[0]
+        if trigger['prop_id'] == 'parcel_download_all_btn.n_clicks':
+            return True
+        else:
+            return False
+
+# Disable download button
+@app.callback(
+    [Output("download_data_btn", "disabled"),
+     Output("disable_download_message", "children")],
+    [Input("export_data_config", "value")])
+def toggle_download_btn(value):
+    if value == []:
+        return True, "You must include at least one type of data."
+    else:
+        return False, ""
+
 @app.callback(
     Output("parcel_download_all", "data"), 
-    [Input("parcel_download_all_btn", "n_clicks")],
-    [State("dropdown_segm_methods", "value"),
-     State("parcel_table_dropdown_method", "value")])
-def download_parceldata(n_clicks, segmentation_method, parcellation_method): 
+    [Input("download_data_btn", "n_clicks")],
+    [State("export_segm_method", "value"),
+     State("export_parc_method", "value"),
+     State("export_data_config", "value"),
+     State("export_groupby_check", "value"),
+     State("export_groupby_config", "value"),
+     ])
+def download_parceldata(n_clicks, segmentation_method, parcellation_method, data_config, groupby_check, groupby_config):
     if n_clicks is not None:
-        return export_parcel_table(segmentation_method, parcellation_method)
-'''
 
+        include_cat = False
+        include_segm = False
+        include_parc = False
+        groupby_cat = None
+
+        if data_config is not None:
+            if 'Categories' in data_config:
+                include_cat = True
+            if 'Segmentation' in data_config:
+                include_segm = True
+            if 'Parcellation' in data_config:
+                include_parc = True
+
+        if groupby_check == ['Group by:']:
+            groupby_cat = groupby_config
+
+        return export_parcel_table(segmentation_method, parcellation_method, include_segm, include_parc, include_cat, groupby_cat)
+
+'''
 @app.callback(
     [Output('scatter_plot_2', 'figure'),
      Output('scatter_matrix_2', 'figure')],
