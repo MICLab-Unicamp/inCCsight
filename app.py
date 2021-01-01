@@ -1259,7 +1259,7 @@ def build_parcel_table(mode = 'Method', segmentation_method = 'ROQS', parcellati
 
     return layout
 
-def export_parcel_table(segmentation_method = 'ROQS', parcellation_method = 'Witelson', include_segm=True, include_parc=True, include_cat=True, groupby_cat=None):
+def export_parcel_table(segmentation_method = 'ROQS', parcellation_method = 'Witelson', include_segm=True, include_parc=True, include_cat=True, groupby_cat=None, include_stdev=True):
 
     # Get data, organize with multiindex columns
     if include_parc is True:
@@ -1290,8 +1290,13 @@ def export_parcel_table(segmentation_method = 'ROQS', parcellation_method = 'Wit
 
     # Group by category
     if groupby_cat is not None:
-        print('got here')
         df = df.groupby(('Categories', groupby_cat)).mean()    
+
+    # Drop or not Std Dev columns
+    if include_stdev is False:
+        for col_tuple in df.columns:
+            if 'StdDev' in col_tuple[-1]:
+                df = df.drop(columns=col_tuple)
 
     # Define filename
     if include_segm is True and include_parc is False:
@@ -1364,6 +1369,7 @@ def build_export_parcel_table_modal():
                     dcc.Checklist(
                         id="export_show_stdev",
                         options=options_stdv_config,
+                        value=['Show Std. Dev.'],
                         inputStyle=dict(marginRight='5px'))
                     ],
                 ),
@@ -2189,13 +2195,15 @@ def toggle_download_btn(value):
      State("export_data_config", "value"),
      State("export_groupby_check", "value"),
      State("export_groupby_config", "value"),
+     State("export_show_stdev", "value"),
      ])
-def download_parceldata(n_clicks, segmentation_method, parcellation_method, data_config, groupby_check, groupby_config):
+def download_parceldata(n_clicks, segmentation_method, parcellation_method, data_config, groupby_check, groupby_config, stdev_config):
     if n_clicks is not None:
 
         include_cat = False
         include_segm = False
         include_parc = False
+        include_stdev = False
         groupby_cat = None
 
         if data_config is not None:
@@ -2209,7 +2217,10 @@ def download_parceldata(n_clicks, segmentation_method, parcellation_method, data
         if groupby_check == ['Group by:']:
             groupby_cat = groupby_config
 
-        return export_parcel_table(segmentation_method, parcellation_method, include_segm, include_parc, include_cat, groupby_cat)
+        if stdev_config == ['Show Std. Dev.']:
+            include_stdev = True
+
+        return export_parcel_table(segmentation_method, parcellation_method, include_segm, include_parc, include_cat, groupby_cat, include_stdev)
 
 '''
 @app.callback(
