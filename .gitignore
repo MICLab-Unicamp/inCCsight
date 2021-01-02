@@ -2,3 +2,7 @@
 __pycache__/
 libcc/__pycache__/
 *.pyc
+Dockerfile
+*.tar.gz
+inccsight/
+*.xlsx
