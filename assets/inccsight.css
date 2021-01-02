@@ -54,7 +54,7 @@ ___________________________________________________*/
 
 #top-row {
     background-color: #192444;
-    padding: 0 0 0 5rem;
+    padding: 0 0 0 0;
     display: flex;
 }
 
@@ -75,8 +75,12 @@ ___________________________________________________*/
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
 
 #top-row-header {
+    display: flex;
+    justify-content: center;
     background-color: #1f2c56;
     padding: 9rem 3rem 3rem 3rem;
+    margin: 0px 30px;
+    width: 
 }
 
 #quality-button-container {
@@ -87,47 +91,13 @@ ___________________________________________________*/
     justify-content: center;
 }
 
-#banner {
-    width: 500px;
-}
-
-.banner Img {
-    height: 9rem;
-    margin-bottom: 2rem;
-    padding: 1rem
-}
-
-#banner .logo {
-    height: 25rem;
-    padding-left: 5rem;
-}
-
-#banner .cctitle {
-    text-align: left;
-    font-family: 'Open Sans', sans-serif;
-    font-size: 4.7rem;
-    font-weight: 600;
-    line-height: 50px;
-    color: white;
-}
-
-#banner .detitle {
-    text-align: left;
-    font-family: 'Open Sans', sans-serif;
-    font-size: 5.6rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    line-height: 70px;
-    color: white;
-}
 
 #instruct {
-    width: 470px;
-    font-size: 1.5rem;
+    font-size: 2rem;
     font-family: 'Open Sans', sans-serif;
     font-weight: 350;
     color: white;
-    padding: 0 0 2rem 0;
+    padding: 2rem;
 
 }
 
@@ -211,7 +181,7 @@ ___________________________________________________*/
 /* Top-row-graphs
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
 #top-row-graphs {
-    width: 80%;
+    width: 100%;
     display: flex;
     flex-direction: row;
     align-items: stretch;
@@ -254,9 +224,12 @@ ___________________________________________________*/
     border-color: white;
     padding: 20px;
     background-color: rgba(0,0,0,0);
-    margin: 0 8rem 4rem 0;
+    margin: 0 12rem 4rem 0;
 }
 
+#header-container {
+    width: 600px;
+}
 
 
 #subject-list-container .graph-title, #group-list-container .graph-title, #header-container .graph-title, #quality-container .graph-title {
@@ -311,13 +284,13 @@ ___________________________________________________*/
 
 @media only screen and (max-width: 1000px) {
     #top-row-graphs {
+
         flex-direction: column;
     }
 
 
 @media (min-width: 1001px) and (max-width: 1400px) {
     #top-row-graphs {
-        padding: 5rem 0;
         flex-direction: row;
         align-items: stretch;
     }
@@ -388,7 +361,7 @@ ___________________________________________________*/
 
 @media (max-width: 1000px) {
     #top-row {
-        padding: 0 4vw;
+        padding: 0 0;
     }
 
     #ternary-map {

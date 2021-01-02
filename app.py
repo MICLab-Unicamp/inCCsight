@@ -229,14 +229,21 @@ app.title = 'inCCsight'
 def build_banner():
     return html.Div(
         id="banner",
-        className="banner",
+        className="twelve columns",
         children=[
-            html.Img(src=app.get_asset_url("unicampw.png")),
-            html.Img(src=app.get_asset_url("miclab.png")),
-            html.Img(src=app.get_asset_url("inccsight.png"), className='logo', style=dict(justifyContent='center')),
-            
-            #html.H5("Corpus Callosum DTI", className='cctitle'),
-            #html.H5("Data Explorer", className='detitle'),
+            html.Div(
+                className='twelve columns',
+                style=dict(display='flex', justifyContent='flex-start'), 
+                children=[
+                    html.Img(src=app.get_asset_url("unicampw.png"), style=dict(height='9rem', marginBottom='2rem', padding='1rem')),
+                    html.Img(src=app.get_asset_url("miclab.png"), style=dict(height='9rem', marginBottom='2rem', padding='1rem')),
+                ]),
+            html.Div(
+                className='twelve columns',
+                style=dict(display='flex', justifyContent='center'),
+                children=[
+                    html.Img(src=app.get_asset_url("inccsight.png"), style=dict(height='25rem')),
+                ]),
         ],
     )
 
@@ -1514,13 +1521,16 @@ app.layout = html.Div(
                             id="header-container",
                             children=[
                                 build_banner(),
-                                html.H5(
-                                    children=["This is a data exploration and visualization tool for diffusion tensor images of the corpus callosum.",
-                                              " Upload data folders to begin. Further information can be found here (link)."
-                                            ],
-                                    id="instruct",
-                                ),
-                                html.Div(className='row', style=dict(display='flex', justifyContent='center', verticalAlign='center'),
+                                html.Div(
+                                    html.H5(
+                                        children=["This is a data exploration and visualization tool for diffusion tensor images of the corpus callosum.",
+                                                  " Upload data folders to begin. Further information can be found here (link)."
+                                                ],
+                                        id="instruct",
+                                    ),
+                                    className='twelve columns'),
+                                
+                                html.Div(className='twelve columns', style=dict(display='flex', justifyContent='center', verticalAlign='center'),
                                     children=[
                                         html.H5("Category:", style=dict(color='white', padding='0 10px 0 54px')),
                                         dcc.Dropdown(id='dropdown_category',
@@ -1532,7 +1542,7 @@ app.layout = html.Div(
                                     id="div_category",
                                 ),  
                                 
-                                html.Div(className='row', style=dict(display='flex', justifyContent='center', verticalAlign='center'),
+                                html.Div(className='twelve columns', style=dict(display='flex', justifyContent='center', verticalAlign='center'),
                                     children=[
                                        html.H5("Segm. Method:", style=dict(color='white', padding='0 10px 0 0')),
                                        dcc.Dropdown(id='dropdown_segm_methods',
@@ -1544,7 +1554,7 @@ app.layout = html.Div(
                                     id="div_select_segm_method",
                                 ),
 
-                                html.Div(className='row', id='quality-button-container', 
+                                html.Div(className='twelve columns', id='quality-button-container', 
                                     children=[
                                         dbc.Button(
                                             "Check quality",
@@ -1581,7 +1591,7 @@ app.layout = html.Div(
                                 build_graph_title("Subjects"),
                                 html.Div(
                                     build_subjects_list(), 
-                                    style=dict(height='500px', overflowY='auto'),
+                                    style=dict(height='500px', overflowY='auto', width='300px'),
                                     id="subject-table-container")], 
                                 className = "four columns", 
                                 id="subject-list-container",
@@ -1597,6 +1607,7 @@ app.layout = html.Div(
                             html.Div(
                                 id='summary-card-container',
                                 className='five columns',
+                                style=dict(width='380px'),
                                 children=[
                                 dbc.Card(
                                     id = "summary-card",
