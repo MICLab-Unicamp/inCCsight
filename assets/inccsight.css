@@ -201,7 +201,7 @@ ___________________________________________________*/
     display: flex;
     flex-direction: row;
     align-items: flex-end;
-    justify-content: flex-end;
+    justify-content: center;
 }
 
 .numcard{
@@ -219,12 +219,19 @@ ___________________________________________________*/
     margin: 0;
 }
 
+#summary-card-container {
+    display: flex;
+    justify-content: flex-end;
+    margin-right: 8rem;
+}
+
 #summary-card {
     border-radius: 20px;
     border-color: white;
     padding: 20px;
     background-color: rgba(0,0,0,0);
-    margin: 0 12rem 4rem 0;
+    margin: 0 0 4rem 8rem;
+    width: 250px;
 }
 
 #header-container {
@@ -241,8 +248,8 @@ ___________________________________________________*/
     margin: 0 0 1rem 0;
 }
 
-#subject-list-container, #group-list-container{
-    margin-right: 20px;
+#subject-list-container {
+    margin-left: 4rem;
 }
 
 
@@ -282,11 +289,20 @@ ___________________________________________________*/
     border-top: 3px solid #e36209 !important;
 }
 
-@media only screen and (max-width: 1000px) {
-    #top-row-graphs {
+.modal-backdrop {
+    width: 100%;
+    height: 100%
+}
 
+@media only screen and (max-width: 700px) {
+    #top-row-graphs {
         flex-direction: column;
     }
+
+    #left-panel, #right-panel {
+        width: 100%;
+    }
+
 
 
 @media (min-width: 1001px) and (max-width: 1400px) {

@@ -1591,9 +1591,9 @@ app.layout = html.Div(
                                 build_graph_title("Subjects"),
                                 html.Div(
                                     build_subjects_list(), 
-                                    style=dict(height='500px', overflowY='auto', width='300px'),
+                                    style=dict(height='550px', margin='0 0 50px 0', overflowY='auto', width='300px'),
                                     id="subject-table-container")], 
-                                className = "four columns", 
+                                className = "column", 
                                 id="subject-list-container",
                             ),
 
@@ -1606,8 +1606,7 @@ app.layout = html.Div(
 
                             html.Div(
                                 id='summary-card-container',
-                                className='five columns',
-                                style=dict(width='380px'),
+                                className='column',
                                 children=[
                                 dbc.Card(
                                     id = "summary-card",
@@ -1645,7 +1644,7 @@ app.layout = html.Div(
             
                 html.Div(
                     id='dashboard',
-                    style=dict(height='100vh', overflowY='auto', overflowX='hidden'),
+                    style=dict(height='110vh', overflowY='auto', overflowX='hidden'),
                     className='twelve columns',
                     children=[
 

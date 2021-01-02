@@ -39,6 +39,7 @@ html,body
     margin: 0px;
     padding: 0px;
     overflow-x: hidden; 
+    zoom: 90%;
 }
 
 /* For devices larger than 400px */
