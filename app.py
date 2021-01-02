@@ -56,7 +56,8 @@ print(' ')
 # GENERAL DEFINITIONS -------------------------------------------------------------------------
 
 dict_segmentation_functions = {'ROQS': segmfuncs.segm_roqs,
-                             'Watershed': segmfuncs.segm_watershed}
+                             'Watershed': segmfuncs.segm_watershed,
+                             'Imported Masks': segmfuncs.segm_mask}
 
 dict_parcellation_functions = {'Witelson': parcelfuncs.parc_witelson,
                              'Hofer': parcelfuncs.parc_hofer,
@@ -126,6 +127,13 @@ if len(path_dict.values()) == 0:
     print('Terminating program.\n')
     raise SystemExit(0)
 
+# Check if we are importing masks
+if opts.maskname is not None:
+    mask_basename = opts.maskname
+    dict_segmentation_methods['Imported Masks'] ='imported_mask'
+else:
+    mask_basename = None
+
 # DATA PROCESSING -----------------------------------------------------------------------------
 
 # Create dataframe for each segmentation method
@@ -168,14 +176,20 @@ for subject_path in tqdm(path_dict.values()):
         subject_name = os.path.basename(os.path.dirname(subject_path))
 
         # Process/Load data
+        if segmentation_method == 'Imported Masks':
+            if ccprocess.check_mask(subject_path, mask_basename) is False:
+                continue
+
         try:
             segmentation_mask, scalar_maps, scalar_statistics, scalar_midlines, error_prob, parcellations_masks = ccprocess.segment(subject_path, 
                                                                                                                                    segmentation_method, 
                                                                                                                                    dict_segmentation_functions, 
                                                                                                                                    dict_parcellation_functions, 
-                                                                                                                                   opts.basename)
+                                                                                                                                   opts.basename,
+                                                                                                                                   mask_basename)
         except:
-            print('Segmentation failed for subject {} with method {}'.format(subject_name, segmentation_method))
+            print('> Segmentation failed for subject {} with method {}'.format(subject_name, segmentation_method))
+            continue
 
         # Get thickness
         try:
@@ -925,7 +939,7 @@ def build_quality_images(threshold=0.7):
 
     tabs = []
 
-    for segmentation_method in dict_segmentation_functions.keys():
+    for segmentation_method in dict_segmentation_methods.keys():
         tabs.append(get_quality_tab(segmentation_method))
 
     return dbc.Tabs(tabs, style=dict(height='40px', verticalAlign='center', padding='0px 10px 0px 10px'))
@@ -1144,7 +1158,7 @@ def build_segm_table(mode = 'Method', segmentation_method = 'ROQS', show_stdev =
     
     elif mode == 'Method':
         df = pd.DataFrame()
-        for segmentation_method in dict_segmentation_functions.keys():
+        for segmentation_method in dict_segmentation_methods.keys():
             df_aux = dict_scalar_statistics[segmentation_method]
             df_aux = df_aux.drop(dict_removed_subjects[segmentation_method], errors='ignore')
             df_aux = df_aux.reset_index()
@@ -1546,9 +1560,9 @@ app.layout = html.Div(
                                     children=[
                                        html.H5("Segm. Method:", style=dict(color='white', padding='0 10px 0 0')),
                                        dcc.Dropdown(id='dropdown_segm_methods',
-                                             options=[{'label': method, 'value': method} for method in dict_segmentation_functions.keys()],
+                                             options=[{'label': method, 'value': method} for method in dict_segmentation_methods.keys()],
                                              multi=False,
-                                             value=list(dict_segmentation_functions.keys())[0],
+                                             value=list(dict_segmentation_methods.keys())[0],
                                              style={'width':'150px'})
                                     ],
                                     id="div_select_segm_method",

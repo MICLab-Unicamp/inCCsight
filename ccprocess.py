@@ -2,6 +2,7 @@ import numpy as np
 import nibabel as nib
 import os
 import libcc
+import glob
 
 import warnings
 warnings.filterwarnings('ignore') 
@@ -9,11 +10,12 @@ warnings.filterwarnings('ignore')
 shape_imports = libcc.shapeSignImports()
 
 
-def segment(subject_path, segmentation_method, segmentation_methods_dict, parcellation_methods_dict, basename):
+def segment(subject_path, segmentation_method, segmentation_methods_dict, parcellation_methods_dict, basename, mask_basename=None):
 
 	name_dict = {'ROQS': 'roqs',
 	             'Watershed': 'watershed',
-	             'STAPLE':'staple'}
+	             'STAPLE':'staple',
+	             'Imported Masks':'imported_mask'}
 
 	folderpath = subject_path + 'inCCsight/'
 	segmname = 'segm_' + name_dict[segmentation_method]
@@ -38,12 +40,33 @@ def segment(subject_path, segmentation_method, segmentation_methods_dict, parcel
 		AD = AD_v[fissure,:,:]
 		eigvects_ms = abs(eigvects[0,:,fissure]) 
 
-		# STAPLE segmentation
+		# Check segmentation type and segment
 		if segmentation_method == 'STAPLE':
 			segmentation = segmentation_methods_dict[segmentation_method](subject_path, fissure, segm_import=None)
-	
+		elif segmentation_method == 'Imported Masks':
+			segmentation, fissure, axis = segmentation_methods_dict[segmentation_method](get_mask_path(subject_path, mask_basename), threshold=0)
+			if segmentation is None:
+				raise TypeError()
+
+			if axis == 0 :
+				wFA = wFA_v[fissure,:,:]
+				FA = FA_v[fissure,:,:]
+				MD = MD_v[fissure,:,:]
+				RD = RD_v[fissure,:,:]
+				AD = AD_v[fissure,:,:]
+			if axis == 1 :
+				wFA = wFA_v[:,fissure,:]
+				FA = FA_v[fissure,:,:]
+				MD = MD_v[:,fissure,:]
+				RD = RD_v[:,fissure,:]
+				AD = AD_v[:,fissure,:]
+			if axis == 2 :
+				wFA = wFA_v[:,:,fissure]
+				FA = FA_v[fissure,:,:]
+				MD = MD_v[:,:,fissure]
+				RD = RD_v[:,:,fissure]
+				AD = AD_v[:,:,fissure]
 		else:
-			# Segment
 			segmentation = segmentation_methods_dict[segmentation_method](wFA, eigvects_ms)
 
 		# Check segmentation errors (True/False)
@@ -70,17 +93,17 @@ def segment(subject_path, segmentation_method, segmentation_methods_dict, parcel
 		# Parcellation
 		parcellations_dict = {}
 		for parcellation_method, parcellation_function in parcellation_methods_dict.items():
-			try:
-				parcellations_dict[parcellation_method] = parcellation_function(segmentation, wFA)
-			except:
-				print("Parc. Error - Method: {}, Subj.: {}".format(parcellation_method, subject_path))
-				parcellations_dict[parcellation_method] = []
+			#try:
+			parcellations_dict[parcellation_method] = parcellation_function(segmentation, wFA)
+			#except:
+			#	print("Parc. Error - Method: {}, Subj.: {}".format(parcellation_method, subject_path))
+			#	parcellations_dict[parcellation_method] = []
 
 		# Save files
 		data_tuple = (segmentation, scalar_maps, scalar_statistics, scalar_midlines, error_prob, parcellations_dict)
 
 		# Assemble nifti mask
-		if segmentation_method != 'S_MASK':
+		if segmentation_method != 'Imported Masks':
 			canvas = np.zeros(wFA_v.shape, dtype = 'int32')
 			canvas[fissure,:,:] = segmentation
 			save_nii(subject_path, segmname, canvas, affine)
@@ -169,3 +192,18 @@ def save_nii(path, filename, content, affine):
 	# Filename
 	nii_img = nib.Nifti1Image(content, affine)
 	nib.save(nii_img, os.path.join(save_path, filename+'.nii.gz'))
+
+def get_mask_path(subject_path, mask_basename):
+    subject_name = os.path.basename(os.path.dirname(subject_path))
+    files = [i for i in glob.glob(subject_path + '/*nii.gz') if mask_basename in os.path.basename(i)]
+    if len(files) > 1:
+        print('> Warning: Multiple masks found for subject {}. File {} will be considered due to alphabetical order.'.format(subject_name, files[0]))
+    return files[0]
+
+def check_mask(subject_path, mask_basename):
+	subject_name = os.path.basename(os.path.dirname(subject_path))
+	files = [i for i in glob.glob(subject_path + '/*nii.gz') if mask_basename in os.path.basename(i)]
+	if len(files) > 0:
+		return True
+	else:
+		return False

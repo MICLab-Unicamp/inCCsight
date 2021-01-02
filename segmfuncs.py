@@ -173,35 +173,43 @@ def segm_mask(path, threshold=0):
 
     import nibabel as nib
     import numpy as np
-    import matplotlib.pyplot as plt
+    import os
 
     volume = nib.load(path).get_data()
 
     # Normalize
     vol = np.array(volume, dtype='int32')
-    vol[vol > threshold] == 1
+    vol[vol > threshold] = 1
+    vol = np.squeeze(vol)
 
-    # Find direction 
-    mask = None
-    fissure = None
-    for i in range(3):
-        for j in range(2):
-            if np.sum(np.max(np.max(vol,axis=i),axis=j)) == 1:
-                fissure = np.argmax(np.max(np.max(vol,axis=i),axis=j))
-      
-    axis = 0      
-    # Obtain mask from direction    
-    if (i==1 and j==1) or (i==2 and j==1):
-        mask = vol[fissure,:,:]
-        axis = 0
-    elif (i==0 and j==1) or (i==2 and j==0):
-        mask = vol[:,fissure,:]
-        axis = 1
-    elif (i==0 and j==0) or (i==1 and j==0):
-        mask = vol[:,:,fissure]
-        axis = 2
+    if np.max(vol) != 0:
 
-    return mask, fissure, axis
+        # Find direction 
+        mask = None
+        fissure = None
+        for i in range(3):
+            for j in range(2):
+                if np.sum(np.max(np.max(vol, axis=i),axis=j)) == 1:
+                    fissure = np.argmax(np.max(np.max(vol,axis=i),axis=j))
+        
+        axis = 0    
+        # Obtain mask from direction    
+        if (i==1 and j==1) or (i==2 and j==1):
+            mask = vol[fissure,:,:]
+            axis = 0
+        elif (i==0 and j==1) or (i==2 and j==0):
+            mask = vol[:,fissure,:]
+            axis = 1
+        elif (i==0 and j==0) or (i==1 and j==0):
+            mask = vol[:,:,fissure]
+            axis = 2
+    
+        return mask, fissure, axis
+
+    else:
+        print('> Warning: Invalid mask (all values = 0) for subject {}.'.format(os.path.basename(os.path.dirname(path))))
+        return None, None, None
+
 
 
 def segm_watershed_3d(wFA, gaussian_sigma=0.3):
