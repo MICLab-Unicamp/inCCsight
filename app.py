@@ -1781,7 +1781,7 @@ app.layout = html.Div(
                                             style=dict(marginBottom='-30px'),
                                             children=[
                                                 build_graph_title("Segmentation BoxPlots"),
-                                                dcc.Graph(id="segm_boxplots", figure=build_group_segm_boxplot()),
+                                                dcc.Loading(dcc.Graph(id="segm_boxplots", figure=build_group_segm_boxplot())),
                                             ],
                                         ),
 
@@ -1790,7 +1790,7 @@ app.layout = html.Div(
                                             #style=dict(maginTop='0px'),
                                             children=[
                                                 build_graph_title("Parcellation BoxPlots"),
-                                                dcc.Graph(id="parc_boxplots", figure=build_parcel_boxplot()),
+                                                dcc.Loading(dcc.Graph(id="parc_boxplots", figure=build_parcel_boxplot())),
                                                 build_parcel_boxplot_dropdowns(),
                                             ],
                                         ),
@@ -1803,7 +1803,7 @@ app.layout = html.Div(
                                     className="four columns",
                                     children=[
                                         build_graph_title("Scatter Plot"),
-                                        dcc.Graph(id="scatter_plot", figure=build_segm_scatterplot()),
+                                        dcc.Loading(dcc.Graph(id="scatter_plot", figure=build_segm_scatterplot())),
                                         build_segm_scatterplot_dropdowns(),
                                     ],
                                 ),
@@ -1822,7 +1822,7 @@ app.layout = html.Div(
                                     className="eight columns",
                                     children=[
                                         build_graph_title("Scatter Matrix"),
-                                        dcc.Graph(id="scatter_matrix", figure=build_segm_scattermatrix()),
+                                        dcc.Loading(dcc.Graph(id="scatter_matrix", figure=build_segm_scattermatrix())),
                                     ],
                                 ),
 
@@ -1832,7 +1832,7 @@ app.layout = html.Div(
                                     className="four columns",
                                     children=[
                                         build_graph_title("Bubble Plots"),
-                                        dcc.Graph(id="bubble_plots", figure=build_bubble_grouped()),
+                                        dcc.Loading(dcc.Graph(id="bubble_plots", figure=build_bubble_grouped())),
                                         build_bubbleplot_dropdowns(),
                                     ],
                                 ),
@@ -1854,7 +1854,7 @@ app.layout = html.Div(
                                     className="four columns",
                                     children=[
                                         build_graph_title("Midline Plots"),
-                                        dcc.Graph(id="midline_graph", figure=build_midline_plot()),
+                                        dcc.Loading(dcc.Graph(id="midline_graph", figure=build_midline_plot())),
                                         build_midlineplot_dropdown(),
                                     ],
                                 ),
