@@ -905,13 +905,19 @@ def build_quality_collapse():
 
                 html.Div([
                         html.Div([
-                            html.H6("Threshold:"), 
+                            html.H6("Threshold:", style=dict(fontSize='1.8rem')), 
                             dcc.Dropdown(id='dropdown-quality-threshold',
                                          options= [{'label': num/100, 'value': num/100} for num in np.arange(95, 5, -5)],
                                          multi=False,
                                          value='0.7',
                                          style={'width':'100px', 'marginLeft':'5px'}),
-                            ], className='row', style=dict(marginLeft='2rem')),
+                            html.H6("Scalar:", style=dict(fontSize='1.8rem', marginLeft='2rem')), 
+                            dcc.Dropdown(id='dropdown-quality-scalar',
+                                         options= [{'label': i, 'value': i} for i in ['wFA']+scalar_list],
+                                         multi=False,
+                                         value='wFA',
+                                         style={'width':'100px', 'marginLeft':'5px'}),
+                            ], className='row', style=dict(margin='20px 0 0 12px')),
                 ], className='twelve columns', style=dict(display="flex", justifyContent="space-between")),
                 
                 html.Div([
@@ -933,9 +939,9 @@ def build_quality_collapse():
 
     return layout
 
-def build_quality_images(threshold=0.7):
+def build_quality_images(threshold=0.7, scalar='wFA'):
     
-    def get_quality_tab_children(segmentation_method):
+    def get_quality_tab_children(segmentation_method, scalar='wFA'):
         
         children = []
 
@@ -972,7 +978,7 @@ def build_quality_images(threshold=0.7):
                                 build_quality_badges(subject_id, index_error_probs, index_outliers),
 
                                 html.Div([
-                                    dcc.Graph(figure=build_fissure_image(subject_id, segmentation_method))
+                                    dcc.Graph(figure=build_fissure_image(subject_id, segmentation_method, scalar))
                                     ], className='twlve columns'),
                             
                             ], className = 'twelve columns')))
@@ -980,7 +986,7 @@ def build_quality_images(threshold=0.7):
 
 
     def get_quality_tab(segmentation_method):
-        tab = dbc.Tab(label=segmentation_method, children=html.Div(get_quality_tab_children(segmentation_method), style=dict(height='80vh', overflowY="auto", padding='20px 20px 20px 20px')))
+        tab = dbc.Tab(label=segmentation_method, children=html.Div(get_quality_tab_children(segmentation_method, scalar), style=dict(height='80vh', overflowY="auto", padding='20px 20px 20px 20px')))
         return tab
 
     tabs = []
@@ -1925,6 +1931,7 @@ app.layout = html.Div(
                                 ),
 
                                 html.Div(build_export_parcel_table_modal(), id='example_div'),
+                                html.Div(id='bridge-div'),
                             ],
                         ),        
                     ]
@@ -2087,23 +2094,39 @@ def update_remove_subject_tooltip(segmentation_method):
 
 # Quality collapse ----------------------------------------------------
 
+# Bridge div
+@app.callback(
+    Output('bridge-div', 'className'),
+    [Input({'type':'btn-remove-subject', 'index': ALL}, 'n_clicks')],
+    [State('dropdown-subj-collapse-segm-methods', 'value')])
+def quality_control_bridge(remove_clicks, dropdown_segmentation_method):
+    
+    global dict_removed_subjects
+
+    trigger = dash.callback_context.triggered[0]
+    btn_id = ast.literal_eval(trigger["prop_id"][:-9])
+    
+    if remove_clicks != [None]:
+        dict_removed_subjects[dropdown_segmentation_method].append(btn_id['index'])
+        return 'trash_'+btn_id['index']
+    else:
+        return dash.no_update
+
 # Remove selected subjects
 @app.callback(
     Output('photo-container', 'children'),
     [Input('remove_btn', 'n_clicks'),
      Input('restore_btn', 'n_clicks'),
      Input('dropdown-quality-threshold', 'value'),
-     Input({'type':'btn-remove-subject', 'index': ALL}, 'n_clicks')],
+     Input('dropdown-quality-scalar', 'value'),
+     Input('bridge-div', 'className')],
     [State({'type': 'remove-cbx', 'index': ALL}, 'id'),
-     State({'type': 'remove-cbx', 'index': ALL}, 'value'),
-     State('dropdown-subj-collapse-segm-methods', 'value'),
-     State('photo-container', 'children')])
-def remove_quality_images(n_clicks, restore_clicks, threshold, remove_clicks, ids, values, dropdown_segmentation_method, children):
+     State({'type': 'remove-cbx', 'index': ALL}, 'value')])
+def remove_quality_images(n_clicks, restore_clicks, threshold, scalar, bridge_flag, ids, values):
 
     global dict_removed_subjects
 
     trigger = dash.callback_context.triggered[0]
-    btn_id = ast.literal_eval(trigger["prop_id"][:-9])
     removed_counter = 0
 
     if restore_clicks is not None and trigger['prop_id'] == 'restore_btn.n_clicks':
@@ -2121,12 +2144,14 @@ def remove_quality_images(n_clicks, restore_clicks, threshold, remove_clicks, id
                 dict_removed_subjects[segmentation_method] = list(set(dict_removed_subjects[segmentation_method]))
                 removed_counter += 1
     
-    elif remove_clicks != [None] and btn_id['type'] == 'btn-remove-subject':
-        dict_removed_subjects[dropdown_segmentation_method].append(btn_id['index'])
-        removed_counter += 1
+    elif trigger['prop_id'] == 'dropdown-quality-scalar.value' or trigger['prop_id']=='dropdown-quality-threshold.value':
+        return build_quality_images(threshold, scalar)
+
+    elif trigger['prop_id'] == 'bridge-div.className':
+        return build_quality_images(threshold, scalar)        
 
     if removed_counter > 0:
-        return build_quality_images(threshold)
+        return build_quality_images(threshold, scalar)
     else:
         return dash.no_update
 
