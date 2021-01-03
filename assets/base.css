@@ -39,7 +39,8 @@ html,body
     margin: 0px;
     padding: 0px;
     overflow-x: hidden; 
-    zoom: 90%;
+    zoom: 100%;
+    min-width: 1200px;
 }
 
 /* For devices larger than 400px */

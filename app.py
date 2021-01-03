@@ -644,7 +644,7 @@ def build_bubble_grouped_pvalue(scalar='Thickness', mode='Method', segmentation_
 
     return fig
 
-# -----------------------------------------------------------------------------------------
+# Dropdowns --------------------------------------------------------------------------------
 
 def build_midlineplot_dropdown():
 
@@ -748,28 +748,57 @@ def build_bubbleplot_dropdowns():
         )
     return layout    
 
-def build_fissure_image_dropdown():
+def build_fissure_image_dropdown(subject_id):
 
     options = [{'label': segmentation_method, 'value': segmentation_method} for segmentation_method in list(dict_segmentation_methods.keys())+['None']]
     options_scalars = [{'label': scalar, 'value': scalar} for scalar in ['wFA']+scalar_list]
 
     layout = html.Div([
                 html.Div([
-                    html.H6('Segm. Method:', className='table-options-title', style={'padding':'0px 10px 0px 10px'}),
-                    dcc.Dropdown(id='dropdown-subj-collapse-segm-methods',
-                                 options=options,
-                                 multi=False,
-                                 value=list(dict_segmentation_methods.keys())[0],
-                                 style={'width':'120px'}),
-                    html.H6('Scalar:', className='table-options-title', style={'padding':'0px 10px 0px 30px'}),
-                    dcc.Dropdown(id='dropdown-subj-collapse-scalars',
-                                 options=options_scalars,
-                                 multi=False,
-                                 value='wFA',
-                                 style={'width':'150px'})
-                ], className='row', style=dict(display='flex', justifyContent='left', verticalAlign='center')),
+                    
+                    html.Div(
+                        children=[
+                            html.H6('Segm. Method:', className='table-options-title', style={'padding':'0px 20px 0px 10px'}),
+                            
+                            dcc.Dropdown(id='dropdown-subj-collapse-segm-methods',
+                                         options=options,
+                                         multi=False,
+                                         value=list(dict_segmentation_methods.keys())[0],
+                                         style={'width':'120px'}),
+                        ], className='row'),
+                    
+                    html.Div(
+                        dbc.Button('Remove segmentation', 
+                                outline=True,
+                                color='danger',
+                                id=dict(type='btn-remove-subject', index=subject_id),
+                                style=dict(padding='0 15px', margin='0px 0px 0px 20px', fontSize='1.2rem')
+                            ),
+                        id=f"tooltip-div-wrapper-{subject_id}"),
+                    
+                ], className='row', style=dict(display='flex', justifyContent='left', verticalAlign='center', marginLeft='0')),
+
+                html.Div(
+                    children=[
+                        html.H6('Scalar:', className='table-options-title', style={'padding':'0px 10px 0px 10px'}),
+                        
+                        dcc.Dropdown(id='dropdown-subj-collapse-scalars',
+                                     options=options_scalars,
+                                     multi=False,
+                                     value='wFA',
+                                     style={'width':'150px'}),
+                    ], className='row', style=dict(display='flex', justifyContent='left', verticalAlign='center', marginTop='2px')),
+
+                dbc.Tooltip("This will remove only the ROQS segmentation, indicated on the dropdown to the left",
+                            target=f"tooltip-div-wrapper-{subject_id}",
+                            id='subject-collapse-tooltip',
+                            style=dict(fontSize='12pt'),
+                            placement='bottom',
+                            ),
+
             ]
         )
+
 
     return layout   
 
@@ -829,7 +858,7 @@ def build_individual_subject_parcel_table_dropdown():
         )
     return layout 
 
-# -----------------------------------------------------------------------------------------
+# Collapses and others ---------------------------------------------------------------------
 
 def build_subjects_list():
     '''
@@ -1014,13 +1043,6 @@ def build_subject_collapse(segmentation_method='ROQS', scalar_map='wFA', subject
                 html.Div([
                     html.Div([
                         build_graph_title("Subject " + subject_id),
-                        dbc.Button(
-                                'Remove subject', 
-                                outline=True,
-                                color='danger',
-                                id=dict(type='btn-remove-subject', index=subject_id),
-                                style=dict(padding='0 15px', margin='25px 0px 0px 20px', fontSize='1.2rem')
-                            ),
                         ], className='row'),
                     html.Button('X', style=dict(fontSize='1.5rem', margin='10px', padding='0 13px', fontFamily= 'Open Sans', borderRadius='20px'),
                                 id=dict(type='btn-exit-subject', index=subject_id))
@@ -1034,9 +1056,9 @@ def build_subject_collapse(segmentation_method='ROQS', scalar_map='wFA', subject
                         build_graph_title("Scalar maps"),
                         #dcc.Graph(figure=build_3d_visualization(subject_id))
                         dcc.Graph(figure=build_fissure_image(subject_id, segmentation_method, scalar = scalar_map), id='subject_collapse_fissure_img'),
-                        build_fissure_image_dropdown(),
+                        build_fissure_image_dropdown(subject_id),
 
-                    ], className = 'three columns'),
+                    ], className = 'four columns', style=dict(display='grid', justifyContent='center')),
 
                     html.Div(className='one column'),
 
@@ -1982,9 +2004,9 @@ def open_subject_collapse(n_clicks, exit_clicks, ids):
     if n_clicks is not None:
 
         trigger = dash.callback_context.triggered[0] 
-        
+
         if (trigger['value'] is None): 
-            return False, []
+            return dash.no_update
 
         btn_id = ast.literal_eval(trigger["prop_id"][:-9])
 
@@ -1998,7 +2020,7 @@ def open_subject_collapse(n_clicks, exit_clicks, ids):
         
         return True, [build_subject_collapse(subject_id = subject_id)]
     else:
-        return False, []
+        return dash.no_update
 
 @app.callback(
     Output('individual_subject_segm_table_container', 'children'),
@@ -2027,6 +2049,13 @@ def update_parc_table_subj_collapse(scalar, segmentation_method, parcellation_me
 def update_fissure_image(segmentation_method, scalar):
     return build_fissure_image(subject_id=selected_subject_id, segmentation_method=segmentation_method, scalar=scalar)
 
+# Update remove subject tooltip
+@app.callback(
+    Output('subject-collapse-tooltip', 'children'),
+    [Input('dropdown-subj-collapse-segm-methods', 'value')])
+def update_remove_subject_tooltip(segmentation_method):
+    return "This will remove only the {} segmentation, indicated on the dropdown to the left".format(segmentation_method)
+
 # Quality collapse ----------------------------------------------------
 
 # Remove selected subjects
@@ -2034,15 +2063,18 @@ def update_fissure_image(segmentation_method, scalar):
     Output('photo-container', 'children'),
     [Input('remove_btn', 'n_clicks'),
      Input('restore_btn', 'n_clicks'),
-     Input('dropdown-quality-threshold', 'value')],
+     Input('dropdown-quality-threshold', 'value'),
+     Input({'type':'btn-remove-subject', 'index': ALL}, 'n_clicks')],
     [State({'type': 'remove-cbx', 'index': ALL}, 'id'),
      State({'type': 'remove-cbx', 'index': ALL}, 'value'),
+     State('dropdown-subj-collapse-segm-methods', 'value'),
      State('photo-container', 'children')])
-def remove_quality_images(n_clicks, restore_clicks, threshold, ids, values, children):
+def remove_quality_images(n_clicks, restore_clicks, threshold, remove_clicks, ids, values, dropdown_segmentation_method, children):
 
     global dict_removed_subjects
 
     trigger = dash.callback_context.triggered[0]
+    btn_id = ast.literal_eval(trigger["prop_id"][:-9])
     removed_counter = 0
 
     if restore_clicks is not None and trigger['prop_id'] == 'restore_btn.n_clicks':
@@ -2059,6 +2091,10 @@ def remove_quality_images(n_clicks, restore_clicks, threshold, ids, values, chil
                 dict_removed_subjects[segmentation_method].append(subject_key)
                 dict_removed_subjects[segmentation_method] = list(set(dict_removed_subjects[segmentation_method]))
                 removed_counter += 1
+    
+    elif remove_clicks != [None] and btn_id['type'] == 'btn-remove-subject':
+        dict_removed_subjects[dropdown_segmentation_method].append(btn_id['index'])
+        removed_counter += 1
 
     if removed_counter > 0:
         return build_quality_images(threshold)
