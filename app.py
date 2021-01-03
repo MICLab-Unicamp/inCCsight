@@ -8,6 +8,7 @@ import numpy as np
 import random
 from tqdm import tqdm
 from skimage import measure
+from scipy import stats
 
 def warn(*args, **kwargs):
     pass
@@ -152,6 +153,7 @@ dict_parcellations_masks = {}
 dict_parcellations_statistics = {}
 dict_thickness = {}
 dict_removed_subjects = {}
+dict_scalar_outliers = {}
 
 # Segment and get info
 
@@ -168,6 +170,7 @@ for subject_path in tqdm(path_dict.values()):
             dict_parcellations_masks[segmentation_method] = {}
             dict_thickness[segmentation_method] = {}
             dict_removed_subjects[segmentation_method] = []
+            dict_scalar_outliers[segmentation_method] = []
 
 
         # Get data path info
@@ -226,6 +229,11 @@ for segmentation_method in dict_segmentation_methods.keys():
     
     dict_parcellations_statistics[segmentation_method] = inputfuncs.parcellations_dfs_dicts(dict_scalar_maps[segmentation_method], dict_parcellations_masks[segmentation_method], segmentation_method)
 
+    # Get FA and/or other scalars ouliers
+    for scalar in ['FA']:
+        df = dict_scalar_statistics[segmentation_method][scalar]
+        outliers = df[~df.between(df.quantile(.1), df.quantile(.9))].index
+        dict_scalar_outliers[segmentation_method] += list(outliers)
 
 # VISUALIZATION -------------------------------------------------------------------------------
 
@@ -934,13 +942,20 @@ def build_quality_images(threshold=0.7):
         # Get error probs
         df = dict_error_prob[segmentation_method]
         df = df.drop(dict_removed_subjects[segmentation_method])
-        df = df.sort_values(by=['error_prob'])
         
         # Order by error probs
-        index_label = df.query('error_prob > '+str(threshold)).index.tolist()
+        index_error_probs = df.query('error_prob > '+str(threshold)).index.tolist()
+        index_error_probs.sort()
+
+        # Get ouliers
+        index_outliers = dict_scalar_outliers[segmentation_method]
+        index_outliers = [x for x in index_outliers if x not in dict_removed_subjects[segmentation_method]]
+        index_outliers.sort()
+
+        index_no_quality = list(set(index_error_probs + index_outliers))
 
         # Retrieve images and segmentation
-        for subject_id in index_label:
+        for subject_id in index_no_quality:
             children.append(dcc.Loading(
                             html.Div([
                                 html.Div([
@@ -954,6 +969,8 @@ def build_quality_images(threshold=0.7):
 
                                     ], className='twelve columns', style=dict(width='100%', display='flex', verticalAlign='center', justifyContent='space-between')),
                                 
+                                build_quality_badges(subject_id, index_error_probs, index_outliers),
+
                                 html.Div([
                                     dcc.Graph(figure=build_fissure_image(subject_id, segmentation_method))
                                     ], className='twlve columns'),
@@ -1077,6 +1094,18 @@ def build_subject_collapse(segmentation_method='ROQS', scalar_map='wFA', subject
 
             ], style={'margin':'20px', 'backgroundColor':'#FAFAFA', 'border-radius':'20px', 'padding':'0px 0px 50px 0px'})
     return layout
+
+def build_quality_badges(subject_id, index_error_probs, index_outliers):
+
+    children = []
+
+    if subject_id in index_error_probs:
+        children.append(dbc.Badge("Abnormal Shape", color="secondary", pill=True, style=dict(marginRight='10px', fontSize='12pt', fontWeight='600')))
+
+    if subject_id in index_outliers:
+        children.append(dbc.Badge("FA Outlier", color="secondary", pill=True, style=dict(marginRight='10px', fontSize='12pt', fontWeight='600')))
+
+    return html.Div(children=children, className='twelve columns', style=dict(marginLeft='27px'))
 
 # DataTable functions ---------------------------------------------------------------------
 
