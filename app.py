@@ -188,7 +188,7 @@ for subject_path in tqdm(path_dict.values()):
                                                                                                                                    opts.basename,
                                                                                                                                    mask_basename)
         except:
-            print('> Segmentation failed for subject {} with method {}'.format(subject_name, segmentation_method))
+            print('> Warning: Segmentation failed for subject {} with method {}'.format(subject_name, segmentation_method))
             continue
 
         # Get thickness
@@ -506,7 +506,7 @@ def build_bubble_grouped(mode='Method', segmentation_method='ROQS', scalar='FA',
         df_aux = df_aux.drop(dict_removed_subjects[segmentation_method])
 
         if category_index is not None:
-            df_aux = df_aux.loc[category_index]
+            df_aux = df_aux.loc[np.intersect1d(df_aux.index, category_index)]
 
         df_aux = df_aux.dropna(axis=0)
 
