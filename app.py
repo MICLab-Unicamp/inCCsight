@@ -6,6 +6,7 @@ import pathlib
 import pandas as pd
 import numpy as np
 import random
+import itertools
 from tqdm import tqdm
 from skimage import measure
 from scipy import stats
@@ -1203,7 +1204,7 @@ def stripped_rows():
                                    "border": "3px solid blue"})
     return style_data_conditional
 
-def build_segm_table(mode = 'Method', segmentation_method = 'ROQS', show_stdev = False, color = False):
+def build_segm_table(mode = 'Method', segmentation_method = 'ROQS', show_stdev = False, color = False, pvalue=False):
 
     list_scalars = ['FA','RD','AD','MD']
 
@@ -1213,28 +1214,43 @@ def build_segm_table(mode = 'Method', segmentation_method = 'ROQS', show_stdev =
         df = df.reset_index().rename(columns={"index": "Subject"})
         names = ['Subject'] + list_scalars
     
-    elif mode == 'Method':
-        df = pd.DataFrame()
-        for segmentation_method in dict_segmentation_methods.keys():
-            df_aux = dict_scalar_statistics[segmentation_method]
-            df_aux = df_aux.drop(dict_removed_subjects[segmentation_method], errors='ignore')
-            df_aux = df_aux.reset_index()
-            df_aux['Method'] = segmentation_method
-            df = pd.concat([df, df_aux], axis=0)
-        df = df.groupby('Method').mean().reset_index()
-        names = ['Method'] + list_scalars
-
     else:
-        df = dict_scalar_statistics[segmentation_method]
-        df = df.drop(dict_removed_subjects[segmentation_method], errors='ignore')
-        df = pd.concat([df_categories[mode], df], axis=1)
-        df = df.groupby(mode).mean().reset_index()
-        names = [mode] + list_scalars
-    
+
+        if mode == 'Method':
+            df = pd.DataFrame()
+            for segmentation_method in dict_segmentation_methods.keys():
+                df_aux = dict_scalar_statistics[segmentation_method]
+                df_aux = df_aux.drop(dict_removed_subjects[segmentation_method], errors='ignore')
+                df_aux = df_aux.reset_index()
+                df_aux['Method'] = segmentation_method
+                df = pd.concat([df, df_aux], axis=0) 
+            category_list = list(dict_segmentation_methods.keys())
+        else:
+            df = dict_scalar_statistics[segmentation_method]
+            df = df.drop(dict_removed_subjects[segmentation_method], errors='ignore')
+            df = pd.concat([df_categories[mode], df], axis=1)
+            category_list = list(set(df_categories[mode]))
+            
+        if pvalue is True:
+            
+            dict_pvalues = {}
+            for cat1, cat2 in itertools.combinations(category_list, 2):
+                df1 = df[df[mode] == cat1]
+                df2 = df[df[mode] == cat2]
+                dict_pvalues['{} x {}'.format(cat1, cat2)] = get_column_pvalues(df1, df2)
+            
+            df = pd.DataFrame().from_dict(dict_pvalues, orient='index', columns=scalar_statistics_names).reset_index()
+            df = df.rename(columns = {'index':mode})
+            names = [mode] + list_scalars
+            
+        else:
+            df = df.groupby(mode).mean().reset_index()
+            names = [mode] + list_scalars
+
     df = df.round(6).sort_index()
 
     if show_stdev is False:
-        columns=[{"name": i, "id": i, "selectable": True} for i in names]
+        columns=[{"name": i, "id": i} for i in names]
         data=df[names]
     else:
         columns=[{"name": i, "id": i} for i in df.columns[:-1]]
@@ -1265,7 +1281,7 @@ def build_segm_table(mode = 'Method', segmentation_method = 'ROQS', show_stdev =
     )
     return layout
 
-def build_parcel_table(mode = 'Method', segmentation_method = 'ROQS', parcellation_method = 'Witelson', scalar = 'FA', color = False):
+def build_parcel_table(mode = 'Method', segmentation_method = 'ROQS', parcellation_method = 'Witelson', scalar = 'FA', color = False, pvalue = False):
     
     list_regions = ['P1', 'P2', 'P3', 'P4', 'P5']
 
@@ -1278,36 +1294,55 @@ def build_parcel_table(mode = 'Method', segmentation_method = 'ROQS', parcellati
         df = df.reset_index()
         df = df.rename(columns={"index": "Subject"})
         names = ['Subject'] + list_regions
-    
-    elif mode == 'Method':
-        
-        df = pd.DataFrame()
-        for segmentation_method in dict_segmentation_methods.keys():
-            df_aux = pd.DataFrame()
-            for region in list_regions:
-                df_aux = pd.concat([df_aux, dict_parcellations_statistics[segmentation_method][parcellation_method][region][scalar]], axis=1)
-            df_aux = df_aux.drop(dict_removed_subjects[segmentation_method], errors='ignore')
-            df_aux['Method'] = segmentation_method
-            df = pd.concat([df, df_aux], axis=0)
-        df = df.groupby('Method').mean()
-        df.columns = list_regions
-        names = ['Method'] + list_regions
 
     else:
+    
+        if mode == 'Method':
+            
+            df = pd.DataFrame()
+            for segmentation_method in dict_segmentation_methods.keys():
+                df_aux = pd.DataFrame()
+                for region in list_regions:
+                    df_aux = pd.concat([df_aux, dict_parcellations_statistics[segmentation_method][parcellation_method][region][scalar]], axis=1)
+                df_aux = df_aux.drop(dict_removed_subjects[segmentation_method], errors='ignore')
+                df_aux['Method'] = segmentation_method
+                df = pd.concat([df, df_aux], axis=0)
+            
+            category_list = list(set(dict_segmentation_methods.keys()))
+            
 
-        categories = list(set(df_categories[mode]))
+        else:
 
-        df = pd.DataFrame()
-        for category in categories:
-            df_aux = pd.DataFrame()
-            for region in list_regions:
-                df_aux = pd.concat([df_aux, dict_parcellations_statistics[segmentation_method][parcellation_method][region][scalar][df_categories[mode] == category]], axis=1)
-            df_aux[mode] = category
-            df = pd.concat([df, df_aux], axis=0)
-        df = df.drop(dict_removed_subjects[segmentation_method], errors='ignore')
-        df = df.groupby(mode).mean()
-        df.columns = list_regions
-        names = [mode] + list_regions            
+            category_list = list(set(df_categories[mode]))
+
+            df = pd.DataFrame()
+            for category in category_list:
+                df_aux = pd.DataFrame()
+                for region in list_regions:
+                    df_aux = pd.concat([df_aux, dict_parcellations_statistics[segmentation_method][parcellation_method][region][scalar][df_categories[mode] == category]], axis=1)
+                df_aux[mode] = category
+                df = pd.concat([df, df_aux], axis=0)
+            df = df.drop(dict_removed_subjects[segmentation_method], errors='ignore')
+            
+
+        if pvalue is True:
+            
+            df.columns = list_regions + [mode]
+
+            dict_pvalues = {}
+            for cat1, cat2 in itertools.combinations(category_list, 2):
+                df1 = df[df[mode] == cat1]
+                df2 = df[df[mode] == cat2]
+                dict_pvalues['{} x {}'.format(cat1, cat2)] = get_column_pvalues(df1, df2)
+            
+            df = pd.DataFrame().from_dict(dict_pvalues, orient='index', columns=list_regions).reset_index()
+            df = df.rename(columns = {'index':mode})
+            names = [mode] + list_regions
+            
+        else:
+            df = df.groupby(mode).mean()
+            df.columns = list_regions
+            names = [mode] + list_regions     
 
 
     layout = dash_table.DataTable(
@@ -1577,6 +1612,19 @@ def get_number_of_folders():
     else:
         return 1
 
+def get_column_pvalues(df1, df2):
+    df1 = df1.dropna()._get_numeric_data()
+    df2 = df2.dropna()._get_numeric_data()
+    
+    pvalues = []
+    if list(df1.columns) == list(df2.columns):    
+        for r in df1.columns:
+            for c in df2.columns:
+                if r == c:
+                    pvalues.append(stats.ttest_ind(df1[r], df2[c], nan_policy='omit')[1])
+        return pvalues
+    else:
+        raise ValueError("DataFrame column values don't match")
 # ---------------------------------- LAYOUT -----------------------------------------------
 app.layout = html.Div(
     children=[
@@ -1748,7 +1796,8 @@ app.layout = html.Div(
                                                     id='segm_table_dropdown_mode',
                                                     className = 'options-dropdown',
                                                     options=[{'label': 'Overall', 'value': 'overall'},
-                                                              {'label': 'Subjects', 'value': 'subjects'}],
+                                                             {'label': 'Subjects', 'value': 'subjects'},
+                                                             {'label': 'p-values', 'value': 'pvalue'}],
                                                     multi=False,
                                                     value='overall'),
 
@@ -1793,7 +1842,8 @@ app.layout = html.Div(
                                                     id='parcel_table_dropdown_mode',
                                                     className = 'options-dropdown',
                                                     options=[{'label': 'Overall', 'value': 'overall'},
-                                                             {'label': 'Subjects', 'value': 'subjects'}],
+                                                             {'label': 'Subjects', 'value': 'subjects'},
+                                                             {'label': 'p-values', 'value': 'pvalue'}],
                                                     multi=False,
                                                     value='overall',
                                                 ),
@@ -2205,9 +2255,12 @@ def open_quality_collapse(n_clicks, exit_clicks, className):
      Input("segm_table_dropdown_stdev", "value"),
      Input('photo-container', 'children')])
 def change_segm_table_mode(table_mode, segmentation_method, mode, show_stdev, removed):
+    pvalue = False
     if table_mode == 'subjects':
         mode = 'subjects'
-    return [build_segm_table(mode = mode, segmentation_method = segmentation_method, show_stdev = show_stdev, color = False)]
+    elif table_mode == 'pvalue':
+        pvalue = True
+    return [build_segm_table(mode = mode, segmentation_method = segmentation_method, show_stdev = show_stdev, color = False, pvalue=pvalue)]
 
 # Change parcel table mode
 @app.callback(
@@ -2220,14 +2273,18 @@ def change_segm_table_mode(table_mode, segmentation_method, mode, show_stdev, re
      Input('photo-container', 'children')])
 def change_parcel_table_mode(mode, segmentation_method, table_mode, parcellation_method, scalar, removed):
     
+    pvalue = False
     if table_mode == 'subjects':
         mode = 'subjects'
+    elif table_mode == 'pvalue':
+        pvalue = True
 
     return [build_parcel_table(mode = mode, 
                 segmentation_method = segmentation_method, 
                 parcellation_method = parcellation_method,
                 scalar = scalar,
-                color = False)]
+                color = False,
+                pvalue = pvalue)]
 
 # Highlight table row borders upon clicking
 @app.callback(
