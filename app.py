@@ -2005,6 +2005,156 @@ def update_dropdown_disabled(mode):
     else:
         return False
 
+# Tables --------------------------------------------------------------
+
+# Change segm table mode
+@app.callback(
+    Output("segm_table_container", "children"),
+    [Input("segm_table_dropdown_mode", "value"),
+     Input("dropdown_segm_methods", "value"),
+     Input("dropdown_category","value"),
+     Input("segm_table_dropdown_stdev", "value"),
+     Input('photo-container', 'children')])
+def change_segm_table_mode(table_mode, segmentation_method, mode, show_stdev, removed):
+    pvalue = False
+    if table_mode == 'subjects':
+        mode = 'subjects'
+    elif table_mode == 'pvalue':
+        pvalue = True
+    return [build_segm_table(mode = mode, segmentation_method = segmentation_method, show_stdev = show_stdev, color = False, pvalue=pvalue)]
+
+# Change parcel table mode
+@app.callback(
+    Output("parcel_table_container", "children"),
+    [Input("dropdown_category","value"),
+     Input("dropdown_segm_methods", "value"),
+     Input("parcel_table_dropdown_mode", "value"),
+     Input("parcel_table_dropdown_method", "value"),
+     Input("parcel_table_dropdown_scalar", "value"),
+     Input('photo-container', 'children')])
+def change_parcel_table_mode(mode, segmentation_method, table_mode, parcellation_method, scalar, removed):
+    
+    pvalue = False
+    if table_mode == 'subjects':
+        mode = 'subjects'
+    elif table_mode == 'pvalue':
+        pvalue = True
+
+    return [build_parcel_table(mode = mode, 
+                segmentation_method = segmentation_method, 
+                parcellation_method = parcellation_method,
+                scalar = scalar,
+                color = False,
+                pvalue = pvalue)]
+
+# Highlight table row borders upon clicking
+@app.callback(
+    Output("segm_table", "style_data_conditional"),
+    [Input("segm_table", "selected_cells")],
+    [State("segm_table", "data"),
+     State('segm_table', 'style_data_conditional')])
+def paint_segm_table(selected_cells, table_data, style_data_conditional):
+ 
+    n_rows = len(table_data)
+
+    for row in range(n_rows):
+        rule = {"if": {"row_index": row}, "border": "3px solid blue"}
+        if rule in style_data_conditional:
+            style_data_conditional.remove(rule)
+
+    if selected_cells is not None:
+
+        for cell in selected_cells:
+            row = cell['row'] 
+            style_data_conditional.append({"if": {"row_index": row},
+                                           "border": "3px solid blue"})
+    
+    return style_data_conditional
+
+# Highlight table row borders upon clicking
+@app.callback(
+    Output("parcel_table", "style_data_conditional"),
+    [Input("parcel_table", "selected_cells")],
+    [State("parcel_table", "data"),
+     State('parcel_table', 'style_data_conditional')])
+def paint_parcel_table(selected_cells, table_data, style_data_conditional):
+    n_rows = len(table_data)
+
+    for row in range(n_rows):
+        rule = {"if": {"row_index": row}, "border": "3px solid blue"}
+        if rule in style_data_conditional:
+            style_data_conditional.remove(rule)
+
+    if selected_cells is not None:
+
+        for cell in selected_cells:
+            row = cell['row'] 
+            style_data_conditional.append({"if": {"row_index": row},
+                                           "border": "3px solid blue"})
+    
+    return style_data_conditional
+
+# Open export data modal
+@app.callback(
+    Output("export_data_modal", "is_open"),
+    [Input("parcel_download_all_btn", "n_clicks"),
+     Input("close_modal_btn", "n_clicks")])
+def toggle_export_modal(open_clicks, close_clicks):
+    if open_clicks is not None:
+        
+        trigger = dash.callback_context.triggered[0]
+        if trigger['prop_id'] == 'parcel_download_all_btn.n_clicks':
+            return True
+        else:
+            return False
+
+# Disable download button
+@app.callback(
+    [Output("download_data_btn", "disabled"),
+     Output("disable_download_message", "children")],
+    [Input("export_data_config", "value")])
+def toggle_download_btn(value):
+    if value == []:
+        return True, "You must include at least one type of data."
+    else:
+        return False, ""
+
+@app.callback(
+    Output("parcel_download_all", "data"), 
+    [Input("download_data_btn", "n_clicks")],
+    [State("export_segm_method", "value"),
+     State("export_parc_method", "value"),
+     State("export_data_config", "value"),
+     State("export_groupby_check", "value"),
+     State("export_groupby_config", "value"),
+     State("export_show_stdev", "value"),
+     ])
+def download_parceldata(n_clicks, segmentation_method, parcellation_method, data_config, groupby_check, groupby_config, stdev_config):
+    if n_clicks is not None:
+
+        include_cat = False
+        include_segm = False
+        include_parc = False
+        include_stdev = False
+        groupby_cat = None
+
+        if data_config is not None:
+            if 'Categories' in data_config:
+                include_cat = True
+            if 'Segmentation' in data_config:
+                include_segm = True
+            if 'Parcellation' in data_config:
+                include_parc = True
+
+        if groupby_check == ['Group by:']:
+            groupby_cat = groupby_config
+
+        if stdev_config == ['Show Std. Dev.']:
+            include_stdev = True
+
+        return export_parcel_table(segmentation_method, parcellation_method, include_segm, include_parc, include_cat, groupby_cat, include_stdev)
+
+
 # Graph updates -------------------------------------------------------
 
 # Update segm box-plots
@@ -2243,155 +2393,6 @@ def open_quality_collapse(n_clicks, exit_clicks, className):
                 return ["notquality columns", True]
     else:
         return ["twelve columns", False]
-
-# Tables --------------------------------------------------------------
-
-# Change segm table mode
-@app.callback(
-    Output("segm_table_container", "children"),
-    [Input("segm_table_dropdown_mode", "value"),
-     Input("dropdown_segm_methods", "value"),
-     Input("dropdown_category","value"),
-     Input("segm_table_dropdown_stdev", "value"),
-     Input('photo-container', 'children')])
-def change_segm_table_mode(table_mode, segmentation_method, mode, show_stdev, removed):
-    pvalue = False
-    if table_mode == 'subjects':
-        mode = 'subjects'
-    elif table_mode == 'pvalue':
-        pvalue = True
-    return [build_segm_table(mode = mode, segmentation_method = segmentation_method, show_stdev = show_stdev, color = False, pvalue=pvalue)]
-
-# Change parcel table mode
-@app.callback(
-    Output("parcel_table_container", "children"),
-    [Input("dropdown_category","value"),
-     Input("dropdown_segm_methods", "value"),
-     Input("parcel_table_dropdown_mode", "value"),
-     Input("parcel_table_dropdown_method", "value"),
-     Input("parcel_table_dropdown_scalar", "value"),
-     Input('photo-container', 'children')])
-def change_parcel_table_mode(mode, segmentation_method, table_mode, parcellation_method, scalar, removed):
-    
-    pvalue = False
-    if table_mode == 'subjects':
-        mode = 'subjects'
-    elif table_mode == 'pvalue':
-        pvalue = True
-
-    return [build_parcel_table(mode = mode, 
-                segmentation_method = segmentation_method, 
-                parcellation_method = parcellation_method,
-                scalar = scalar,
-                color = False,
-                pvalue = pvalue)]
-
-# Highlight table row borders upon clicking
-@app.callback(
-    Output("segm_table", "style_data_conditional"),
-    [Input("segm_table", "selected_cells")],
-    [State("segm_table", "data"),
-     State('segm_table', 'style_data_conditional')])
-def paint_segm_table(selected_cells, table_data, style_data_conditional):
- 
-    n_rows = len(table_data)
-
-    for row in range(n_rows):
-        rule = {"if": {"row_index": row}, "border": "3px solid blue"}
-        if rule in style_data_conditional:
-            style_data_conditional.remove(rule)
-
-    if selected_cells is not None:
-
-        for cell in selected_cells:
-            row = cell['row'] 
-            style_data_conditional.append({"if": {"row_index": row},
-                                           "border": "3px solid blue"})
-    
-    return style_data_conditional
-
-# Highlight table row borders upon clicking
-@app.callback(
-    Output("parcel_table", "style_data_conditional"),
-    [Input("parcel_table", "selected_cells")],
-    [State("parcel_table", "data"),
-     State('parcel_table', 'style_data_conditional')])
-def paint_parcel_table(selected_cells, table_data, style_data_conditional):
-    n_rows = len(table_data)
-
-    for row in range(n_rows):
-        rule = {"if": {"row_index": row}, "border": "3px solid blue"}
-        if rule in style_data_conditional:
-            style_data_conditional.remove(rule)
-
-    if selected_cells is not None:
-
-        for cell in selected_cells:
-            row = cell['row'] 
-            style_data_conditional.append({"if": {"row_index": row},
-                                           "border": "3px solid blue"})
-    
-    return style_data_conditional
-
-# Open export data modal
-@app.callback(
-    Output("export_data_modal", "is_open"),
-    [Input("parcel_download_all_btn", "n_clicks"),
-     Input("close_modal_btn", "n_clicks")])
-def toggle_export_modal(open_clicks, close_clicks):
-    if open_clicks is not None:
-        
-        trigger = dash.callback_context.triggered[0]
-        if trigger['prop_id'] == 'parcel_download_all_btn.n_clicks':
-            return True
-        else:
-            return False
-
-# Disable download button
-@app.callback(
-    [Output("download_data_btn", "disabled"),
-     Output("disable_download_message", "children")],
-    [Input("export_data_config", "value")])
-def toggle_download_btn(value):
-    if value == []:
-        return True, "You must include at least one type of data."
-    else:
-        return False, ""
-
-@app.callback(
-    Output("parcel_download_all", "data"), 
-    [Input("download_data_btn", "n_clicks")],
-    [State("export_segm_method", "value"),
-     State("export_parc_method", "value"),
-     State("export_data_config", "value"),
-     State("export_groupby_check", "value"),
-     State("export_groupby_config", "value"),
-     State("export_show_stdev", "value"),
-     ])
-def download_parceldata(n_clicks, segmentation_method, parcellation_method, data_config, groupby_check, groupby_config, stdev_config):
-    if n_clicks is not None:
-
-        include_cat = False
-        include_segm = False
-        include_parc = False
-        include_stdev = False
-        groupby_cat = None
-
-        if data_config is not None:
-            if 'Categories' in data_config:
-                include_cat = True
-            if 'Segmentation' in data_config:
-                include_segm = True
-            if 'Parcellation' in data_config:
-                include_parc = True
-
-        if groupby_check == ['Group by:']:
-            groupby_cat = groupby_config
-
-        if stdev_config == ['Show Std. Dev.']:
-            include_stdev = True
-
-        return export_parcel_table(segmentation_method, parcellation_method, include_segm, include_parc, include_cat, groupby_cat, include_stdev)
 
 '''
 @app.callback(
