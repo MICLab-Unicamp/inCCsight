@@ -23,6 +23,7 @@ logging.captureWarnings(True)
 
 import inputfuncs
 import ccprocess
+import libcc
 
 import segmfuncs
 import parcelfuncs
@@ -119,7 +120,6 @@ if opts.parents is not None:
             # Create dict with subjects as keys and group (parents names) as values
             group_dict.update(dict_folders)
 
-
 df_group = pd.DataFrame.from_dict(group_dict, orient='index', columns=["Folder"])
 df_categories = pd.concat([df_categories, df_group], axis = 1)
 
@@ -196,8 +196,9 @@ for subject_path in tqdm(path_dict.values()):
             continue
 
         # Get thickness
+        
         try:
-            thick, _, _ = thickness(segmentation_mask, 200)
+            thick, _, _ = libcc.thickness(segmentation_mask, 200)
         except:
             thick = np.empty(200)
         
@@ -418,6 +419,7 @@ def build_segm_scatterplot(mode='Method', segmentation_method = 'ROQS', scalar_x
                     trendline=trendline)
 
     fig.update_layout(height=800, paper_bgcolor='rgba(0,0,0,0)')
+    fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor='right', x=1))
     fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
     
     return fig
@@ -453,7 +455,8 @@ def build_segm_scattermatrix(mode='Method', segmentation_method = 'ROQS', extra_
     else:
         n_cats = len(set(df_categories[mode].dropna(axis=0)))
 
-    fig.update_layout(height=250*n_cats, paper_bgcolor='rgba(0,0,0,0)',legend_orientation="h")
+    fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor='right', x=1))
+    fig.update_layout(height=500+250*n_cats, paper_bgcolor='rgba(0,0,0,0)')
     fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12), margin=dict(r=0, l=0))
 
     return fig
@@ -493,14 +496,15 @@ def build_midline_plot(scalar='FA', mode='Method', segmentation_method='ROQS'):
         
     fig = px.line(df_melt, x='index', y='value', color=mode)
 
-    fig.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h")    
+    fig.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor='right', x=1))
+    fig.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)')    
     fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
     
     fig.update_layout(xaxis_title='Points along CC body', yaxis_title=scalar, legend_title=mode)
     
     return fig
 
-def build_bubble_grouped(mode='Method', segmentation_method='ROQS', scalar='FA', size=False):
+def build_bubble_grouped(mode='Method', segmentation_method='ROQS', scalar='Thickness', size=True):
     
     def build_bubble_plot(scalar='FA', segmentation_method='Watershed', size = True, category_index = None):
 
@@ -543,7 +547,7 @@ def build_bubble_grouped(mode='Method', segmentation_method='ROQS', scalar='FA',
         
         for i, segmentation_method in enumerate(dict_segmentation_methods):
             fig.add_trace(build_bubble_plot(scalar=scalar, segmentation_method=segmentation_method, size=size)['data'][0], row=i+1, col=1)
-            fig.update_yaxes(title_text="{} for {} method".format(scalar, segmentation_method), row=i+1, col=1)
+            fig.update_yaxes(title_text="{} for<br>{} method".format(scalar, segmentation_method), row=i+1, col=1)
         
     else:
         
@@ -557,14 +561,15 @@ def build_bubble_grouped(mode='Method', segmentation_method='ROQS', scalar='FA',
         for i, category in enumerate(set(df)):
             category_index = df_categories.loc[df_categories[mode] == category].index
             fig.add_trace(build_bubble_plot(scalar=scalar, segmentation_method=segmentation_method, size=size, category_index=category_index)['data'][0], row=i+1, col=1)
-            fig.update_yaxes(title_text="{} for {} category".format(scalar, category), row=i+1, col=1)
+            fig.update_yaxes(title_text="{} for<br>{} category".format(scalar, category), row=i+1, col=1)
     
     fig.update_xaxes(title_text="Points along CC body", row=n_cats, col=1)
     fig.update_layout(height=250*n_cats, paper_bgcolor='rgba(0,0,0,0)') 
     fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12), margin=dict(r=0, l=0, t=60))
+    
     return fig
 
-def build_bubble_grouped_pvalue(scalar='Thickness', mode='Method', segmentation_method='ROQS', threshold=0.05):
+def build_bubble_grouped_pvalue(mode='Method', segmentation_method='ROQS', scalar='Thickness', threshold=0.05):
     
     def build_bubble_pvalue(pvalue, threshold=0.05, size=False, gray=False):
 
@@ -589,15 +594,18 @@ def build_bubble_grouped_pvalue(scalar='Thickness', mode='Method', segmentation_
     if mode == 'Method':
         categories = list(itertools.combinations(dict_segmentation_methods.keys(), 2))
         n_cats = len(categories)
+
+        if n_cats == 0:
+            return empty_figure_with_text('Not enough categories to calculate p-values.')
         
         fig = make_subplots(rows=n_cats, cols=1)
         
         for i, category in enumerate(categories):
             
             if scalar == 'Thickness':
-                pvalue = ttest_ind(dict_thickness[category[0]], dict_thickness[category[1]]).pvalue
+                pvalue = stats.ttest_ind(dict_thickness[category[0]], dict_thickness[category[1]]).pvalue
             else:
-                pvalue = ttest_ind(pd.DataFrame.from_dict(dict(dict_scalar_midlines[category[0]][scalar]), orient='index', columns=scalar_midline_names),
+                pvalue = stats.ttest_ind(pd.DataFrame.from_dict(dict(dict_scalar_midlines[category[0]][scalar]), orient='index', columns=scalar_midline_names),
                                    pd.DataFrame.from_dict(dict(dict_scalar_midlines[category[1]][scalar]), orient='index', columns=scalar_midline_names)).pvalue
 
             pvalue = np.take(pvalue, list(np.linspace(0,195,40)))
@@ -621,15 +629,18 @@ def build_bubble_grouped_pvalue(scalar='Thickness', mode='Method', segmentation_
         categories = list(itertools.combinations(set(df), 2))
         n_cats = len(categories)
         
+        if n_cats == 0:
+            return empty_figure_with_text('Not enough categories to calculate p-values.')
+
         fig = make_subplots(rows=n_cats, cols=1, x_title='Statistic Meaningful Differences (p < 0.05)')
         
         for i, category in enumerate(categories):
             
             if scalar == 'Thickness':
-                pvalue = ttest_ind(dict_thickness[segmentation_method].loc[df_categories[mode] == category[0]], 
+                pvalue = stats.ttest_ind(dict_thickness[segmentation_method].loc[df_categories[mode] == category[0]], 
                                    dict_thickness[segmentation_method].loc[df_categories[mode] == category[1]]).pvalue
             else:
-                pvalue = ttest_ind(pd.DataFrame.from_dict(dict(dict_scalar_midlines[segmentation_method][scalar]), orient='index', columns=scalar_midline_names).loc[df_categories[mode] == category[0]],
+                pvalue = stats.ttest_ind(pd.DataFrame.from_dict(dict(dict_scalar_midlines[segmentation_method][scalar]), orient='index', columns=scalar_midline_names).loc[df_categories[mode] == category[0]],
                                    pd.DataFrame.from_dict(dict(dict_scalar_midlines[segmentation_method][scalar]), orient='index', columns=scalar_midline_names).loc[df_categories[mode] == category[1]]).pvalue
     
             pvalue = np.take(pvalue, list(np.linspace(0,195,40)))
@@ -645,8 +656,8 @@ def build_bubble_grouped_pvalue(scalar='Thickness', mode='Method', segmentation_
                 fig.add_trace(new_gray_fig['data'][0], row=i+1, col=1)
                 
             fig.update_yaxes(title_text="{} x {}".format(category[0], category[1]), row=i+1, col=1)
-           
-    fig.update_layout(height=300*n_cats, width=800) 
+
+    fig.update_layout(height=400*n_cats) 
     fig.update_xaxes(title_text="Points along CC body", row=n_cats, col=1)
     fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', legend_orientation="h")    
     fig.update_layout(font=dict(family="Open Sans, sans-serif", size=12))
@@ -735,26 +746,51 @@ def build_parcel_boxplot_dropdowns():
 
 def build_bubbleplot_dropdowns():
 
+    options_pvalue = [{'label': scalar, 'value': scalar} for scalar in ['Scalar', 'p-value']]
     options_scalars = [{'label': scalar, 'value': scalar} for scalar in scalar_list+['Thickness']]
     options_size = [{'label': scalar, 'value': scalar} for scalar in ['True', 'False']]
 
     layout = html.Div([
                 html.Div([
-                    html.H6('Scalar:', className='table-options-title', style={'padding':'0px 10px 0px 10px'}),
-                    dcc.Dropdown(id='dropdown-bubbleplot-left',
-                                 options=options_scalars,
-                                 multi=False,
-                                 value='FA',
-                                 style={'width':'150px'}),
-                    html.H6('Size:', className='table-options-title', style={'padding':'0px 10px 0px 30px'}),
-                    dcc.Dropdown(id='dropdown-bubbleplot-right',
-                                 options=options_size,
-                                 multi=False,
-                                 value='False',
-                                 style={'width':'120px'})
-                ], className='row', style=dict(display='flex', justifyContent='left', verticalAlign='center')),
+
+                    html.Div([
+
+                        html.H6('Mode:', className='table-options-title', style={'padding':'0px 10px 0px 0px'}),
+                        dcc.Dropdown(id='dropdown-bubbleplot-mode',
+                                     options=options_pvalue,
+                                     multi=False,
+                                     value='Scalar',
+                                     style={'width':'150px'}),
+
+                    ], className='row', style={'margin':'0px 0px 0px 10px'}),
+
+                    html.Div([
+
+                        html.H6('Scalar:', className='table-options-title', style={'padding':'0px 10px 0px 0px'}),
+                        dcc.Dropdown(id='dropdown-bubbleplot-left',
+                                     options=options_scalars,
+                                     multi=False,
+                                     value='Thickness',
+                                     style={'width':'150px'}),
+
+                    ], className='row', style={'margin':'0px 0px 0px 30px'}),
+
+                    html.Div([
+
+                        html.H6('Size:', className='table-options-title', style={'padding':'0px 10px 0px 0px'}),
+                        dcc.Dropdown(id='dropdown-bubbleplot-right',
+                                     options=options_size,
+                                     multi=False,
+                                     value='True',
+                                     style={'width':'120px'})
+
+                    ], className='row', style={'margin':'0px 0px 0px 30px'}),
+
+                
+                ], className='row', style=dict(display='flex', justifyContent='left', verticalAlign='center', marginBottom='50px')),
             ]
         )
+
     return layout    
 
 def build_fissure_image_dropdown(subject_id):
@@ -1625,6 +1661,33 @@ def get_column_pvalues(df1, df2):
         return pvalues
     else:
         raise ValueError("DataFrame column values don't match")
+
+def empty_figure_with_text(text):
+
+    return {
+        "layout": {
+            "height": 300,
+            "paper_bgcolor": 'rgba(0,0,0,0)',
+            "xaxis": {
+                "visible": False
+            },
+            "yaxis": {
+                "visible": False
+            },
+            "annotations": [
+                {
+                    "text": text,
+                    "xref": "paper",
+                    "yref": "paper",
+                    "showarrow": False,
+                    "font": {
+                        "size": 28
+                    }
+                }
+            ]
+        }
+    }
+
 # ---------------------------------- LAYOUT -----------------------------------------------
 app.layout = html.Div(
     children=[
@@ -1763,7 +1826,7 @@ app.layout = html.Div(
             
                 html.Div(
                     id='dashboard',
-                    style=dict(height='110vh', overflowY='auto', overflowX='hidden'),
+                    style=dict(height='100vh', overflowY='auto', overflowX='hidden'),
                     className='twelve columns',
                     children=[
 
@@ -1894,7 +1957,7 @@ app.layout = html.Div(
 
                                 html.Div(
                                     id="bottom-row-left-column",
-                                    className="eight columns",
+                                    className="seven columns",
                                     children=[
                                     
                                         html.Div(
@@ -1921,7 +1984,7 @@ app.layout = html.Div(
                                 # Scatterplot
                                 html.Div(
                                     id="scatterplot-container",
-                                    className="four columns",
+                                    className="five columns",
                                     children=[
                                         build_graph_title("Scatter Plot"),
                                         dcc.Loading(dcc.Graph(id="scatter_plot", figure=build_segm_scatterplot())),
@@ -1940,24 +2003,39 @@ app.layout = html.Div(
                                 # Scattermatrix
                                 html.Div(
                                     id="scattermatrix-container",
-                                    className="eight columns",
+                                    className="seven columns",
                                     children=[
                                         build_graph_title("Scatter Matrix"),
                                         dcc.Loading(dcc.Graph(id="scatter_matrix", figure=build_segm_scattermatrix())),
                                     ],
                                 ),
 
-                                # Bubble plot
                                 html.Div(
-                                    id="bubbleplot-container",
-                                    className="four columns",
-                                    children=[
-                                        build_graph_title("Bubble Plots"),
-                                        dcc.Loading(dcc.Graph(id="bubble_plots", figure=build_bubble_grouped())),
-                                        build_bubbleplot_dropdowns(),
+                                    className="five columns",
+                                    children = [
+
+                                        # Midline plots
+                                        html.Div(
+                                            id="midline-container",
+                                            children=[
+                                                build_graph_title("Midline Plots"),
+                                                dcc.Loading(dcc.Graph(id="midline_graph", figure=build_midline_plot())),
+                                                build_midlineplot_dropdown(),
+                                            ],
+                                        ),
+
+                                        # Bubble plot
+                                        html.Div(
+                                            id="bubbleplot-container",
+                                            children=[
+                                                build_graph_title("Bubble Plots"),
+                                                dcc.Loading(dcc.Graph(id="bubble_plots", figure=build_bubble_grouped())),
+                                                build_bubbleplot_dropdowns(),
+                                            ],
+                                        ),
+
                                     ],
                                 ),
-
                             ],
                         ),
 
@@ -1967,18 +2045,6 @@ app.layout = html.Div(
                             style=dict(marginRight='20px'),
                             children=[
 
-
-
-                                # Midline plots
-                                html.Div(
-                                    id="midline-container",
-                                    className="four columns",
-                                    children=[
-                                        build_graph_title("Midline Plots"),
-                                        dcc.Loading(dcc.Graph(id="midline_graph", figure=build_midline_plot())),
-                                        build_midlineplot_dropdown(),
-                                    ],
-                                ),
 
                                 html.Div(build_export_parcel_table_modal(), id='example_div'),
                                 html.Div(id='bridge-div'),
@@ -2217,15 +2283,20 @@ def update_scatterplot(segm_method, mode, scalar_x, scalar_y, trendline, removed
     Output("bubble_plots","figure"),
     [Input("dropdown_segm_methods","value"),
      Input("dropdown_category","value"),
+     Input("dropdown-bubbleplot-mode", "value"),
      Input("dropdown-bubbleplot-left", "value"),
      Input("dropdown-bubbleplot-right", "value"),
      Input('photo-container', 'children')])
-def update_bubbleplot(segm_method, mode, scalar, size, removed):
+def update_bubbleplot(segm_method, mode, bubble_mode, scalar, size, removed):
     if size == 'True':
         size = True
     elif size == 'False':
         size = False
-    return build_bubble_grouped(mode=mode, segmentation_method=segm_method, scalar=scalar, size=size)
+
+    if bubble_mode == 'Scalar':
+        return build_bubble_grouped(mode=mode, segmentation_method=segm_method, scalar=scalar, size=size)
+    else:
+        return build_bubble_grouped_pvalue(mode=mode, segmentation_method=segm_method, scalar=scalar)
 
 # Subject collapse ----------------------------------------------------
 
