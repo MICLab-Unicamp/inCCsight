@@ -784,8 +784,18 @@ def build_bubbleplot_dropdowns():
                                      value='True',
                                      style={'width':'120px'})
 
-                    ], className='row', style={'margin':'0px 0px 0px 30px'}),
+                    ], className='row', style={'margin':'0px 0px 0px 30px'}, id='div-bubble-dropdown-right'),
 
+                    html.Div([
+
+                        html.H6('Threshold:', className='table-options-title', style={'padding':'0px 10px 0px 0px'}),
+                        dcc.Dropdown(id='dropdown-bubbleplot-threshold',
+                                     options=[{'label': num/100, 'value': num/100} for num in list(np.arange(0, 10, 1)) + list(np.arange(15, 95, 5))],
+                                     multi=False,
+                                     value=0.05,
+                                     style={'width':'120px'})
+
+                    ], className='row', style=dict(display='none', margin='0px 0px 0px 30px'), id='div-bubble-dropdown-threshold'),
                 
                 ], className='row', style=dict(display='flex', justifyContent='left', verticalAlign='center', marginBottom='50px')),
             ]
@@ -793,9 +803,9 @@ def build_bubbleplot_dropdowns():
 
     return layout    
 
-def build_fissure_image_dropdown(subject_id):
+def build_fissure_image_dropdown(subject_id, segmentation_methods_available=dict_segmentation_methods.keys()):
 
-    options = [{'label': segmentation_method, 'value': segmentation_method} for segmentation_method in list(dict_segmentation_methods.keys())+['None']]
+    options = [{'label': segmentation_method, 'value': segmentation_method} for segmentation_method in list(segmentation_methods_available)+['None']]
     options_scalars = [{'label': scalar, 'value': scalar} for scalar in ['wFA']+scalar_list]
 
     layout = html.Div([
@@ -808,7 +818,7 @@ def build_fissure_image_dropdown(subject_id):
                             dcc.Dropdown(id='dropdown-subj-collapse-segm-methods',
                                          options=options,
                                          multi=False,
-                                         value=list(dict_segmentation_methods.keys())[0],
+                                         value=segmentation_methods_available[0],
                                          style={'width':'120px'}),
                         ], className='row'),
                     
@@ -847,9 +857,9 @@ def build_fissure_image_dropdown(subject_id):
 
     return layout   
 
-def build_individual_subject_segm_table_dropdown():
+def build_individual_subject_segm_table_dropdown(segmentation_methods_available=dict_segmentation_methods.keys()):
 
-    options = [{'label': segmentation_method, 'value': segmentation_method} for segmentation_method in dict_segmentation_methods.keys()]
+    options = [{'label': segmentation_method, 'value': segmentation_method} for segmentation_method in segmentation_methods_available]
     options_stddev = [{'label': scalar, 'value': scalar} for scalar in ['Show', 'Hide']]
 
     layout = html.Div([
@@ -858,7 +868,7 @@ def build_individual_subject_segm_table_dropdown():
                     dcc.Dropdown(id='dropdown-subj-collapse-table-segm-methods',
                                  options=options,
                                  multi=False,
-                                 value=list(dict_segmentation_methods.keys())[0],
+                                 value=segmentation_methods_available[0],
                                  style={'width':'150px'}),
                     html.H6('Show Std.Dev.:', className='table-options-title', style={'padding':'0px 10px 0px 30px'}),
                     dcc.Dropdown(id='dropdown-subj-collapse-table-segm-std-dev',
@@ -872,9 +882,9 @@ def build_individual_subject_segm_table_dropdown():
 
     return layout
 
-def build_individual_subject_parcel_table_dropdown():
+def build_individual_subject_parcel_table_dropdown(segmentation_methods_available=dict_segmentation_methods.keys()):
 
-    options = [{'label': segmentation_method, 'value': segmentation_method} for segmentation_method in dict_segmentation_methods.keys()]
+    options = [{'label': segmentation_method, 'value': segmentation_method} for segmentation_method in segmentation_methods_available]
     options_scalars = [{'label': scalar, 'value': scalar} for scalar in scalar_list]
     options_parcel_method = [{'label': parc, 'value': parc} for parc in dict_parcellations_statistics[segmentation_method].keys()]
 
@@ -884,7 +894,7 @@ def build_individual_subject_parcel_table_dropdown():
                     dcc.Dropdown(id='dropdown-subj-collapse-table-parcel-segm-methods',
                                  options=options,
                                  multi=False,
-                                 value=list(dict_segmentation_methods.keys())[0],
+                                 value=segmentation_methods_available[0],
                                  style={'width':'150px'}),
                     html.H6('Parcel. method:', className='table-options-title', style={'padding':'0px 10px 0px 30px'}),
                     dcc.Dropdown(id='dropdown-subj-collapse-table-parcel-methods',
@@ -924,7 +934,7 @@ def build_subjects_list():
 
         button_group.append(html.Button(subject_id, 
             style=dict(fontSize='1.8rem', width='100%', backgroundColor=background, marginBottom='2px', color='rgb(255,255,255)'), 
-            id={'type': 'subject-list-btns', 'index': 'btn-subj-list-{}'.format(subject_id)}))
+            id={'type': 'subject-list-btns', 'index': subject_id}))
         
 
     return html.Div(button_group, style=dict(width='100%'))
@@ -1035,7 +1045,7 @@ def build_quality_images(threshold=0.7, scalar='wFA'):
 
 def build_fissure_image(subject_id, segmentation_method, scalar = 'FA'):
 
-    scalar_maps = dict_scalar_maps['ROQS'][subject_id]
+    scalar_maps = dict_scalar_maps[segmentation_method][subject_id]
     scalar_maps_list = ['wFA','FA','MD','RD','AD']
     scalar_map = scalar_maps[scalar_maps_list.index(scalar)]
 
@@ -1098,6 +1108,11 @@ def build_3d_visualization(subject_id):
 
 def build_subject_collapse(segmentation_method='ROQS', scalar_map='wFA', subject_id = list(path_dict.keys())[0]):
 
+    segmentation_methods_available = []
+    for segm_method in dict_segmentation_methods.keys():
+        if subject_id in dict_scalar_statistics[segm_method].index:
+            segmentation_methods_available.append(segm_method)
+
     layout = dbc.Card([
 
                 html.Div([
@@ -1115,8 +1130,8 @@ def build_subject_collapse(segmentation_method='ROQS', scalar_map='wFA', subject
                     html.Div([
                         build_graph_title("Scalar maps"),
                         #dcc.Graph(figure=build_3d_visualization(subject_id))
-                        dcc.Graph(figure=build_fissure_image(subject_id, segmentation_method, scalar = scalar_map), id='subject_collapse_fissure_img'),
-                        build_fissure_image_dropdown(subject_id),
+                        dcc.Graph(figure=build_fissure_image(subject_id, segmentation_methods_available[0], scalar = scalar_map), id='subject_collapse_fissure_img'),
+                        build_fissure_image_dropdown(subject_id, segmentation_methods_available),
 
                     ], className = 'four columns', style=dict(display='grid', justifyContent='center')),
 
@@ -1124,12 +1139,12 @@ def build_subject_collapse(segmentation_method='ROQS', scalar_map='wFA', subject
 
                     html.Div([
                         build_graph_title("Segmentation data"),
-                        build_individual_subject_segm_table(subject_id, segmentation_method),
-                        build_individual_subject_segm_table_dropdown(),
+                        build_individual_subject_segm_table(subject_id, segmentation_methods_available[0]),
+                        build_individual_subject_segm_table_dropdown(segmentation_methods_available),
 
                         build_graph_title("Parcellation data"),
-                        build_individual_subject_parcel_table(subject_id, segmentation_method, parcellation_method='Witelson', scalar='FA'),
-                        build_individual_subject_parcel_table_dropdown(),
+                        build_individual_subject_parcel_table(subject_id, segmentation_methods_available[0], parcellation_method='Witelson', scalar='FA'),
+                        build_individual_subject_parcel_table_dropdown(segmentation_methods_available),
 
                     ], className='six columns'),
 
@@ -1773,7 +1788,7 @@ app.layout = html.Div(
                                 build_graph_title("Subjects"),
                                 html.Div(
                                     build_subjects_list(), 
-                                    style=dict(height='550px', margin='0 0 50px 0', overflowY='auto', width='300px'),
+                                    style=dict(height='550px', margin='0 0 50px 0', overflowY='auto', minWidth='300px', maxWidth='450px'),
                                     id="subject-table-container")], 
                                 className = "column", 
                                 id="subject-list-container",
@@ -2286,8 +2301,9 @@ def update_scatterplot(segm_method, mode, scalar_x, scalar_y, trendline, removed
      Input("dropdown-bubbleplot-mode", "value"),
      Input("dropdown-bubbleplot-left", "value"),
      Input("dropdown-bubbleplot-right", "value"),
+     Input("dropdown-bubbleplot-threshold", "value"),
      Input('photo-container', 'children')])
-def update_bubbleplot(segm_method, mode, bubble_mode, scalar, size, removed):
+def update_bubbleplot(segm_method, mode, bubble_mode, scalar, size, threshold, removed):
     if size == 'True':
         size = True
     elif size == 'False':
@@ -2296,7 +2312,24 @@ def update_bubbleplot(segm_method, mode, bubble_mode, scalar, size, removed):
     if bubble_mode == 'Scalar':
         return build_bubble_grouped(mode=mode, segmentation_method=segm_method, scalar=scalar, size=size)
     else:
-        return build_bubble_grouped_pvalue(mode=mode, segmentation_method=segm_method, scalar=scalar)
+        return build_bubble_grouped_pvalue(mode=mode, segmentation_method=segm_method, scalar=scalar, threshold=threshold)
+
+# Update bubble plot dropdown options
+@app.callback(
+    [Output('div-bubble-dropdown-right', 'style'),
+     Output('div-bubble-dropdown-threshold', 'style')],
+    [Input('dropdown-bubbleplot-mode', 'value')],
+    [State('div-bubble-dropdown-right', 'style'),
+     State('div-bubble-dropdown-threshold', 'style')])
+def update_bubbleplot_dropdown(bubble_mode, style_right, style_threshold):
+    if bubble_mode == 'Scalar':
+        style_right['display'] = 'flex'
+        style_threshold['display'] = 'none'
+    else:
+        style_right['display'] = 'none'
+        style_threshold['display'] = 'flex'
+    return [style_right, style_threshold]
+
 
 # Subject collapse ----------------------------------------------------
 
@@ -2320,7 +2353,7 @@ def open_subject_collapse(n_clicks, exit_clicks, ids):
         if btn_id['type'] == 'btn-exit-subject':
             return False, []        
 
-        subject_id = btn_id['index'].rsplit('-')[-1]
+        subject_id = btn_id['index']
         
         global selected_subject_id
         selected_subject_id = subject_id
