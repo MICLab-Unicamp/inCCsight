@@ -9,33 +9,12 @@ inCCsight is a web-based software for processing, exploring e visualizing data f
 
 ## How to install
 
-We suggest you to create a separate virtual environment running Python 3 for this app, and install all of the required dependencies there. 
+### Building from source
 
-### In Windows:
-You will need `Python3`, `pip`, `git` and `virtualenv` installed in your machine in order to install this app, please refer to https://docs.python.org/3/using/windows.html and https://git-scm.com/book/en/v2/Getting-Started-Installing-Git if you need help installing these tools. In Windows we recommend you install the latest Python3 version (available in https://www.python.org/downloads/windows/), selecting the conventional install which will include `pip` and allowing the installer to modify system variables. Later you'll only need to install the `virtualenv` package by typing:
-```
-pip install virtualenv
-``` 
-Additionally you'll need to have Microsoft's _C++ Build Tools_ installed in order to install some of the required packages, you can download it here: https://visualstudio.microsoft.com/visual-cpp-build-tools/ 
+**Warning for Windows users:** We failed to install one of the required libraries (siamxt) on Windows, which chould be built from source. If you're a Windows user we suggest you use the Docker image provided, as explained in the next section.
 
-Run in Command Prompt. Clone the git repository:
-```
-git clone https://github.com/thaiscaldeira/ccinsight/
-cd ccinsight
-```
-Create a new virtual environment:
-```
-python -m virtualenv venv
-venv\Scripts\activate
-```
-Update pip and install app requirements
-```
-py -m pip install -U pip
-pip install -r requirements.txt
-```
+We suggest you to create a separate virtual environment running Python 3 for this app, and install all of the required dependencies there. The installation steps below include the creation of the virtual environment.
 
-
-### In UNIX-based systems:
 You will need `Python3`, `pip`, `git` and `virtualenv` installed in your machine in order to install this app, please refer to https://docs.python.org/3/using/unix.html and https://git-scm.com/book/en/v2/Getting-Started-Installing-Git if you need help installing these tools. If you already have `Python3` and `pip` installed, you can install `virtualenv` by typing:
 ```
 pip install virtualenv
@@ -55,6 +34,48 @@ Update pip and install app requirements
 ```
 python -m pip install -U pip
 pip install -r requirements.txt
+```
+Install siamxt (https://github.com/rmsouza01/siamxt)
+```
+cd siamxt
+python setup.py install
+```
+
+### Using a Docker image
+
+Docker is an open platform for developing, shipping, and running applications. Docker enables you to separate your applications from your infrastructure so you can deliver software quickly. You can find more information, as well as download links and installation steps here: https://www.docker.com/
+
+To use the docker image you'll only have to run it normally with the commands explained in the next sections. The first time you run it, it will automatically download the image. 
+
+If you want to download the image without running it do:
+```
+docker pull thaiscaldeira/inccsight
+```
+Using docker will require, however, that you use some docker flags. inCCsight runs on localhost port 8000 by default, so if you wish to change its port while using the docker image you can do it by mapping the port like in the example below where it will run on https://localhost:8888:
+```
+docker run -p 8888:8000 thaiscaldeira/inccsight [INCCSIGHT FLAGS]
+```
+Alongside, to allow the container to read and save information from your disk we have to map the folders we wanna work with. For example, if I have folders organised as showed below we can map the volume `ALL_DATA` to a folder /f/ by using the flag `-v`followed by the mapping configuration `./ALL_DATA/:/f/` and use it with with the `--parent` flag from inCCsight. We will include more examples in the following 'How to use inCCsight' section of how to use it with docker.
+```
+|- ALL_DATA
+   |- HEALTH_CONTROLS
+      |- SUBJECT_000001
+      |- SUBJECT_000002
+      |- SUBJECT_000003
+      |- ...
+   |- CONDITION_X
+      |- SUBJECT_000014
+      |- SUBJECT_000015
+      |- SUBJECT_000016
+      |- ...
+   |- CONDITION_Y
+      |- SUBJECT_000029
+      |- SUBJECT_000030
+      |- SUBJECT_000031
+      |- ...
+```
+```
+docker run -v ./ALL_DATA:/f/ thaiscaldeira/inccsight --parent /f/HEALTH_CONTROLS/ /f/CONDITION_X/ /f/CONDITION_Y/
 ```
 
 ***
