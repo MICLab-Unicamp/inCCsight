@@ -4,11 +4,11 @@ import os
 import libcc
 import glob
 
+
 import warnings
 warnings.filterwarnings('ignore') 
 
 shape_imports = libcc.shapeSignImports()
-
 
 def segment(subject_path, segmentation_method, segmentation_methods_dict, parcellation_methods_dict, basename, mask_basename=None):
 
@@ -41,33 +41,41 @@ def segment(subject_path, segmentation_method, segmentation_methods_dict, parcel
 		eigvects_ms = abs(eigvects[0,:,fissure]) 
 
 		# Check segmentation type and segment
-		if segmentation_method == 'STAPLE':
-			segmentation = segmentation_methods_dict[segmentation_method](subject_path, fissure, segm_import=None)
-		elif segmentation_method == 'Imported Masks':
-			segmentation, fissure, axis = segmentation_methods_dict[segmentation_method](get_mask_path(subject_path, mask_basename), threshold=0)
-			if segmentation is None:
-				raise TypeError()
+		try:
+			if segmentation_method == 'STAPLE':
+				segmentation = segmentation_methods_dict[segmentation_method](subject_path, fissure, segm_import=None)
+			elif segmentation_method == 'Imported Masks':
+				segmentation, fissure, axis = segmentation_methods_dict[segmentation_method](get_mask_path(subject_path, mask_basename), threshold=0)
+				if segmentation is None:
+					raise TypeError()
 
-			if axis == 0 :
-				wFA = wFA_v[fissure,:,:]
-				FA = FA_v[fissure,:,:]
-				MD = MD_v[fissure,:,:]
-				RD = RD_v[fissure,:,:]
-				AD = AD_v[fissure,:,:]
-			if axis == 1 :
-				wFA = wFA_v[:,fissure,:]
-				FA = FA_v[fissure,:,:]
-				MD = MD_v[:,fissure,:]
-				RD = RD_v[:,fissure,:]
-				AD = AD_v[:,fissure,:]
-			if axis == 2 :
-				wFA = wFA_v[:,:,fissure]
-				FA = FA_v[fissure,:,:]
-				MD = MD_v[:,:,fissure]
-				RD = RD_v[:,:,fissure]
-				AD = AD_v[:,:,fissure]
-		else:
-			segmentation = segmentation_methods_dict[segmentation_method](wFA, eigvects_ms)
+				if axis == 0 :
+					wFA = wFA_v[fissure,:,:]
+					FA = FA_v[fissure,:,:]
+					MD = MD_v[fissure,:,:]
+					RD = RD_v[fissure,:,:]
+					AD = AD_v[fissure,:,:]
+				if axis == 1 :
+					wFA = wFA_v[:,fissure,:]
+					FA = FA_v[fissure,:,:]
+					MD = MD_v[:,fissure,:]
+					RD = RD_v[:,fissure,:]
+					AD = AD_v[:,fissure,:]
+				if axis == 2 :
+					wFA = wFA_v[:,:,fissure]
+					FA = FA_v[fissure,:,:]
+					MD = MD_v[:,:,fissure]
+					RD = RD_v[:,:,fissure]
+					AD = AD_v[:,:,fissure]
+			else:
+				segmentation = segmentation_methods_dict[segmentation_method](wFA, eigvects_ms)
+		except:
+			print('> Segmentation failed for subject {} with segmentation method {}'.format(os.path.basename(os.path.dirname(subject_path)), segmentation_method))
+			return None
+
+		if len(np.array(segmentation).shape) < 2:
+			print('> Segmentation failed for subject {} with segmentation method {}'.format(os.path.basename(os.path.dirname(subject_path)), segmentation_method))
+			return None
 
 		# Check segmentation errors (True/False)
 		error_flag = False
@@ -93,11 +101,11 @@ def segment(subject_path, segmentation_method, segmentation_methods_dict, parcel
 		# Parcellation
 		parcellations_dict = {}
 		for parcellation_method, parcellation_function in parcellation_methods_dict.items():
-			#try:
-			parcellations_dict[parcellation_method] = parcellation_function(segmentation, wFA)
-			#except:
-			#	print("Parc. Error - Method: {}, Subj.: {}".format(parcellation_method, subject_path))
-			#	parcellations_dict[parcellation_method] = []
+			try:
+				parcellations_dict[parcellation_method] = parcellation_function(segmentation, wFA)
+			except:
+				print("Parc. Error - Method: {}, Subj.: {}".format(parcellation_method, subject_path))
+				parcellations_dict[parcellation_method] = []
 
 		# Save files
 		data_tuple = (segmentation, scalar_maps, scalar_statistics, scalar_midlines, error_prob, parcellations_dict)
@@ -109,6 +117,10 @@ def segment(subject_path, segmentation_method, segmentation_methods_dict, parcel
 			save_nii(subject_path, segmname, canvas, affine)
 
 		save_os(subject_path, filename, data_tuple)
+		
+		del wFA_v, FA_v, MD_v, RD_v, AD_v, fissure, eigvals, eigvects, affine
+		del wFA, FA, MD, RD, AD
+		del segmentation, scalar_maps, scalar_statistics, scalar_midlines, error_prob, parcellations_dict
 
 	return data_tuple
 

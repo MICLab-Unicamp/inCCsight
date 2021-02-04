@@ -12,6 +12,9 @@ def getTheCC(segmentation):
     maxwidth = 0
     i = 1
 
+    ymed = None
+    xmed = None
+
     # background is labeled as 0
     for props in regions[1:]:
         minr, minc, maxr, maxc = props.bbox                            

@@ -1,6 +1,7 @@
  #!/usr/bin/env python -W ignore::DeprecationWarning
 
 import os
+
 import ast
 import pathlib
 import pandas as pd
@@ -184,19 +185,23 @@ for subject_path in tqdm(path_dict.values()):
             if ccprocess.check_mask(subject_path, mask_basename) is False:
                 continue
 
-        try:
-            segmentation_mask, scalar_maps, scalar_statistics, scalar_midlines, error_prob, parcellations_masks = ccprocess.segment(subject_path, 
-                                                                                                                                   segmentation_method, 
-                                                                                                                                   dict_segmentation_functions, 
-                                                                                                                                   dict_parcellation_functions, 
-                                                                                                                                   opts.basename,
-                                                                                                                                   mask_basename)
-        except:
-            print('> Warning: Segmentation failed for subject {} with method {}'.format(subject_name, segmentation_method))
+        data_tuple = ccprocess.segment(subject_path, 
+                                       segmentation_method, 
+                                       dict_segmentation_functions, 
+                                       dict_parcellation_functions, 
+                                       opts.basename,
+                                       mask_basename)
+
+
+        if data_tuple is None:
             continue
+        #except:
+        #    print('> Warning: Segmentation failed for subject {} with method {}'.format(subject_name, segmentation_method))
+        #    continue
+
+        segmentation_mask, scalar_maps, scalar_statistics, scalar_midlines, error_prob, parcellations_masks = data_tuple
 
         # Get thickness
-        
         try:
             thick, _, _ = libcc.thickness(segmentation_mask, 200)
         except:

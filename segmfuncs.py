@@ -4,7 +4,7 @@
 Segmentation functions, positional args have to be (wFA_ms, eigenvects_ms)
 '''
 
-def segm_watershed(wFA_ms, eigenvects_ms, gaussian_sigma=0.3):
+def segm_watershed(wFA_ms, eigenvects_ms, gaussian_sigma=0.5):
 
     import numpy as np
     from scipy import ndimage 
