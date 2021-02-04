@@ -15,6 +15,8 @@ COPY ./data ./data
 COPY ./libcc ./libcc
 COPY ./siamxt-master ./siamxt-master
 
+EXPOSE 8080/tcp
+
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
