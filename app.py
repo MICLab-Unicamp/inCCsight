@@ -93,12 +93,19 @@ df_numerical = pd.DataFrame()
 # Read external data
 if opts.ext_data is not None:
     
+    external_data_path = opts.ext_data
     external_data = pd.read_excel(external_data_path, dtype={'Subjects':'object'})
     external_data = external_data.set_index('Subjects')
 
-    df_categories = external_data.select_dtypes(include=['object'])
-    df_numerical = external_data.select_dtypes(include=np.number)
+    # Clear NaNs on index
+    external_data = external_data[external_data.index.notnull()]
+    
+    # Remove unnamed columns 
+    external_data = external_data.loc[:,~external_data.columns.str.match("Unnamed")]
 
+    df_categories = external_data.select_dtypes(include=['object'])
+    df_numerical = external_data.select_dtypes(include=['number'])
+    
     col_categories = ['Method'] + list(df_categories.columns)    
 
 # Get indicated directories
@@ -281,21 +288,26 @@ def build_graph_title(title):
 
 # DataViz ------------------------------------------------------------------------------------
 
-def build_group_segm_boxplot(mode='Method', segmentation_method='ROQS', extra_dims=[]):
+def build_group_segm_boxplot(mode='Method', segmentation_method='ROQS', extra_dims=list(df_numerical.columns)):
 
     std_colors = pio.templates[theme]['layout']['colorway']
         
     if mode == 'Method':
     
-        df = pd.DataFrame()
-        scalar_names = ['FA', 'MD', 'RD', 'AD']
+        scalar_names = ['FA', 'MD', 'RD', 'AD'] + extra_dims
+    
         subplots = make_subplots(rows=1, cols=len(scalar_names), subplot_titles=scalar_names)
     
         for i, scalar in enumerate(scalar_names):
             
             for j, segmentation_method in enumerate(dict_segmentation_methods.keys()):
                 
-                df = dict_scalar_statistics[segmentation_method]
+                if len(extra_dims) == 0:
+                    df = pd.DataFrame()
+                else:
+                    df = df_numerical[extra_dims]
+
+                df = pd.concat([df, dict_scalar_statistics[segmentation_method]], axis=1)
                 df = df.drop(dict_removed_subjects[segmentation_method])
                 
                 subplots.add_trace(go.Box(y=df[scalar], name=segmentation_method, legendgroup=segmentation_method, hovertext=df.index, marker=dict(color=std_colors[j])), row=1, col=i+1)
@@ -320,7 +332,7 @@ def build_group_segm_boxplot(mode='Method', segmentation_method='ROQS', extra_di
         df = df.dropna(axis=0)
         
         categories = set(df[mode])
-        
+    
         for i, scalar in enumerate(scalar_names):
             
             for j, category in enumerate(categories):
@@ -401,7 +413,7 @@ def build_segm_scatterplot(mode='Method', segmentation_method = 'ROQS', scalar_x
     df = pd.DataFrame()
 
     if mode == 'Method':
-        df = pd.DataFrame()
+
         for segmentation_method in dict_segmentation_methods.keys():
             df_aux = dict_scalar_statistics[segmentation_method]
             df_aux['Method'] = segmentation_method 
@@ -409,15 +421,17 @@ def build_segm_scatterplot(mode='Method', segmentation_method = 'ROQS', scalar_x
 
     else:
         df = pd.concat([df_categories[mode], dict_scalar_statistics[segmentation_method]], axis=1)
-        df = pd.concat([df, df_numerical], axis=1)        
+    df = df.join(df_numerical, how='outer')
         
     df = df.drop(dict_removed_subjects[segmentation_method])
     df = df.dropna(axis=0)
 
+    print(df)
+
     fig = px.scatter(df, 
                     x=scalar_x, 
                     y=scalar_y, 
-                    color=mode, 
+                    color=mode,
                     marginal_y="violin", 
                     marginal_x="histogram",
                     hover_name=df.index,
@@ -429,7 +443,7 @@ def build_segm_scatterplot(mode='Method', segmentation_method = 'ROQS', scalar_x
     
     return fig
 
-def build_segm_scattermatrix(mode='Method', segmentation_method = 'ROQS', extra_dims = []):
+def build_segm_scattermatrix(mode='Method', segmentation_method = 'ROQS', extra_dims = list(df_numerical.columns)):
 
     dimensions = ['FA','MD','RD','AD']
     df = pd.DataFrame()
@@ -690,7 +704,7 @@ def build_midlineplot_dropdown():
 
 def build_segm_scatterplot_dropdowns():
 
-    options = [{'label': scalar, 'value': scalar} for scalar in scalar_list]
+    options = [{'label': scalar, 'value': scalar} for scalar in scalar_list + list(df_numerical.columns)]
     options_trendlines = [{'label': scalar, 'value': scalar} for scalar in ['None', 'OLS', 'Lowess']]
 
     layout = html.Div([
@@ -1725,10 +1739,13 @@ app.layout = html.Div(
                                 build_banner(),
                                 html.Div(
                                     html.H5(
-                                        children=["This is a data exploration and visualization tool for diffusion tensor images of the corpus callosum.",
-                                                  " Upload data folders to begin. Further information can be found here (link)."
-                                                ],
+                                        children=[
+                                            html.H6("This is a data exploration and visualization tool for diffusion tensor images of the corpus callosum."),
+                                            html.H6("Further information can be found in the "),
+                                            html.A(href='https://github.com/thaiscaldeira/inCCsight)', children='GitHub page.', style=dict(marginTop='8px', marginLeft='7px')),
+                                            ],
                                         id="instruct",
+                                        className='row',
                                     ),
                                     className='twelve columns'),
                                 
