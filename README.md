@@ -3,15 +3,34 @@
 # inCCsight
 inCCsight is a web-based software for processing, exploring e visualizing data for Corpus Callosum analysis using Diffusion Tensor Images (DTI) implemented in Python/Dash/Plotly. 
 
+The software is open source,
+portable and interactive for analysis of the corpus callosum in DTI individually or in groups,
+implementing different techniques available for segmentation and installment and proposing
+relevant metrics for comparing and evaluating the quality of these procedures in
+a web application.
+
 ![Software screenshot](https://github.com/thaiscaldeira/ccinsight/blob/master/assets/inccsight_screenshot.png)
 
 ***
+
+## Considerations
+This software was developed through the [MICLab](https://miclab.fee.unicamp.br/), check out our [Github](https://github.com/MICLab-Unicamp)!
+
+**Article:** The article that explains the development and operation of the tool was published by [Computer & Graphics](https://www.journals.elsevier.com/computers-and-graphics). 
+You can check out this article [here](https://www.sciencedirect.com/science/article/abs/pii/S0097849321001436).
+In case of using the software, please cite this article: *Caldeira, Thais, et al. "inCCsight: A software for exploration and visualization of DT-MRI data of the Corpus Callosum." Computers & Graphics 99 (2021): 259-271.*
+
+**Data**: In case you go test the tool and not have the data (DTI), check the [OASIS](https://www.oasis-brains.org/#access). This is a data center with medical images available for studies and collaboration of science community. 
+
+If you use data from Oasis, check out the Oasis3 notebook in this repository, it performs a pre-processing of data collected from the data center.
+
+For an overview of the tool, we have a video showing the process and use: [InCCsight](https://www.youtube.com/watch?v=9Y8s8H3X2ow&list=PLCZ64jtDHDO0fBxdyRM5jtukD3U_ZxME_&index=3)
 
 ## How to install
 
 ### Building from source
 
-**Warning for Windows users:** We failed to install one of the required libraries (siamxt) on Windows, which chould be built from source. If you're a Windows user we suggest you use the Docker image provided, as explained in the next section.
+** Docker **: The main installation method is via Docker, both on Windows and for Linux.
 
 We suggest you to create a separate virtual environment running Python 3 for this app, and install all of the required dependencies there. The installation steps below include the creation of the virtual environment.
 
@@ -36,6 +55,9 @@ python -m pip install -U pip
 pip install -r requirements.txt
 ```
 Install siamxt (https://github.com/rmsouza01/siamxt)
+
+**Warning for Windows users:** We failed to install one of the required libraries (siamxt) on Windows, which chould be built from source. If you're a Windows user we suggest you use the Docker image provided, as explained in the next section.
+
 ```
 cd siamxt
 python setup.py install
@@ -165,3 +187,8 @@ To import external data you can use the flag `-d` or `--extra-data`, as shown:
 ```
 python app.py -p ./HEALTH_CONTROLS ./CONDITION_X ./CONDITION_Y -d ./subjects_informations.xls
 ```
+
+### Next Steps and Updates
+
+- [ ] Bug fixes.
+- [ ] Data (DTI) available for testing.
