@@ -18,7 +18,9 @@ This software was developed through the [MICLab](https://miclab.fee.unicamp.br/)
 
 **Article:** The article that explains the development and operation of the tool was published by [Computer & Graphics](https://www.journals.elsevier.com/computers-and-graphics). 
 You can check out this article [here](https://www.sciencedirect.com/science/article/abs/pii/S0097849321001436).
-In case of using the software, please cite this article: *Caldeira, Thais, et al. "inCCsight: A software for exploration and visualization of DT-MRI data of the Corpus Callosum." Computers & Graphics 99 (2021): 259-271.*
+In case of using the software, please cite this article: 
+
+*Caldeira, Thais, et al. "inCCsight: A software for exploration and visualization of DT-MRI data of the Corpus Callosum." Computers & Graphics 99 (2021): 259-271.*
 
 **Data**: In case you go test the tool and not have the data (DTI), check the [OASIS](https://www.oasis-brains.org/#access). This is a data center with medical images available for studies and collaboration of science community. 
 
