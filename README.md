@@ -22,7 +22,7 @@ In case of using the software, please cite this article:
 
 *Caldeira, Thais, et al. "inCCsight: A software for exploration and visualization of DT-MRI data of the Corpus Callosum." Computers & Graphics 99 (2021): 259-271.*
 
-**Data**: In case you go test the tool and not have the data (DTI), check the [OASIS](https://www.oasis-brains.org/#access). This is a data center with medical images available for studies and collaboration of science community. 
+**Data**: In case you want to test the tool and do not have the data (DTI), check the [OASIS](https://www.oasis-brains.org/#access). This is a data center with medical images available for studies and collaboration of science community. 
 
 If you use data from Oasis, check out the Oasis3 notebook in this repository, it performs a pre-processing of data collected from the data center.
 
