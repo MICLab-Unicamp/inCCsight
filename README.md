@@ -30,7 +30,7 @@ For an overview of the tool, we have a video showing the process and use: [InCCs
 
 ### Building from source
 
-** Docker **: The main installation method is via Docker, both on Windows and for Linux.
+**Docker**: The main installation method is via Docker, both on Windows and for Linux.
 
 We suggest you to create a separate virtual environment running Python 3 for this app, and install all of the required dependencies there. The installation steps below include the creation of the virtual environment.
 
