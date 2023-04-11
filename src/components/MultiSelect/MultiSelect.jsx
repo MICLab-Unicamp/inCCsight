@@ -5,7 +5,7 @@ import './MultiSelect.scss';
 const options = [
     { label: "ROQS Based", value: "ROQS" },
     { label: "CNN Based", value: "CNN"},
-    { label: "Watershed", value: "Watershed", disabled: true },
+    { label: "Watershed (Maintenance)", value: "Watershed", disabled: true },
     { label: "Coming Soon", value: "", disabled: true },
 ];
 
