@@ -1,0 +1,48 @@
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Lato', sans-serif;
+}
+
+.container{
+    overflow: none;
+    width: 100%;
+    min-height: 100vh;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: rgb(61, 60, 60);
+    background-color: #ffffff;
+}
+
+:root{
+    --primaryColor: #111F4A;
+    --black: #080808;
+    --white: #fdfdfd;
+    --green: #00563B;
+    --primaryColorLight: #686E8E;
+    --primaryColorContrast: #1F2C56;
+    --gray: #aeaeae;
+}
+
+/* 
+Cores steps 
+fundo: #192444
+
+
+*/
+select{
+    box-sizing: border-box;
+    padding-right: 30px;
+    border-radius: 4px;
+    border: 1px solid #BBBBBB;
+    height: 36px;
+    width: 160px;
+    padding-left: 6px;
+    background-color: white;
+    color: #080808;
+    padding-right: 10px;
+}

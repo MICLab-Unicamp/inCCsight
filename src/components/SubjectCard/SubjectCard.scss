@@ -1,0 +1,20 @@
+.subject-card{
+    width: 95%;
+    height: 30px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 4px 4px 6px rgba(0, 0, 0, 0.425);
+    color: white;
+    font-weight: bold;
+    background-color: rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+    margin-bottom: 10px;
+
+    &:hover{
+        transition: .8s;
+        background-color: black;
+        filter: brightness(2);
+    }
+}

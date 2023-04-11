@@ -1,0 +1,23 @@
+.midline-container{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+
+    .select-scalar{
+        margin-left: 45px;
+        font-weight: bolder;
+        font-size: 18px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+
+        .select{
+            margin-left: 0px;
+            margin-top: 5px;
+            height: 26px;
+            width: 100px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+    }
+}

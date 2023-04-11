@@ -1,0 +1,51 @@
+.scatter-container{
+    display: flex;
+    flex-direction: column;
+    margin-top: 40px;
+    border-top: 1px solid #aeaeae;
+    box-sizing: border-box;
+    padding: 20px 40px;
+
+    .scatter-title{
+        font-weight: bolder;
+        font-size: 20px;
+    }
+
+    .scatter-row{
+        display: flex;
+        flex-direction: row;
+    }
+
+    .select-row{
+        display: flex;
+        flex-direction: row;
+        margin-left: 35px;
+        margin-top: 20px;
+
+        .select-scalar{
+            margin-left: 45px;
+            font-weight: bolder;
+            font-size: 18px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+    
+            .select{
+                margin-left: 0px;
+                margin-top: 5px;
+                height: 26px;
+                width: 100px;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+        }
+
+    }
+}
+
+.scatter-col{
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    margin-top: -100px;
+}

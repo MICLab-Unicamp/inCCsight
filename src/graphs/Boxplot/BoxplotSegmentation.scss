@@ -1,0 +1,16 @@
+.boxplot-container{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+
+    .boxplot-title{
+        font-weight: bolder;
+        font-size: 20px;
+        margin-bottom: 20px;
+    }
+
+    .boxplot-row{
+        display: flex;
+        flex-direction: row;
+    }
+}

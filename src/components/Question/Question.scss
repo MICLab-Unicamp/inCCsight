@@ -1,0 +1,14 @@
+.question-container{
+    width: 100%;
+    min-height: 20px;
+    height: auto;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid var(--primaryColor);
+    margin: 10px 0px;
+
+    p{
+        margin-top: 10px;
+    }
+}

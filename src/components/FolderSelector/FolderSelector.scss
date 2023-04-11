@@ -1,0 +1,92 @@
+.folder-container {
+    width: 140px;
+    min-height: 160px;
+    height: auto;
+    max-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    gap: 10px;
+
+    .check-icon{
+        display: none;
+        margin-top: -6px;
+        font-size: 18px;
+        color: var(--green);
+    }
+
+    .input-text {
+        width: 100%;
+        border-radius: 4px;
+        height: 34px;
+        border: 1px solid var(--primaryColor);
+        padding-left: 4px;
+    }
+
+    .input-icon {
+        position: relative;
+        width: 100%;
+        height: 70%;
+        border: 4px dotted var(--primaryColor);
+        border-radius: 8px;
+        cursor: pointer;
+
+        &:hover{
+            transition: .4s;
+            border: 3px dotted var(--primaryColorLight);
+        }
+    }
+
+    .input-icon input[type="file"] {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        z-index: -1;
+    }
+
+    .icon-button {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 10px;
+        cursor: pointer;
+        border: none;
+        background: none;
+        color: #111F4A;
+
+        .icon {
+            width: 50px;
+            height: 50px;
+        }
+
+        .icon-text{
+            font-size: 12px;
+        }
+    
+        &:hover{
+            transition: .4s;
+            color: #686E8E;
+        }
+    }
+
+    .path-label{
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        
+        .check{
+            font-size: 16px;
+            color: var(--green);
+        }
+    }
+
+}

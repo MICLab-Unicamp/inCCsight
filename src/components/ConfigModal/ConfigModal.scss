@@ -1,0 +1,103 @@
+#modal-area{
+    width: 100%;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.3);
+    position: fixed;
+    z-index: 99;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .modal-container{
+        width: 80%;
+        height: 800px;
+        background-color: white;
+        border-radius: 20px;
+        display: flex;
+        flex-direction: column;
+    
+        .close-icon{
+            align-self: flex-end;
+            margin-top: 20px;
+            margin-right: 20px;
+            font-weight: bolder;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .modal-body{
+            width: 100%;
+            height: 90%;
+            box-sizing: border-box;
+            padding-right: 20px;
+            display: flex;
+
+            .modal-left{
+                width: 30%;
+                height: 100%;
+                border-right: 1px solid #3a3a3a;
+                display: flex;
+                flex-direction: column;
+                box-sizing: border-box;
+                padding-left: 15px;
+                
+                .active{
+                    border-bottom: 1px solid #3a3a3a;
+                }
+
+                span{
+                    color: #3a3a3a;
+                    padding: 10px 10px 15px;
+                    font-weight: bolder;
+                    cursor: pointer;
+
+                    &:hover{
+                        transition: .4s;
+                        border-bottom: 1px solid #3a3a3a;
+                    }
+                }
+            }
+
+            .modal-right{
+                width: 70%;
+                height: 100%;
+                
+                .modal-right-view{
+                    box-sizing: border-box;
+                    padding: 40px 20px;
+                    display: flex;
+                    flex-direction: column;
+                    height: 100%;
+                
+                    .input-group{
+                        display: flex;
+                        flex-direction: column;
+                        width: 40%;
+                        margin-top: 12px;
+
+                        input, select{
+                            margin-top: 4px;
+                            height: 24px;
+                            border-radius: 4px;
+                        }
+                    }
+
+                    .btn-apply{
+                        border: none;
+                        box-shadow: 4px 4px 6px rgba(0, 0, 0, 0.4);
+                        padding: 9px 16px;
+                        background: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        align-self: flex-end;                           
+                    }
+                
+                }
+
+            }
+
+        }
+
+    }
+    
+}

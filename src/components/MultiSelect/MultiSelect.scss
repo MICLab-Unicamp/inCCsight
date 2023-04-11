@@ -1,0 +1,31 @@
+.multi-select {
+    display: flex;
+    flex-direction: column;
+    font-family: Arial, sans-serif;
+    width: 300px;
+}
+
+.selected-options {
+    display: flex;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.option-chip {
+    background-color: #dcdcdc;
+    border-radius: 16px;
+    padding: 4px 8px;
+    margin-right: 8px;
+    margin-bottom: 8px;
+    display: flex;
+}
+
+.multiselect-container{
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .select{
+        width: 90%;
+    }
+}

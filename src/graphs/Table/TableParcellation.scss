@@ -1,0 +1,87 @@
+.table-field{
+    height: 200px;
+    margin-right: 20px;
+    display: flex;
+    flex-direction: column;
+
+    .table-row{
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        box-sizing: border-box;
+        padding: 0px 10px;
+
+        .table-title{
+            font-size: 20px;
+            font-weight: bolder;
+        }
+
+        .btn-export{
+            width: 120px;
+            height: 30px;
+            border-radius: 8px;
+            border: none;
+            border: 1px solid #BBBBBB;
+            font-weight: bold;
+            color: #BBBBBB;
+            background-color: white;
+            cursor: pointer;
+
+            &:hover{
+                transition: .8s;
+                box-shadow: 6px 4px 10px rgba(0, 0, 0, 0.45);
+            }
+        }
+    }
+
+    .options-row{
+        display: flex;
+        flex-direction: row;
+        
+        .select-group{
+            display: flex;
+            flex-direction: column;
+            margin-left: 10px;
+            margin-right: 20px;
+            margin-top: 12px;
+
+            label{
+                margin-bottom: 6px;
+                font-weight: bold;
+            }
+
+            select{
+                height: 26px;
+                box-sizing: border-box;
+                padding-right: 30px;
+                border-radius: 4px;
+                background-color: white;
+                border: 1px solid #BBBBBB;
+                height: 36px;
+                width: 160px;
+                padding-left: 6px;
+                background: none;
+                padding-right: 10px;
+            }
+        }
+    }
+}
+
+.white{
+    margin-top: 4px;
+    color: white;
+}
+
+.none{
+    display: none;
+}
+
+#scalarValueParcellation{
+    background-color: white;
+}
+
+#methodValue{
+    background-color: white;
+}
