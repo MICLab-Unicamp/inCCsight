@@ -30,7 +30,8 @@ Para instalar a partir do Website, basta seguir os passos:
 Para instalar a ferramenta diretamente a partir da fonte (Github) e ter acesso aos códigos:
 1. No terminal, digite `git clone https://github.com/MICLab-Unicamp/inCCsight`
 2. Caminhe até o local que foi realizado o download e realize o comando: `npm install`
-3. **Tipos de Uso:** 
+3. Caminhe até a pasta "methods/venv/" e utilize `pip install -r requirements.txt`
+4. **Tipos de Uso:** 
   - 3.1 **Usuário:** Use o comando `yarn electron:build`. Isso irá transformar a ferramenta em um executável Windows, Linux e Mac.
   - 3.2. **Desenvolvedor:** use o comando `yarn electron:serve`. Isso iniciará a ferramenta como desenvolvedor, permitindo realizar alterações no código e visualiza-las em tempo real.
 
