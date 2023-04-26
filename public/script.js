@@ -13,23 +13,15 @@ function saveTime(time1, time2) {
     });
 }
 
-
 function viewSegmentation() {
     command = exec(`.\\view3d\\venv\\Scripts\\activate && python .\\view3d\\viewCC.py`)
 }
 
 function viewBrain() {
     command = exec(`.\\view3d\\venv\\Scripts\\activate && python .\\view3d\\viewBrain.py`)
-
 }
 
 /* Chamar a ferramenta */
-
-function startThais2() {
-
-    //command = exec(`cd ../methods/thais && python app.py -p /home/jovi/Dados/teste`)
-    //command = exec(`cd ./methods/thais && dir`)
-}
 
 function startROQS(folders){
     let folder = folders
@@ -143,3 +135,6 @@ function startROQS(lista) {
         })
     }
 }
+
+// Prepare Methods
+
