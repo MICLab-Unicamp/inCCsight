@@ -23,7 +23,8 @@ For an overview of the tool, we have a video showing the process and use: [InCCs
 To install the tool directly from the source (Github) and have access to the codes:
 1. In the terminal, type `git clone https://github.com/MICLab-Unicamp/inCCsight`
 2. Walk to the location where the download was performed and execute the command: `npm install`
-3. Walk using "cd methods/venv/" and use `pip install -r requirements.txt` (This install all libraries necessary for use the methods) 
+3. Walk using "cd methods" and use `python -m venv venv` -> `pip install -r requirements.txt` in each method (This install all libraries necessary for use the methods) 
+(Obs: Soon this step will be automated)
 4. **Types of Use:**
    1. **User:** Use the `yarn electron:build` command. This will turn the tool into a Windows, Linux and Mac executable.
    2. **Developer:** use the `yarn electron:serve` command. This will launch the tool as a developer, allowing you to make changes to the code and preview them in real time.
