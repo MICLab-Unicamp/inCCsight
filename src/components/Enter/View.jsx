@@ -23,12 +23,6 @@ function View(props){
     const [folders, setFolders] = useState([<FolderSelector key={1} id={1} />]);
     const [filter, setFilter] = useState("")
 
-    function startAnalyzes() {
-        let t = localStorage.getItem("folders")
-        // window.startThais(t)
-        window.startROQS(t)
-        // openWindow();
-    }
 
     async function startAnalyzes() {
         
@@ -37,7 +31,7 @@ function View(props){
         let folders = JSON.parse(localStorage.getItem("folders"))
         
         await window.startROQS(folders);
-        //await window.startThais(folders);
+        await window.startCNN(folders);
         //await window.startJoany(folders);
         
         //await window.transformJson();
