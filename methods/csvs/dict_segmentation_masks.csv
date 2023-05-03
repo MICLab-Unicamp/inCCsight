@@ -1,0 +1,92 @@
+;ROQS;Watershed
+000002;"[[False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]
+ ...
+ [False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]]";"[[False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]
+ ...
+ [False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]]"
+000025;"[[False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]
+ ...
+ [False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]]";"[[False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]
+ ...
+ [False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]]"
+000033;"[[False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]
+ ...
+ [False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]]";"[[False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]
+ ...
+ [False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]]"
+000034;"[[False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]
+ ...
+ [False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]]";"[[False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]
+ ...
+ [False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]]"
+000042;"[[False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]
+ ...
+ [False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]]";"[[False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]
+ ...
+ [False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]]"
+000109;"[[False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]
+ ...
+ [False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]]";"[[False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]
+ ...
+ [False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]]"
+000110;"[[False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]
+ ...
+ [False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]]";"[[False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]
+ ...
+ [False False False ... False False False]
+ [False False False ... False False False]
+ [False False False ... False False False]]"

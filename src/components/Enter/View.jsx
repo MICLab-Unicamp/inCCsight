@@ -32,9 +32,8 @@ function View(props){
         
         await window.startROQS(folders);
         await window.startCNN(folders);
-        //await window.startJoany(folders);
         
-        //await window.transformJson();
+        // await window.transformJson();
 
         //openWindow();
     }

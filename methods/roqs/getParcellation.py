@@ -1,7 +1,7 @@
 import parcellation as pcl
 import pandas as pd
 
-def adjust_dict_parcellations_statistics(data):
+def adjust_dict_parcellations_statistics(data, subject_data, data_path):
     methods = list(data.keys())
     subjects = list(data[methods[0]].keys())
     methods_parc = list(data[methods[0]][subjects[0]])
@@ -11,14 +11,15 @@ def adjust_dict_parcellations_statistics(data):
     for method in methods:
         subject_list = []
         for subject in subjects:
-            subject_data = {"Name": subject}
             for method_p in methods_parc:
                 for part in parts:
                     for scalar in scalars:
                         subject_data[f"{method_p}_{scalar}_{part}"] = data[method][subject][method_p][part][scalar]
             subject_list.append(subject_data)
-        df = pd.DataFrame(subject_list)
-        df.to_csv(f"./data/parcellation_statistics.csv", sep=";")
+        
+        df_sub = pd.DataFrame(subject_list)
+        df_sub.to_csv(f"{data_path}/inCCsight/roqs_based.csv", sep=";")
+        #df.to_csv(f"./data/parcellation_roqs_statistics.csv", sep=";")
 
 def getParcellation(segment, wFA):
     

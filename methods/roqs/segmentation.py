@@ -364,6 +364,25 @@ def get_segm(data_paths):
             meanADList.append(scalar_statistics[6])
             stdADList.append(scalar_statistics[7])
 
+            name = sub
+            meanFA = scalar_statistics[0] 
+            stdFA = scalar_statistics[1]
+            meanMD = scalar_statistics[2]
+            stdMD = scalar_statistics[3]
+            meanRD = scalar_statistics[4]
+            stdRD = scalar_statistics[5]
+            meanAD = scalar_statistics[6]
+            stdAD = scalar_statistics[7]
+            
+            sub_data = {}
+
+            names_maps = list(["name", "meanFA", "stdFA", "meanMD", "stdMD", "meanRD", "stdRD", "meanAD", "stdAD"])
+            scalars_values = list([name,scalar_statistics[0], scalar_statistics[1], scalar_statistics[2], scalar_statistics[3], scalar_statistics[4], scalar_statistics[5], scalar_statistics[6], scalar_statistics[7]])
+            
+
+            for i in range(0, len(names_maps)):
+                sub_data[names_maps[i]] = scalars_values[i]
+            
             # Salvando os Dados
             canvas = np.zeros(wFA_v.shape, dtype='int32')
             canvas[fissure, :, :] = segmentation
@@ -374,13 +393,16 @@ def get_segm(data_paths):
             end = time.time()
             time_total = round(end - start, 2)
             times.append(time_total)
+
+            gm.adjust_dict_parcellations_statistics(parcellationsList, sub_data, data_path)
+
         except:
-            print(f"Falha com o {data_path}")
+            print(f"{data_path} Failed.")
             continue
-    subjects = {"Names": names, "FA": meanFAList, "FA StdDev": stdFAList, "MD": meanMDList, "MD StdDev": stdMDList,
-                "RD": meanRDList, "RD StdDev": stdRDList, "AD": meanADList, "AD StdDev": stdADList,
-                "Time": times}
+        
+    subjects = {"Names": names, "FA": meanFAList, "FA StdDev": stdFAList, "MD": meanMDList, "MD StdDev": stdMDList, "RD": meanRDList, "RD StdDev": stdRDList, "AD": meanADList, "AD StdDev": stdADList, "Time": times}
 
     df = pd.DataFrame(subjects)
     df.to_csv("./data/roqs_based.csv", sep=";")
-    gm.adjust_dict_parcellations_statistics(parcellationsList)
+    df.to_csv("../csvs/roqs_based.csv", sep=";")
+    #gm.adjust_dict_parcellations_statistics(parcellationsList)
