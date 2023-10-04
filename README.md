@@ -19,6 +19,8 @@ For an overview of the tool, we have a video showing the process and use: [InCCs
 
 ## Installing
 
+* É necessário ter instalado o NPM ou o YARN no computador *
+
 ### From Source
 To install the tool directly from the source (Github) and have access to the codes:
 1. In the terminal, type `git clone https://github.com/MICLab-Unicamp/inCCsight`
