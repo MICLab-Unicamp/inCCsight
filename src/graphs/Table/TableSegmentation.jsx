@@ -1,174 +1,176 @@
-import React, {useState} from 'react'
+import React, { useState } from 'react'
 import Plot from 'react-plotly.js'
 import InfoTool from '../../components/InfoTool/InfoTool'
 import './TableSegmentation.scss'
-
 import { TbEyeFilled, TbEyeOff } from 'react-icons/tb'
 
-function getMeanValues(subjects, method, scalar){
-    let value = 0
-    subjects.map((subject) => {
-        return(
-            value += subject[method][scalar]
-        )
-    })
+const SCALARS = ["FA", "MD", "RD", "AD"]
+const SCALARS_WITH_STD = ["FA", "FA StdDev", "MD", "MD StdDev", "RD", "RD StdDev", "AD", "AD StdDev"]
 
-    value /= (subjects.length);
-    return value.toFixed(6)
+function getMeanValues(subjects, method, scalar) {
+    const values = subjects.map(s => s[method][scalar])
+    return (values.reduce((a, b) => a + b, 0) / values.length).toFixed(6)
+}
+
+function getColumnColors(colValues) {
+    const nums = colValues.map(Number)
+    const max = Math.max(...nums)
+    const min = Math.min(...nums)
+    return nums.map(v => {
+        if (v === max) return 'rgba(144, 238, 144, 0.6)'
+        if (v === min) return 'rgba(255, 182, 193, 0.6)'
+        return 'white'
+    })
+}
+
+function exportCSV(headers, cols, filename) {
+    const rows = [headers.join(',')]
+    for (let r = 0; r < cols[0].length; r++) {
+        rows.push(cols.map(col => col[r]).join(','))
+    }
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
 }
 
 function TableSegmentation(props) {
+    const [showStd, setShowStd] = useState(false)
 
-    let [view, setView] = useState("hide")
-    let [size, setSize] = useState(130)
-    let [iconEye, setIconEye] = useState(<TbEyeFilled />)
+    const subjects = props.data
+    const headers = showStd
+        ? ["Method", ...SCALARS_WITH_STD]
+        : ["Method", ...SCALARS]
 
-    function changeShowSegmentation(type) {
-        let value = document.querySelector("#showView2D").value
-        console.log(value);
+    const scalarKeys = showStd ? SCALARS_WITH_STD : SCALARS
+
+    const methodNames = ["ROQS", "Watershed-Based", "CNN-Based"]
+    const methodKeys = ["ROQS_scalar", "Watershed_scalar", "santarosa_scalars"]
+
+    let cols = [methodNames]
+    for (const key of scalarKeys) {
+        const colValues = methodKeys.map(m => getMeanValues(subjects, m, key))
+        cols.push(colValues)
     }
 
-    function teste(){
-        if(view == "hide"){
-            setView("show")
-            setIconEye(<TbEyeOff />)
-        } else{
-            setView("hide")
-            setIconEye(<TbEyeFilled />)
-        }
+    // Cell colors: only apply to scalar columns (not StdDev cols, not Method col)
+    const cellColors = [
+        Array(3).fill('#f0f0f0'), // Method column
+        ...cols.slice(1).map((colValues, i) => {
+            const isStdCol = showStd && (i % 2 === 1)
+            return isStdCol ? Array(3).fill('white') : getColumnColors(colValues)
+        })
+    ]
+
+    const layout = {
+        width: "50%",
+        height: showStd ? 160 : 130,
+        margin: { t: 10, b: 0, l: 10, r: 10 },
+        paper_bgcolor: props.bg_color
     }
 
-        //if(view === "show"){
-        //    setSize(160)
-        //} else{
-        //    setSize(130)
-        //}
-
-    /* Remover depois */
-    let joany = [0.6556650233259003, 0.248837988995943, 0.0010308019022138776, 0.0004797977367285885, 0.0006192081277246568, 0.0005655540233389842, 0.0018539894511923193, 0.0004405055082694843]
-
-
-    let headers = []
-    /* Selecionando os dados */
-    let subjects = props.data
-    if(view === "show"){
-        headers = ["Method", "FA", "FA StdDev","MD", "MD StdDev", "RD", "RD StdDev", "AD", "AD StdDev"]
-    } else if(view === "hide"){
-        headers = ["Method", "FA", "MD", "RD", "AD"]
-    }
-
-    let cols = [["ROQS", "Watershed-Based", "CNN-Based"]]
-
-    for(let i = 1; i !== headers.length; i++){
-        let v1 = getMeanValues(subjects, "ROQS_scalar", headers[i])
-        let v2 = getMeanValues(subjects, "Watershed_scalar", headers[i])
-        let v3 = getMeanValues(subjects, "santarosa_scalars", headers[i])
-        cols.push([v1, v2, v3])
-    }
-    
-    /* Ajustes da tabela */
-    
-    let layout = {width: "50%", height: size, margin: {t: 10, b: 0, l: 10, r: 10}, paper_bgcolor: props.bg_color}
-
-    if(props.type === "2D"){
-
-        let data = [{
+    if (props.type === "2D") {
+        const plotData = [{
             type: "table",
             header: {
                 values: headers,
                 align: ["center"],
-                line: {width: 1, color: 'black'},
-                fill: {color: "grey"},
-                font: {family: "Arial", size: 14, color: "white"}
+                line: { width: 1, color: 'black' },
+                fill: { color: "grey" },
+                font: { family: "Arial", size: 14, color: "white" }
             },
             cells: {
                 values: cols,
                 height: 30,
-                align: ["center", "center"],
-                line: {width: 1, color: 'black'},
-                font: {family: "Arial", size: 12, color: "black"}    
-            }
-        }]
-
-        return(
-
-            <div className='table-field'>
-                    
-                <div className='table-row'>
-                    <span className={`table-title ${props.color}`}>Segmentation Data <InfoTool text="Comparison of the mean values ​​obtained by segmentation in each method."/></span>
-                    <button className='btn-export'>Export</button>
-                </div>
-    
-                <Plot data={data} layout={layout}/>
-            
-                <div className='options-row'>  
-            
-                    <div className='select-group'>
-                        <label className={props.color}>Std. Dev: </label>
-
-                        <button onClick={teste} className="btn-icon">{iconEye}</button>
-
-                    </div>
-            
-                </div>
-    
-            </div>
-        )
-    } else if(props.type === "3D"){
-
-        let joany = [0.6556650233259003, 0.248837988995943, 0.0010308019022138776, 0.0004797977367285885, 0.0006192081277246568, 0.0005655540233389842, 0.0018539894511923193, 0.0004405055082694843]
-        let cols = [["CNN-Based"]]
-
-        for(let i = 1; i !== headers.length; i++){
-            let v1 = getMeanValues(subjects, "santarosa_scalars", headers[i])
-            cols.push([v1])
-        }
-
-        let data = [{
-            type: "table",
-            header: {
-                values: headers,
                 align: ["center"],
-                line: {width: 1, color: 'black'},
-                fill: {color: "grey"},
-                font: {family: "Arial", size: 14, color: "white"}
-            },
-            cells: {
-                values: cols,
-                height: 30,
-                align: ["center", "center"],
-                line: {width: 1, color: 'black'},
-                font: {family: "Arial", size: 12, color: "black"}    
+                line: { width: 1, color: 'black' },
+                fill: { color: cellColors },
+                font: { family: "Arial", size: 12, color: "black" }
             }
         }]
 
-        return(
-
+        return (
             <div className='table-field'>
-                    
                 <div className='table-row'>
-                    <span className={`table-title ${props.color}`}>Segmentation Data <InfoTool text="Comparison of the mean values ​​obtained by segmentation in each method."/></span>
-                    <button className='btn-export'>Export</button>
+                    <span className={`table-title ${props.color}`}>
+                        Segmentation Data <InfoTool text="Comparison of the mean values obtained by segmentation in each method." />
+                    </span>
+                    <button className='btn-export' onClick={() => exportCSV(headers, cols, 'segmentation_data.csv')}>
+                        Export
+                    </button>
                 </div>
-    
-                <Plot data={data} layout={layout}/>
-            
-                <div className='options-row'>  
-            
+
+                <Plot data={plotData} layout={layout} />
+
+                <div className='options-row'>
                     <div className='select-group'>
                         <label className={props.color}>Std. Dev: </label>
-                        <select onChange={() => {changeShowSegmentation("3D")}} id="show">
-                            <option value="hide">Hide</option>
-                            <option value="show">Show</option>
-                        </select>
+                        <button onClick={() => setShowStd(v => !v)} className="btn-icon">
+                            {showStd ? <TbEyeOff /> : <TbEyeFilled />}
+                        </button>
                     </div>
-            
                 </div>
-    
             </div>
         )
     }
 
+    if (props.type === "3D") {
+        const cols3d = [["CNN-Based"]]
+        for (const key of scalarKeys) {
+            cols3d.push([getMeanValues(subjects, "santarosa_scalars", key)])
+        }
+
+        const cellColors3d = [
+            ['#f0f0f0'],
+            ...cols3d.slice(1).map(() => ['white'])
+        ]
+
+        const plotData3d = [{
+            type: "table",
+            header: {
+                values: headers,
+                align: ["center"],
+                line: { width: 1, color: 'black' },
+                fill: { color: "grey" },
+                font: { family: "Arial", size: 14, color: "white" }
+            },
+            cells: {
+                values: cols3d,
+                height: 30,
+                align: ["center"],
+                line: { width: 1, color: 'black' },
+                fill: { color: cellColors3d },
+                font: { family: "Arial", size: 12, color: "black" }
+            }
+        }]
+
+        return (
+            <div className='table-field'>
+                <div className='table-row'>
+                    <span className={`table-title ${props.color}`}>
+                        Segmentation Data <InfoTool text="Comparison of the mean values obtained by segmentation in each method." />
+                    </span>
+                    <button className='btn-export' onClick={() => exportCSV(headers, cols3d, 'segmentation_3d_data.csv')}>
+                        Export
+                    </button>
+                </div>
+
+                <Plot data={plotData3d} layout={layout} />
+
+                <div className='options-row'>
+                    <div className='select-group'>
+                        <label className={props.color}>Std. Dev: </label>
+                        <button onClick={() => setShowStd(v => !v)} className="btn-icon">
+                            {showStd ? <TbEyeOff /> : <TbEyeFilled />}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )
+    }
 }
 
 export default TableSegmentation

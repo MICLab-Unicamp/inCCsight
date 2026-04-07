@@ -1,95 +1,110 @@
-import React, {useState} from 'react'
+import React, { useState } from 'react'
 import Plot from 'react-plotly.js'
 import './Radar.scss'
 
-function getMeanValues(subjects, method, parc_method, scalar, part){
-    let name = `${parc_method}_${scalar}_${part}`
-    let value = 0
-    subjects.map((subject) => {
-        return(
-            value += subject[method][name]
-        )
-    })
-
-    value /= (subjects.length);
-    return parseFloat(value.toFixed(6))
+const COLORS = {
+    ROQS: "#636EFA",
+    Watershed: "#EF553B"
 }
 
-function getAllValues(subjects, method, parc_method, scalar){
-    let values = []
-    for(let i = 1; i !== 6; i++){
-        values.push(getMeanValues(subjects, method, parc_method, scalar, `P${i}`))
-    }
-    return values
+const PARTS = ['P1', 'P2', 'P3', 'P4', 'P5']
+
+function getMeanValues(subjects, method, parc_method, scalar, part) {
+    const name = `${parc_method}_${scalar}_${part}`
+    const values = subjects.map(s => s[method][name])
+    return parseFloat((values.reduce((a, b) => a + b, 0) / values.length).toFixed(6))
+}
+
+function getAllValues(subjects, method, parc_method, scalar) {
+    return PARTS.map(part => getMeanValues(subjects, method, parc_method, scalar, part))
+}
+
+function normalize(values) {
+    const max = Math.max(...values)
+    if (max === 0) return values
+    return values.map(v => parseFloat((v / max).toFixed(6)))
 }
 
 function Radar(props) {
     const [methodRadar, setMethodRadar] = useState("Witelson")
     const [scalarRadar, setScalarRadar] = useState("FA")
+    const [normalized, setNormalized] = useState(false)
 
-    function changeMethodRadar(){
-        let value = document.querySelector("#methodRadar").value
-        setMethodRadar(value)
+    let wsValues = getAllValues(props.data, "Watershed_parcellation", methodRadar, scalarRadar)
+    let roqsValues = getAllValues(props.data, "ROQS_parcellation", methodRadar, scalarRadar)
+
+    if (normalized) {
+        const allVals = [...wsValues, ...roqsValues]
+        const globalMax = Math.max(...allVals)
+        wsValues = wsValues.map(v => parseFloat((v / globalMax).toFixed(6)))
+        roqsValues = roqsValues.map(v => parseFloat((v / globalMax).toFixed(6)))
     }
 
-    function changeScalarRadar(){
-        let value = document.querySelector("#scalarRadar").value
-        setScalarRadar(value)
-    }
+    // Close the polygon by repeating first value
+    const theta = [...PARTS, PARTS[0]]
 
-    let watershed = {
-        type: 'scatterpolar',
-        r: getAllValues(props.data, "Watershed_parcellation", methodRadar, scalarRadar),
-        theta: ['P1', 'P2','P3', 'P4', 'P5'],
-        fill: 'toself',
-        name: "Watershed"
-    }
+    const plotData = [
+        {
+            type: 'scatterpolar',
+            r: [...wsValues, wsValues[0]],
+            theta,
+            fill: 'toself',
+            name: "Watershed",
+            line: { color: COLORS.Watershed }
+        },
+        {
+            type: 'scatterpolar',
+            r: [...roqsValues, roqsValues[0]],
+            theta,
+            fill: 'toself',
+            name: "ROQS",
+            line: { color: COLORS.ROQS }
+        }
+    ]
 
-    let roqs = {
-        type: 'scatterpolar',
-        r: getAllValues(props.data, "ROQS_parcellation", methodRadar, scalarRadar),
-        theta: ['P1', 'P2','P3', 'P4', 'P5'],
-        fill: 'toself',
-        name: "ROQS"
-    }
-
-    let data = [watershed, roqs]
-
-    let layout = {
+    const layout = {
         title: "Radar Parcellation",
-        legend: {orientation: "h"},
-        
+        legend: { orientation: "h" },
+        polar: {
+            radialaxis: {
+                visible: true,
+                title: normalized ? "Normalized" : scalarRadar
+            }
+        }
     }
 
     return (
         <div className='radar-container'>
-            <Plot data={data} layout={layout}/>
-            
-            <div className='options-col'>  
-        
+            <Plot data={plotData} layout={layout} />
+
+            <div className='options-col'>
                 <div className='select-group'>
                     <label>Parc. Method: </label>
-                    <select id="methodRadar" onChange={changeMethodRadar}>
-                        <option value="Witelson">Witelson</option>
-                        <option value="Hofer">Hofer</option>
-                        <option value="Chao">Chao</option>
-                        <option value="Cover">Cover</option>
-                        <option value="Freesurfer">Freesurfer</option>
+                    <select onChange={e => setMethodRadar(e.target.value)}>
+                        {["Witelson", "Hofer", "Chao", "Cover", "Freesurfer"].map(m => (
+                            <option key={m} value={m}>{m}</option>
+                        ))}
                     </select>
                 </div>
 
                 <div className='select-group'>
                     <label>Scalar: </label>
-                    <select id="scalarRadar" onChange={changeScalarRadar}>
-                        <option value="FA">FA</option>
-                        <option value="RD">RD</option>
-                        <option value="AD">AD</option>
-                        <option value="MD">MD</option>
+                    <select onChange={e => setScalarRadar(e.target.value)}>
+                        {["FA", "RD", "AD", "MD"].map(s => (
+                            <option key={s} value={s}>{s}</option>
+                        ))}
                     </select>
                 </div>
-        
-            </div>
 
+                <div className='select-group'>
+                    <label>Normalize (0–1): </label>
+                    <input
+                        type="checkbox"
+                        checked={normalized}
+                        onChange={e => setNormalized(e.target.checked)}
+                    />
+                </div>
+            </div>
         </div>
     )
 }
