@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"console.log\\\\|console.error\" /c/Users/jv866/OneDrive/Área de Trabalho/inccsight-dev/inCCsight/.claude/worktrees/cool-benz/src --include=*.jsx --include=*.js)",
+      "Bash(grep -r \"TODO\\\\|FIXME\\\\|BUG\\\\|HACK\" /c/Users/jv866/OneDrive/Área de Trabalho/inccsight-dev/inCCsight/.claude/worktrees/cool-benz/methods --include=*.py)"
+    ]
+  }
+}

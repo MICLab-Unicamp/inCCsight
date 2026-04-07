@@ -39,9 +39,18 @@ function View(props){
     }
 
     async function loadLast(){
-        
-        // await window.transformJson();
-        openWindow()
+        document.querySelector("#loading-screen").style.display = "flex"
+        try {
+            await window.transformJson();
+            openWindow();
+        } catch(e) {
+            document.querySelector("#loading-screen").style.display = "none"
+            alert("Nenhuma análise anterior encontrada. Execute uma análise primeiro.")
+        }
+    }
+
+    function loadTestData(){
+        openWindow();
     }
 
     function handleAddButtonClick() {
@@ -83,12 +92,18 @@ function View(props){
                 
                 <div className='row-btns'>
 
-                    <div className='btn-history' onClick={loadLast}>
-                        <TbHistory className='icon-history'/>
-                        <span>Recent</span>
+                    <div className='secondary-btns'>
+                        <div className='btn-history' onClick={loadLast}>
+                            <TbHistory className='icon-history'/>
+                            <span>Última análise</span>
+                        </div>
+
+                        <div className='btn-demo' onClick={loadTestData}>
+                            <span>Dados de teste</span>
+                        </div>
                     </div>
-                    
-                    <button className='btn-start' onClick={startAnalyzes}>Run analyzes</button>
+
+                    <button className='btn-start' onClick={startAnalyzes}>Executar análise</button>
                 </div>
                 
             </div>
