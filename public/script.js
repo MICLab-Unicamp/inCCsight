@@ -59,7 +59,7 @@ function startROQS(lista) {
         })
     } else if (process.platform === 'win32') {
         return new Promise((resolve, reject) => {
-            const command = exec(`cd ./methods/roqs && .\\venv\\Scripts\\activate && python main.py -p ${folders}`);
+            const command = exec(`cd ./methods/roqs && .\\venv\\Scripts\\python.exe main.py -p ${folders}`, { shell: true });
             command.stdout.on('data', (data) => {
                 console.log(data.toString());
             });
@@ -80,8 +80,11 @@ function startROQS(lista) {
 function startCNN(lista) {
     console.log("Executando CNN Based")
     const folders = lista.join(" ");
+    const cmd = process.platform === 'win32'
+        ? `cd ./methods/CNNBased && .\\venv\\Scripts\\python.exe main3D.py -p ${folders}`
+        : `cd ./methods/CNNBased && bash -c 'source ./venv/bin/activate && python main3D.py -p ${folders}'`;
     return new Promise((resolve, reject) => {
-        const command = exec(`deactivate && cd ./methods/CNNBased && bash -c 'source ./venv/bin/activate && python main3D.py -p ${folders}'`, { shell: true });
+        const command = exec(cmd, { shell: true });
         command.stdout.on('data', (data) => {
             console.log(data.toString());
         });

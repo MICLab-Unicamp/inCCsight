@@ -1,7 +1,27 @@
 import React, { useState } from 'react'
 
-/* Data */
-import subjects from '../data/mydata.json'
+/* Data — loaded at runtime so new analyses are reflected without a rebuild */
+const fs = window.require('fs')
+const path = window.require('path')
+
+function loadSubjects() {
+    try {
+        const dataPath = path.join(__dirname, '..', 'src', 'data', 'mydata.json')
+        const raw = fs.readFileSync(dataPath, 'utf-8')
+        return JSON.parse(raw)
+    } catch (e) {
+        // Fallback: try relative path used in dev mode
+        try {
+            const raw = fs.readFileSync(path.join(process.cwd(), 'src', 'data', 'mydata.json'), 'utf-8')
+            return JSON.parse(raw)
+        } catch (e2) {
+            console.warn('Could not load mydata.json dynamically, falling back to bundled data.', e2)
+            return require('../data/mydata.json')
+        }
+    }
+}
+
+const subjects = loadSubjects()
 
 /* Imagens */
 import logo from '../assets/images/inccsight.png'
@@ -30,8 +50,8 @@ function Home() {
 
     const [filter, setFilter] = useState("")
     const [data, setData] = useState(subjects)
+    const [allSubjects] = useState(subjects)
     const [view, setView] = useState("2D")
-    console.log(data)
 
     function filterSubject() {
         let value = document.querySelector("#filter").value
@@ -63,7 +83,7 @@ function Home() {
         let subjectPainel = document.querySelector("#subjectPainel");
 
         if (name === "All") {
-            setData(subjects)
+            setData(allSubjects)
         } else {
             subjectPainel.style.display = "flex"
             const selecteds = []
