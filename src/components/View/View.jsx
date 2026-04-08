@@ -1,5 +1,4 @@
 import React from 'react'
-import Plot from 'react-plotly.js'
 
 /* Componentes */
 import TableSegmentation from '../../graphs/Table/TableSegmentation'
@@ -30,21 +29,10 @@ function SegmentationPlot({ imgPath }) {
     }
 
     return (
-        <Plot
-            data={[{
-                type: 'image',
-                source: `data:image/png;base64,${base64}`,
-            }]}
-            layout={{
-                margin: { l: 0, r: 0, t: 0, b: 0 },
-                xaxis: { visible: false, showgrid: false },
-                yaxis: { visible: false, showgrid: false },
-                paper_bgcolor: 'transparent',
-                plot_bgcolor: 'transparent',
-            }}
-            config={{ displayModeBar: false, responsive: true }}
-            style={{ width: '100%', height: '100%' }}
-            useResizeHandler
+        <img
+            src={`data:image/png;base64,${base64}`}
+            alt="Segmentação ROQS"
+            style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '6px' }}
         />
     )
 }

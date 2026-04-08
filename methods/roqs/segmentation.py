@@ -437,21 +437,31 @@ def get_segm(data_paths):
             try:
                 from skimage import measure as sk_measure
 
-                fig, ax = plt.subplots(figsize=(5, 3.5), dpi=120)
-                im = ax.imshow(FA, cmap='gray', vmin=0, vmax=1)
-                plt.colorbar(im, ax=ax)
+                PANEL_BG = '#1F2C56'
+                fig, ax = plt.subplots(figsize=(5, 3.5), dpi=100, facecolor=PANEL_BG)
+                ax.set_facecolor('#0d0d0d')
 
-                # Contorno vermelho da CC (outline, não preenchido)
+                im = ax.imshow(FA, cmap='gray', vmin=0, vmax=1)
+
+                cbar = plt.colorbar(im, ax=ax)
+                cbar.ax.tick_params(colors='white', labelsize=8)
+                cbar.outline.set_edgecolor('#aaaaaa')
+                plt.setp(cbar.ax.yaxis.get_ticklabels(), color='white')
+
                 contours = sk_measure.find_contours(segmentation.astype(float), 0.5)
                 for c in contours:
                     ax.plot(c[:, 1], c[:, 0], 'r-', linewidth=1.5)
+
+                ax.tick_params(colors='white', labelsize=8)
+                for spine in ax.spines.values():
+                    spine.set_edgecolor('#aaaaaa')
 
                 fig.tight_layout()
 
                 out_dir = os.path.join(data_path, 'inCCsight')
                 os.makedirs(out_dir, exist_ok=True)
                 img_path = os.path.join(out_dir, 'midsagittal_roqs.png')
-                fig.savefig(img_path, bbox_inches='tight', dpi=120)
+                fig.savefig(img_path, bbox_inches='tight', dpi=100, facecolor=PANEL_BG)
                 plt.close(fig)
             except Exception:
                 plt.close('all')

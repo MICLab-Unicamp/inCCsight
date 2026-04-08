@@ -214,132 +214,144 @@
 
 .subject-select{
     width: 100%;
-    height: 70vh;
     background-color: #1F2C56;
     display: none;
     flex-direction: row;
     box-sizing: border-box;
     margin-top: 12px;
-    padding: 20px;
-    align-items: center;
-    justify-content: space-around;
-    
+    padding: 24px 32px;
+    align-items: flex-start;
+    gap: 32px;
+
     .subject-image{
         display: flex;
         flex-direction: column;
-        height: 100%;
+        width: 380px;
+        flex-shrink: 0;
+
         .subject-name{
             font-weight: bolder;
             color: white;
-            font-size: 24px;
+            font-size: 20px;
             margin-bottom: 12px;
+            letter-spacing: 0.5px;
         }
 
         .image{
-            width: 500px;
-            height: 280px;
-            margin-bottom: 12px;
-            background-image: url("../assets/images/ccimage2.PNG");
-            background-color: #080808;
+            width: 100%;
+            aspect-ratio: 10 / 7;
             border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 16px;
+            background-color: #1F2C56;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
 
             .msg-image{
                 font-weight: bold;
-                color: white;
-                font-size: 24px;
-            }
-
-            .image-view{
-                width: 90%;
+                color: #aaaaaa;
+                font-size: 14px;
             }
         }
-        
+
         .image-prompts{
             width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
 
             .image-inputs{
-                width: 240px;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
             }
 
             .image-buttons{
                 display: flex;
                 flex-direction: row;
-                padding-top: 12px;
-                justify-content: space-between;
-                width: 50%;
+                padding-top: 14px;
+                gap: 10px;
 
                 .btn-3d{
-                    width: 120px;
-                    height: 35px;
+                    flex: 1;
+                    height: 34px;
                     border-radius: 6px;
                     background-color: white;
                     font-weight: bolder;
-                    font-size: 14px;
+                    font-size: 13px;
                     color: black;
                     border: none;
                     cursor: pointer;
+
+                    &:hover{ filter: brightness(0.88); }
                 }
 
                 .btn-remove{
-                    width: 120px;
-                    height: 35px;
+                    flex: 1;
+                    height: 34px;
                     border-radius: 6px;
                     background-color: rgb(208, 58, 58);
                     font-weight: bolder;
-                    font-size: 16px;
+                    font-size: 14px;
                     color: white;
                     cursor: pointer;
                     border: none;
+
+                    &:hover{ filter: brightness(0.88); }
                 }
             }
-            
         }
 
         .input-group{
             display: flex;
             flex-direction: column;
             width: 100%;
-            margin-bottom: 6px;
 
             label{
                 margin-bottom: 4px;
-                font-weight: bolder;
-                color: white;
-                font-size: 16px;
+                font-weight: 600;
+                color: #c8d0e7;
+                font-size: 13px;
+                text-transform: uppercase;
+                letter-spacing: 0.4px;
             }
 
             select{
-                height: 38px;
+                height: 34px;
                 border-radius: 4px;
                 padding-left: 8px;
-                background-color: white;
-                color: #080808;
+                background-color: #2e3f6f;
+                color: white;
+                border: 1px solid #4a5f99;
+                font-size: 13px;
             }
         }
     }
 
     .subject-tables{
-        height: 90%;
+        flex: 1;
+        min-width: 0;
         display: flex;
         flex-direction: column;
-        justify-content: space-around;
+        gap: 20px;
+        padding-top: 4px;
     }
 
     .close-icon{
         font-weight: bold;
         color: white;
-        border: 1px solid white;
+        border: 1px solid rgba(255,255,255,0.4);
         border-radius: 50%;
         padding: 5px;
-        font-size: 24px;
-        right: 20px;
-        margin-top: -240px;
+        font-size: 22px;
         position: absolute;
+        right: 20px;
+        top: 20px;
         cursor: pointer;
+        transition: background-color 0.2s;
+
+        &:hover{ background-color: rgba(255,255,255,0.1); }
     }
 }
 
