@@ -2,7 +2,33 @@
   "permissions": {
     "allow": [
       "Bash(grep -r \"console.log\\\\|console.error\" /c/Users/jv866/OneDrive/Área de Trabalho/inccsight-dev/inCCsight/.claude/worktrees/cool-benz/src --include=*.jsx --include=*.js)",
-      "Bash(grep -r \"TODO\\\\|FIXME\\\\|BUG\\\\|HACK\" /c/Users/jv866/OneDrive/Área de Trabalho/inccsight-dev/inCCsight/.claude/worktrees/cool-benz/methods --include=*.py)"
+      "Bash(grep -r \"TODO\\\\|FIXME\\\\|BUG\\\\|HACK\" /c/Users/jv866/OneDrive/Área de Trabalho/inccsight-dev/inCCsight/.claude/worktrees/cool-benz/methods --include=*.py)",
+      "Bash(node -e \":*)",
+      "Bash(node -e \"const p=require\\(''./package.json''\\); console.log\\(JSON.stringify\\(p.dependencies, null, 2\\)\\)\")",
+      "Bash(head -30 echo \"---\" grep -n \"Watershed\\\\|scalar_midline\\\\|scalar_statistic\\\\|thickness\\\\|parcellation_statistic\" \"C:/Users/jv866/OneDrive/Área de Trabalho/inccsight-dev/inCCsight/.claude/worktrees/cool-benz/methods/roqs/segmentation.py\")",
+      "Bash(head -20 echo ---libcc/gets.py--- grep -rn \"to_csv\\\\|csv\" 'C:/Users/jv866/OneDrive/Área de Trabalho/inccsight-dev/inCCsight/.claude/worktrees/cool-benz/methods/roqs/libcc/gets.py')",
+      "Bash(where gh:*)",
+      "Bash(winget list:*)",
+      "Bash(python -c ':*)",
+      "Bash(pip show:*)",
+      "Bash(pip install:*)",
+      "Bash(git -C \"C:\\\\Users\\\\jv866\\\\OneDrive\\\\Área de Trabalho\\\\inccsight-dev\\\\inCCsight\" status --porcelain)",
+      "Bash(git -C \"C:\\\\Users\\\\jv866\\\\OneDrive\\\\Área de Trabalho\\\\inccsight-dev\\\\inCCsight\\\\.claude\\\\worktrees\\\\cool-benz\" status --porcelain)",
+      "Bash(git -C \"C:\\\\Users\\\\jv866\\\\OneDrive\\\\Área de Trabalho\\\\inccsight-dev\\\\inCCsight\" show --stat HEAD)",
+      "Bash(git -C \"C:\\\\Users\\\\jv866\\\\OneDrive\\\\Área de Trabalho\\\\inccsight-dev\\\\inCCsight\" diff HEAD -- methods/roqs/segmentation.py)",
+      "Bash(git -C \"C:\\\\Users\\\\jv866\\\\OneDrive\\\\Área de Trabalho\\\\inccsight-dev\\\\inCCsight\" show HEAD:methods/roqs/segmentation.py)",
+      "Bash(git -C \"C:\\\\Users\\\\jv866\\\\OneDrive\\\\Área de Trabalho\\\\inccsight-dev\\\\inCCsight\" show HEAD:methods/csvs/transformInJson.py)",
+      "Bash(git -C \"C:\\\\Users\\\\jv866\\\\OneDrive\\\\Área de Trabalho\\\\inccsight-dev\\\\inCCsight\" diff HEAD -- methods/csvs/transformInJson.py)",
+      "Bash(git -C \"C:\\\\Users\\\\jv866\\\\OneDrive\\\\Área de Trabalho\\\\inccsight-dev\\\\inCCsight\" log --oneline -3)",
+      "Bash(git -C \"C:\\\\Users\\\\jv866\\\\OneDrive\\\\Área de Trabalho\\\\inccsight-dev\\\\inCCsight\" add methods/csvs/transformInJson.py src/components/SubjectCard/SubjectCard.jsx src/components/SubjectCard/SubjectCard.scss src/components/View/View.jsx src/pages/Home.jsx src/styles/home.scss .claude/launch.json)",
+      "Bash(git -C 'C:\\\\Users\\\\jv866\\\\OneDrive\\\\Área de Trabalho\\\\inccsight-dev\\\\inCCsight' commit -m ':*)",
+      "Bash(git -C \"C:\\\\Users\\\\jv866\\\\OneDrive\\\\Área de Trabalho\\\\inccsight-dev\\\\inCCsight\\\\.claude\\\\worktrees\\\\cool-benz\" diff HEAD -- src/styles/home.scss)",
+      "Bash(git -C \"C:\\\\Users\\\\jv866\\\\OneDrive\\\\Área de Trabalho\\\\inccsight-dev\\\\inCCsight\" remote -v)",
+      "Bash(git -C \"C:\\\\Users\\\\jv866\\\\OneDrive\\\\Área de Trabalho\\\\inccsight-dev\\\\inCCsight\" branch -r)",
+      "Bash(git -C \"C:\\\\Users\\\\jv866\\\\OneDrive\\\\Área de Trabalho\\\\inccsight-dev\\\\inCCsight\" push origin inccsight-v2.0)",
+      "Bash(git -C \"C:\\\\Users\\\\jv866\\\\OneDrive\\\\Área de Trabalho\\\\inccsight-dev\\\\inCCsight\\\\.claude\\\\worktrees\\\\cool-benz\" add src/styles/home.scss .claude/settings.local.json)",
+      "Bash(git -C 'C:\\\\Users\\\\jv866\\\\OneDrive\\\\Área de Trabalho\\\\inccsight-dev\\\\inCCsight\\\\.claude\\\\worktrees\\\\cool-benz' commit -m ':*)",
+      "Bash(git -C \"C:\\\\Users\\\\jv866\\\\OneDrive\\\\Área de Trabalho\\\\inccsight-dev\\\\inCCsight\\\\.claude\\\\worktrees\\\\cool-benz\" push origin claude/cool-benz)"
     ]
   }
 }
