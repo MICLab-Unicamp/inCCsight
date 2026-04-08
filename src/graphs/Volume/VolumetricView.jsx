@@ -8,24 +8,30 @@ const path = window.require('path')
 
 /**
  * Parses a NIfTI-1 buffer (already decompressed) and returns header + voxel data.
+ * Handles datatypes: UINT8(2), INT16(4), INT32(8), FLOAT32(16), FLOAT64(64).
  * NIfTI-1 spec: https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
  */
 function parseNifti1(buf) {
-    // dim[0..7] at offset 40, 8 x int16
-    const nx = buf.readInt16LE(40 + 1 * 2)  // dim[1]
-    const ny = buf.readInt16LE(40 + 2 * 2)  // dim[2]
-    const nz = buf.readInt16LE(40 + 3 * 2)  // dim[3]
+    const nx = buf.readInt16LE(40 + 1 * 2)
+    const ny = buf.readInt16LE(40 + 2 * 2)
+    const nz = buf.readInt16LE(40 + 3 * 2)
 
-    // pixdim[0..7] at offset 76, 8 x float32
-    const dx = Math.abs(buf.readFloatLE(76 + 1 * 4))  // voxel size X
-    const dy = Math.abs(buf.readFloatLE(76 + 2 * 4))  // voxel size Y
-    const dz = Math.abs(buf.readFloatLE(76 + 3 * 4))  // voxel size Z
+    const dx = Math.abs(buf.readFloatLE(76 + 1 * 4))
+    const dy = Math.abs(buf.readFloatLE(76 + 2 * 4))
+    const dz = Math.abs(buf.readFloatLE(76 + 3 * 4))
 
-    // vox_offset at offset 108 (float32) — start of voxel data
+    const datatype   = buf.readInt16LE(70)
     const vox_offset = Math.floor(buf.readFloatLE(108))
+    const n          = nx * ny * nz
+    const off        = buf.byteOffset + vox_offset
 
-    // Fast typed-array view into voxel data (no copy)
-    const voxels = new Float32Array(buf.buffer, buf.byteOffset + vox_offset, nx * ny * nz)
+    let voxels
+    if      (datatype === 2)  voxels = Float32Array.from(new Uint8Array  (buf.buffer, off, n))
+    else if (datatype === 4)  voxels = Float32Array.from(new Int16Array  (buf.buffer, off, n))
+    else if (datatype === 8)  voxels = Float32Array.from(new Int32Array  (buf.buffer, off, n))
+    else if (datatype === 16) voxels = new Float32Array                  (buf.buffer, off, n)
+    else if (datatype === 64) voxels = Float32Array.from(new Float64Array(buf.buffer, off, n))
+    else                      voxels = new Float32Array                  (buf.buffer, off, n)
 
     return { nx, ny, nz, dx, dy, dz, voxels }
 }
@@ -86,7 +92,7 @@ function VolumetricView({ filePath }) {
                 const compressed = await fs.promises.readFile(filePath)
                 const buf = zlib.gunzipSync(compressed)
                 const nifti = parseNifti1(buf)
-                const iso = buildIsosurfaceArrays(nifti, 4)
+                const iso = buildIsosurfaceArrays(nifti, 2)
                 setIsoData(iso)
             } catch (e) {
                 setError(`Não foi possível carregar o arquivo: ${e.message}`)

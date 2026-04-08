@@ -51,22 +51,21 @@ function SegmentationPlot({ imgPath }) {
 }
 
 /**
- * Resolve o caminho do arquivo NIfTI para um sujeito.
+ * Resolve o caminho do arquivo NIfTI da segmentação CNN para um sujeito.
  * Prioridade:
- *   1. <cwd>/methods/CNNBased/temp/<id>/santarosa.nii.gz   (dados de teste)
- *   2. <cwd>/methods/CNNBased/temp/<id>/inCCsight/cnnBased.nii.gz  (processamento real)
+ *   1. <cwd>/methods/CNNBased/temp/<id>/inCCsight/cnnBased.nii.gz  (saída real do CNN)
+ *   2. <cwd>/methods/CNNBased/temp/<id>/santarosa.nii.gz            (dado de teste)
+ *   3. Fallback para dado de demonstração do repositório
  */
 function resolveNiftiPath(subjectId) {
     const base = process.cwd()
+    const cnnPath  = path.join(base, 'methods', 'CNNBased', 'temp', subjectId, 'inCCsight', 'cnnBased.nii.gz')
     const testPath = path.join(base, 'methods', 'CNNBased', 'temp', subjectId, 'santarosa.nii.gz')
-    const realPath = path.join(base, 'methods', 'CNNBased', 'temp', subjectId, 'inCCsight', 'cnnBased.nii.gz')
 
-    const fs = window.require('fs')
+    if (fs.existsSync(cnnPath))  return cnnPath
     if (fs.existsSync(testPath)) return testPath
-    if (fs.existsSync(realPath)) return realPath
 
-    // Fallback para o dado de demonstração disponível no repositório
-    return path.join(base, 'methods', 'CNNBased', 'temp', '000215', 'santarosa.nii.gz')
+    return path.join(base, 'methods', 'CNNBased', 'temp', '000215', 'inCCsight', 'cnnBased.nii.gz')
 }
 
 function View(props) {
