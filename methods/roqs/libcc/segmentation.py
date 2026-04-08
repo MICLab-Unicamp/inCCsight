@@ -1,69 +1,63 @@
-# coding: utf-8 
- 
+# coding: utf-8
+
 def segm_watershed(wFA_ms, gaussian_sigma=0.3):
-
+    """
+    Watershed-based CC segmentation.
+    Uses siamxt (Max-Tree) for marker generation when available;
+    falls back to skimage.feature.peak_local_max otherwise.
+    """
     import numpy as np
-    from scipy import ndimage 
-
-    import siamxt
-    from libcc.preprocess import run_analysis, grad_morf
+    from scipy import ndimage
+    from skimage.segmentation import watershed
+    from skimage.measure import label, regionprops
+    from libcc.preprocess import grad_morf
     from libcc.gets import getTheCC
-    from skimage.morphology import watershed, disk, square, erosion, dilation
-    from skimage.measure import label, regionprops	
-
-
-    ## MORPHOLOGICAL GRADIENT
 
     # Gaussian filter
     wFA_gauss = ndimage.gaussian_filter(wFA_ms, sigma=gaussian_sigma)
 
-    # Structuring element
-    se1 = np.zeros((3,3)).astype('bool')
-    se1[1,:] = True
-    se1[:,1] = True
+    # Cross structuring element (connectivity-4)
+    se1 = np.zeros((3, 3), dtype=bool)
+    se1[1, :] = True
+    se1[:, 1] = True
 
-    # Gradient
+    # Morphological gradient
     grad_wFA = grad_morf(wFA_gauss, se1)
 
+    # ── Marker generation ────────────────────────────────────────────────────
+    segm_markers = np.zeros(grad_wFA.shape, dtype=np.int16)
 
+    try:
+        # Original algorithm: siamxt Max-Tree extinction values
+        import siamxt
+        mxt = siamxt.MaxTreeAlpha(((grad_wFA) * 255).astype("uint8"), se1)
+        leaves_volume = mxt.computeExtinctionValues(mxt.computeVolume(), "volume")
+        indexes = np.argsort(leaves_volume)[::-1]
+        counter = 1
+        for i in indexes[:85]:
+            segm_markers = segm_markers + mxt.recConnectedComponent(i) * counter
+            counter += 1
 
-    ## MAX-TREE
+    except ImportError:
+        # Fallback: local minima of gradient as seeds (= local maxima of inverted gradient)
+        from skimage.feature import peak_local_max
+        inv = grad_wFA.max() - grad_wFA
+        if inv.max() > 0:
+            inv = inv / inv.max()
+        coords = peak_local_max(inv, min_distance=3, num_peaks=85)
+        for k, (r, c) in enumerate(coords, start=1):
+            segm_markers[r, c] = k
 
-    #Structuring element. connectivity-4
-    se2 = se1.copy()
-
-    # Computing Max Tree by volume
-    mxt = siamxt.MaxTreeAlpha(((grad_wFA)*255).astype("uint8"), se2)
-    attr = "volume"
-    leaves_volume = mxt.computeExtinctionValues(mxt.computeVolume(),attr)
-
-    # Create canvas
-    segm_markers = np.zeros(grad_wFA.shape, dtype = np.int16)
-
-    # Labeling canvas
-    indexes = np.argsort(leaves_volume)[::-1]
-    counter = 1
-    for i in indexes[:85]:
-        segm_markers = segm_markers + mxt.recConnectedComponent(i)*(counter)
-        counter+=1
-           
-
-
-    ## SEGMENTING CC
-
-    # Watershed    
+    # ── Watershed ────────────────────────────────────────────────────────────
     wc_wfa = watershed(grad_wFA, segm_markers)
-        
-    # Thresholding regions by FA
-    seg_wFA = np.zeros((wFA_ms).shape).astype(bool)
-    segs = seg_wFA
-    listAll = np.unique(wc_wfa)
-    for i in listAll:
-        media = np.mean(wFA_ms[wc_wfa == i])
-        if media > 0.2*wFA_ms.max():
-            seg_wFA[wc_wfa == i] = 1
 
-    # Getting the CC
+    # Threshold regions by mean FA (keep high-FA regions = white matter)
+    seg_wFA = np.zeros(wFA_ms.shape, dtype=bool)
+    for i in np.unique(wc_wfa):
+        if np.mean(wFA_ms[wc_wfa == i]) > 0.2 * wFA_ms.max():
+            seg_wFA[wc_wfa == i] = True
+
+    # Extract the Corpus Callosum (largest wide structure in upper half)
     seg_wFA, ymed, xmed = getTheCC(seg_wFA)
 
     return seg_wFA, ymed, xmed

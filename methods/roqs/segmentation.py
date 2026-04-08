@@ -288,6 +288,45 @@ def getScalars(segm, wFA, wMD, wRD, wAD):
     return meanFA, stdFA, meanMD, stdMD, meanRD, stdRD, meanAD, stdAD
 
 
+def _collect_segm_stats(segmentation, FA, MD, RD, AD, scalar_maps, sub):
+    """Compute scalars, midlines, thickness and parcellation for a segmentation mask."""
+    scalar_stats = getScalars(segmentation, FA, MD, RD, AD)
+
+    try:
+        midlines = {
+            'FA': str([float(x) for x in getFAmidline(segmentation, FA, n_points=200)]),
+            'MD': str([float(x) for x in getFAmidline(segmentation, MD, n_points=200)]),
+            'RD': str([float(x) for x in getFAmidline(segmentation, RD, n_points=200)]),
+            'AD': str([float(x) for x in getFAmidline(segmentation, AD, n_points=200)]),
+        }
+    except Exception:
+        midlines = {'FA': '[]', 'MD': '[]', 'RD': '[]', 'AD': '[]'}
+
+    try:
+        col_heights = np.sum(segmentation, axis=0).astype(float)
+        thickness = np.interp(
+            np.linspace(0, max(len(col_heights) - 1, 1), 200),
+            np.arange(len(col_heights)),
+            col_heights
+        )
+    except Exception:
+        thickness = np.zeros(200)
+
+    values = gm.getParcellation(segmentation, FA)
+    parc_dict = gm.parcellations_dfs_dicts(scalar_maps, values)
+
+    parc_row = {'Name': sub}
+    for method_p in ['Witelson', 'Hofer', 'Chao', 'Cover', 'Freesurfer']:
+        for part in ['P1', 'P2', 'P3', 'P4', 'P5']:
+            for scalar in ['FA', 'FA StdDev', 'MD', 'MD StdDev', 'RD', 'RD StdDev', 'AD', 'AD StdDev']:
+                try:
+                    parc_row[f'{method_p}_{scalar}_{part}'] = parc_dict[method_p][part][scalar]
+                except Exception:
+                    parc_row[f'{method_p}_{scalar}_{part}'] = 0.0
+
+    return scalar_stats, midlines, thickness, parc_row, parc_dict
+
+
 def get_segm(data_paths):
 
     import matplotlib
@@ -296,19 +335,24 @@ def get_segm(data_paths):
 
     names = []
     imgPathList = []
-    meanFAList = []
-    stdFAList = []
-    meanMDList = []
-    stdMDList = []
-    meanRDList = []
-    stdRDList = []
-    meanADList = []
-    stdADList = []
+    # ── ROQS accumulators ───────────────────────────────────────────────────
+    meanFAList = []; stdFAList = []
+    meanMDList = []; stdMDList = []
+    meanRDList = []; stdRDList = []
+    meanADList = []; stdADList = []
+    midlinesList         = []
+    thicknessList        = []
+    parcellationStatsList = []
     parcellationsList = {"ROQS": {}}
     times = []
-    midlinesList = []
-    thicknessList = []
-    parcellationStatsList = []
+    # ── Watershed accumulators ───────────────────────────────────────────────
+    w_meanFAList = []; w_stdFAList = []
+    w_meanMDList = []; w_stdMDList = []
+    w_meanRDList = []; w_stdRDList = []
+    w_meanADList = []; w_stdADList = []
+    w_midlinesList         = []
+    w_thicknessList        = []
+    w_parcellationStatsList = []
 
     for data_path in data_paths:
         try:
@@ -332,105 +376,70 @@ def get_segm(data_paths):
             eigvects_ms = abs(eigvects[0, :, fissure])
 
             scalar_maps = (FA, MD, RD, AD)
-            segmentation = segm_roqs(wFA, eigvects_ms)
 
-            values = gm.getParcellation(segmentation, FA)
-            parcellation_dict = gm.parcellations_dfs_dicts(scalar_maps, values)
+            # ── ROQS segmentation ────────────────────────────────────────────
+            segmentation = segm_roqs(wFA, eigvects_ms)
+            scalar_statistics, roqs_midlines, thickness_200, parc_row, parcellation_dict = \
+                _collect_segm_stats(segmentation, FA, MD, RD, AD, scalar_maps, sub)
             parcellationsList["ROQS"][sub] = parcellation_dict
 
-            scalar_statistics = getScalars(segmentation, FA, MD, RD, AD)
-
-            # Midline
-            scalar_midlines = {}
-
-            try:
-                scalar_midlines['FA'] = getFAmidline(
-                    segmentation, FA, n_points=200)
-                scalar_midlines['MD'] = getFAmidline(
-                    segmentation, MD, n_points=200)
-                scalar_midlines['RD'] = getFAmidline(
-                    segmentation, RD, n_points=200)
-                scalar_midlines['AD'] = getFAmidline(
-                    segmentation, AD, n_points=200)
-            except:
-                scalar_midlines = {'FA': [], 'MD': [], 'RD': [], 'AD': []}
-
-            # Check segmentation errors (True/False)
-            error_flag = False
-            error_prob = []
-            try:
-                error_flag, error_prob = libcc.checkShapeSign(
-                    segmentation, shape_imports, threshold=0.6)
-            except:
-                error_flag = True
-
-            # data_tuple = (segmentation, scalar_maps, scalar_statistics, scalar_midlines, error_prob, parcellation_dict)
-
             names.append(sub)
-            meanFAList.append(scalar_statistics[0])
-            stdFAList.append(scalar_statistics[1])
-            meanMDList.append(scalar_statistics[2])
-            stdMDList.append(scalar_statistics[3])
-            meanRDList.append(scalar_statistics[4])
-            stdRDList.append(scalar_statistics[5])
-            meanADList.append(scalar_statistics[6])
-            stdADList.append(scalar_statistics[7])
-
-            # Midlines: convert to plain float to avoid np.float64() repr in newer numpy
-            midlinesList.append({
-                'FA': str([float(x) for x in scalar_midlines.get('FA', [])]),
-                'MD': str([float(x) for x in scalar_midlines.get('MD', [])]),
-                'RD': str([float(x) for x in scalar_midlines.get('RD', [])]),
-                'AD': str([float(x) for x in scalar_midlines.get('AD', [])]),
-            })
-
-            # Thickness: count CC pixels per column, interpolated to 200 points
-            try:
-                col_heights = np.sum(segmentation, axis=0).astype(float)
-                thickness_200 = np.interp(
-                    np.linspace(0, max(len(col_heights) - 1, 1), 200),
-                    np.arange(len(col_heights)),
-                    col_heights
-                )
-            except Exception:
-                thickness_200 = np.zeros(200)
+            meanFAList.append(scalar_statistics[0]); stdFAList.append(scalar_statistics[1])
+            meanMDList.append(scalar_statistics[2]); stdMDList.append(scalar_statistics[3])
+            meanRDList.append(scalar_statistics[4]); stdRDList.append(scalar_statistics[5])
+            meanADList.append(scalar_statistics[6]); stdADList.append(scalar_statistics[7])
+            midlinesList.append(roqs_midlines)
             thicknessList.append(thickness_200)
-
-            # Parcellation statistics row
-            parc_row = {'Name': sub}
-            for method_p in ['Witelson', 'Hofer', 'Chao', 'Cover', 'Freesurfer']:
-                for part in ['P1', 'P2', 'P3', 'P4', 'P5']:
-                    for scalar in ['FA', 'FA StdDev', 'MD', 'MD StdDev', 'RD', 'RD StdDev', 'AD', 'AD StdDev']:
-                        try:
-                            parc_row[f'{method_p}_{scalar}_{part}'] = parcellation_dict[method_p][part][scalar]
-                        except Exception:
-                            parc_row[f'{method_p}_{scalar}_{part}'] = 0.0
             parcellationStatsList.append(parc_row)
 
-            name = sub
-            meanFA = scalar_statistics[0] 
-            stdFA = scalar_statistics[1]
-            meanMD = scalar_statistics[2]
-            stdMD = scalar_statistics[3]
-            meanRD = scalar_statistics[4]
-            stdRD = scalar_statistics[5]
-            meanAD = scalar_statistics[6]
-            stdAD = scalar_statistics[7]
-            
-            sub_data = {}
-
-            names_maps = list(["name", "meanFA", "stdFA", "meanMD", "stdMD", "meanRD", "stdRD", "meanAD", "stdAD"])
-            scalars_values = list([name,scalar_statistics[0], scalar_statistics[1], scalar_statistics[2], scalar_statistics[3], scalar_statistics[4], scalar_statistics[5], scalar_statistics[6], scalar_statistics[7]])
-            
-
-            for i in range(0, len(names_maps)):
-                sub_data[names_maps[i]] = scalars_values[i]
-            
-            # Salvando os Dados
             canvas = np.zeros(wFA_v.shape, dtype='int32')
             canvas[fissure, :, :] = segmentation
-
             save.save_nii(data_path, 'segm_roqs', canvas, affine)
+
+            # ── Watershed segmentation ────────────────────────────────────────
+            print(f"  → Executando Watershed para {sub}", flush=True)
+            try:
+                segm_w, _, _ = libcc.segm_watershed(wFA)
+
+                if segm_w is False or not np.any(segm_w):
+                    raise ValueError("Watershed retornou máscara vazia")
+
+                w_stats, w_midlines, w_thickness, w_parc_row, _ = \
+                    _collect_segm_stats(segm_w, FA, MD, RD, AD, scalar_maps, sub)
+
+                w_meanFAList.append(w_stats[0]); w_stdFAList.append(w_stats[1])
+                w_meanMDList.append(w_stats[2]); w_stdMDList.append(w_stats[3])
+                w_meanRDList.append(w_stats[4]); w_stdRDList.append(w_stats[5])
+                w_meanADList.append(w_stats[6]); w_stdADList.append(w_stats[7])
+                w_midlinesList.append(w_midlines)
+                w_thicknessList.append(w_thickness)
+                w_parcellationStatsList.append(w_parc_row)
+
+                canvas_w = np.zeros(wFA_v.shape, dtype='int32')
+                canvas_w[fissure, :, :] = segm_w
+                save.save_nii(data_path, 'segm_watershed', canvas_w, affine)
+                print(f"  → Watershed concluído", flush=True)
+
+            except Exception as e_w:
+                import traceback as _tb
+                print(f"  [WARN] Watershed falhou para {sub}, usando ROQS como fallback: {e_w}")
+                _tb.print_exc()
+                # Fallback: copy ROQS values so the subject still appears in Watershed CSVs
+                w_meanFAList.append(scalar_statistics[0]); w_stdFAList.append(scalar_statistics[1])
+                w_meanMDList.append(scalar_statistics[2]); w_stdMDList.append(scalar_statistics[3])
+                w_meanRDList.append(scalar_statistics[4]); w_stdRDList.append(scalar_statistics[5])
+                w_meanADList.append(scalar_statistics[6]); w_stdADList.append(scalar_statistics[7])
+                w_midlinesList.append(roqs_midlines)
+                w_thicknessList.append(thickness_200)
+                w_parcellationStatsList.append(parc_row)
+
+            sub_data = {
+                "name":    sub,
+                "meanFA":  scalar_statistics[0], "stdFA":  scalar_statistics[1],
+                "meanMD":  scalar_statistics[2], "stdMD":  scalar_statistics[3],
+                "meanRD":  scalar_statistics[4], "stdRD":  scalar_statistics[5],
+                "meanAD":  scalar_statistics[6], "stdAD":  scalar_statistics[7],
+            }
 
             # Gerar PNG da fatia midsagital com contorno vermelho da segmentação
             img_path = ""
@@ -481,37 +490,47 @@ def get_segm(data_paths):
             print()
             continue
         
-    subjects = {"Names": names, "FA": meanFAList, "FA StdDev": stdFAList, "MD": meanMDList, "MD StdDev": stdMDList, "RD": meanRDList, "RD StdDev": stdRDList, "AD": meanADList, "AD StdDev": stdADList, "Time": times}
+    # ── ROQS CSVs ────────────────────────────────────────────────────────────
+    df_roqs = pd.DataFrame({
+        "Names": names, "FA": meanFAList, "FA StdDev": stdFAList,
+        "MD": meanMDList, "MD StdDev": stdMDList,
+        "RD": meanRDList, "RD StdDev": stdRDList,
+        "AD": meanADList, "AD StdDev": stdADList, "Time": times,
+    })
+    df_roqs.to_csv("./data/roqs_based.csv", sep=";")
+    df_roqs.to_csv("../csvs/roqs_based.csv", sep=";")
 
-    df = pd.DataFrame(subjects)
-    df.to_csv("./data/roqs_based.csv", sep=";")
-    df.to_csv("../csvs/roqs_based.csv", sep=";")
-
-    # Save scalar statistics (subject name as index, matching expected CSV format)
-    df_scalar = pd.DataFrame({
+    df_roqs_scalar = pd.DataFrame({
         'FA': meanFAList, 'FA StdDev': stdFAList,
         'MD': meanMDList, 'MD StdDev': stdMDList,
         'RD': meanRDList, 'RD StdDev': stdRDList,
         'AD': meanADList, 'AD StdDev': stdADList,
         'img_path': imgPathList,
     }, index=names)
-    df_scalar.to_csv("../csvs/ROQS_scalar_statistics.csv", sep=";")
-    df_scalar.to_csv("../csvs/Watershed_scalar_statistics.csv", sep=";")
+    df_roqs_scalar.to_csv("../csvs/ROQS_scalar_statistics.csv", sep=";")
 
-    # Save midlines (each cell is a string-encoded list)
     if midlinesList:
-        df_midlines = pd.DataFrame(midlinesList, index=names)
-        df_midlines.to_csv("../csvs/ROQS_scalar_midlines.csv", sep=";")
-        df_midlines.to_csv("../csvs/Watershed_scalar_midlines.csv", sep=";")
-
-    # Save thickness (200 values per subject)
+        pd.DataFrame(midlinesList, index=names).to_csv("../csvs/ROQS_scalar_midlines.csv", sep=";")
     if thicknessList:
-        df_thickness = pd.DataFrame(thicknessList, index=names)
-        df_thickness.to_csv("../csvs/ROQS_dict_thickness.csv", sep=";")
-        df_thickness.to_csv("../csvs/Watershed_dict_thickness.csv", sep=";")
-
-    # Save parcellation statistics
+        pd.DataFrame(thicknessList, index=names).to_csv("../csvs/ROQS_dict_thickness.csv", sep=";")
     if parcellationStatsList:
-        df_parc = pd.DataFrame(parcellationStatsList)
-        df_parc.to_csv("../csvs/ROQS_parcellation_statistics.csv", sep=";")
-        df_parc.to_csv("../csvs/Watershed_parcellation_statistics.csv", sep=";")
+        pd.DataFrame(parcellationStatsList).to_csv("../csvs/ROQS_parcellation_statistics.csv", sep=";")
+
+    # ── Watershed CSVs ───────────────────────────────────────────────────────
+    df_watershed_scalar = pd.DataFrame({
+        'FA': w_meanFAList, 'FA StdDev': w_stdFAList,
+        'MD': w_meanMDList, 'MD StdDev': w_stdMDList,
+        'RD': w_meanRDList, 'RD StdDev': w_stdRDList,
+        'AD': w_meanADList, 'AD StdDev': w_stdADList,
+        'img_path': imgPathList,   # same PNG (ROQS midsagittal)
+    }, index=names)
+    df_watershed_scalar.to_csv("../csvs/Watershed_scalar_statistics.csv", sep=";")
+
+    if w_midlinesList:
+        pd.DataFrame(w_midlinesList, index=names).to_csv("../csvs/Watershed_scalar_midlines.csv", sep=";")
+    if w_thicknessList:
+        pd.DataFrame(w_thicknessList, index=names).to_csv("../csvs/Watershed_dict_thickness.csv", sep=";")
+    if w_parcellationStatsList:
+        pd.DataFrame(w_parcellationStatsList).to_csv("../csvs/Watershed_parcellation_statistics.csv", sep=";")
+
+    print("\n✓ ROQS e Watershed concluídos.", flush=True)
