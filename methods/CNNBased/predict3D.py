@@ -38,12 +38,17 @@ def test_predict(model, data_paths):
 	with torch.no_grad():
 
 		# Variables
+		vol_data = None
+		test_outputs = None
+		pos_process = None
+		vol_data_affine = None
+
 		names = []
 		meanFAList = []
 		stdFAList = []
 		meanMDList = []
 		stdMDList = []
-		meanRDList = [] 
+		meanRDList = []
 		stdRDList = []
 		meanADList = []
 		stdADList = []

@@ -434,8 +434,11 @@ def get_segm(data_paths):
 
             gm.adjust_dict_parcellations_statistics(parcellationsList, sub_data, data_path)
 
-        except:
-            print(f"{data_path} Failed.")
+        except Exception as e:
+            import traceback
+            print(f"\n[ERRO] {data_path} Failed:")
+            traceback.print_exc()
+            print()
             continue
         
     subjects = {"Names": names, "FA": meanFAList, "FA StdDev": stdFAList, "MD": meanMDList, "MD StdDev": stdMDList, "RD": meanRDList, "RD StdDev": stdRDList, "AD": meanADList, "AD StdDev": stdADList, "Time": times}

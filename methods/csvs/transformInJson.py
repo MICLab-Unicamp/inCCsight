@@ -103,26 +103,39 @@ def _safe_drop_index(df):
     df = df.drop(columns=unnamed)
   return df
 
+def _read_csv(filename, required=True):
+  """Read a CSV from the csvs/ folder with clear error if missing."""
+  try:
+    return _safe_drop_index(pd.read_csv(filename, sep=";"))
+  except FileNotFoundError:
+    if required:
+      print(f"\n[ERRO] Arquivo não encontrado: {filename}")
+      print("       Execute a análise ROQS antes de converter para JSON.")
+      raise
+    return pd.DataFrame()
+
 # Importando e executando
-watershed_scalar = _safe_drop_index(pd.read_csv("Watershed_scalar_statistics.csv", sep=";"))
-ROQS_scalar = _safe_drop_index(pd.read_csv("ROQS_scalar_statistics.csv", sep=";"))
+ROQS_scalar      = _read_csv("ROQS_scalar_statistics.csv")
+watershed_scalar = _read_csv("Watershed_scalar_statistics.csv")
 
 try:
-  santarosa_scalar = _safe_drop_index(pd.read_csv("santarosa.csv", sep=";"))
+  santarosa_scalar = _read_csv("santarosa.csv", required=False)
+  if santarosa_scalar.empty:
+    santarosa_scalar = ROQS_scalar.copy()
 except FileNotFoundError:
   santarosa_scalar = ROQS_scalar.copy()
 
-watershed_midlines = _safe_drop_index(pd.read_csv("Watershed_scalar_midlines.csv", sep=";"))
-ROQS_midlines = _safe_drop_index(pd.read_csv("ROQS_scalar_midlines.csv", sep=";"))
+ROQS_midlines      = _read_csv("ROQS_scalar_midlines.csv")
+watershed_midlines = _read_csv("Watershed_scalar_midlines.csv")
 
 watershed_midlines = dataFrameStringToList(watershed_midlines)
-ROQS_midlines = dataFrameStringToList(ROQS_midlines)
+ROQS_midlines      = dataFrameStringToList(ROQS_midlines)
 
-watershed_thickness = _safe_drop_index(pd.read_csv("Watershed_dict_thickness.csv", sep=";"))
-ROQS_thickness = _safe_drop_index(pd.read_csv("ROQS_dict_thickness.csv", sep=";"))
+ROQS_thickness      = _read_csv("ROQS_dict_thickness.csv")
+watershed_thickness = _read_csv("Watershed_dict_thickness.csv")
 
-watershed_parcellation_statistics = _safe_drop_index(pd.read_csv("Watershed_parcellation_statistics.csv", sep=";"))
-ROQS_parcellation_statistics = _safe_drop_index(pd.read_csv("ROQS_parcellation_statistics.csv", sep=";"))
+ROQS_parcellation_statistics      = _read_csv("ROQS_parcellation_statistics.csv")
+watershed_parcellation_statistics = _read_csv("Watershed_parcellation_statistics.csv")
 
 names = list(ROQS_parcellation_statistics["Name"])
 n_santarosa = len(santarosa_scalar)
