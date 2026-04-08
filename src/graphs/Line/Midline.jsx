@@ -54,13 +54,15 @@ function buildBandTraces(yMean, yStd, fillColor, name) {
         {
             x, y: yUpper,
             mode: 'lines', line: { width: 0 },
-            showlegend: false, hoverinfo: 'skip', name: `${name} upper`
+            showlegend: false, hoverinfo: 'skip',
+            name: `${name} upper`, legendgroup: name
         },
         {
             x, y: yLower,
             fill: 'tonexty', mode: 'lines', line: { width: 0 },
             fillcolor: fillColor,
-            showlegend: false, hoverinfo: 'skip', name: `${name} lower`
+            showlegend: false, hoverinfo: 'skip',
+            name: `${name} lower`, legendgroup: name
         }
     ]
 }
@@ -84,13 +86,13 @@ function Midline(props) {
             ...buildBandTraces(wsMean, wsStd, 'rgba(239,85,59,0.2)', "Watershed"),
             {
                 x, y: roqsMean,
-                mode: 'lines', name: 'ROQS',
+                mode: 'lines', name: 'ROQS', legendgroup: 'ROQS',
                 line: { color: COLORS.ROQS, width: 2 },
                 hovertemplate: 'Point %{x}<br>Value: %{y:.6f}<extra>ROQS</extra>'
             },
             {
                 x, y: wsMean,
-                mode: 'lines', name: 'Watershed',
+                mode: 'lines', name: 'Watershed', legendgroup: 'Watershed',
                 line: { color: COLORS.Watershed, width: 2 },
                 hovertemplate: 'Point %{x}<br>Value: %{y:.6f}<extra>Watershed</extra>'
             }
@@ -109,13 +111,13 @@ function Midline(props) {
             ...buildBandTraces(wsMean, wsStd, 'rgba(239,85,59,0.2)', "Watershed"),
             {
                 x, y: roqsMean,
-                mode: 'lines', name: 'ROQS',
+                mode: 'lines', name: 'ROQS', legendgroup: 'ROQS',
                 line: { color: COLORS.ROQS, width: 2 },
                 hovertemplate: 'Point %{x}<br>Thickness: %{y:.4f}<extra>ROQS</extra>'
             },
             {
                 x, y: wsMean,
-                mode: 'lines', name: 'Watershed',
+                mode: 'lines', name: 'Watershed', legendgroup: 'Watershed',
                 line: { color: COLORS.Watershed, width: 2 },
                 hovertemplate: 'Point %{x}<br>Thickness: %{y:.4f}<extra>Watershed</extra>'
             }

@@ -19,28 +19,13 @@ function getMeanValues(subjects, method, parc_method, scalar, part) {
 }
 
 function getColumnColors(colValues) {
-    const nums = colValues.map(Number)
-    const max = Math.max(...nums)
-    const min = Math.min(...nums)
-    return nums.map(v => {
-        if (v === max) return 'rgba(144, 238, 144, 0.6)'
-        if (v === min) return 'rgba(255, 182, 193, 0.6)'
-        return 'white'
-    })
+    return colValues.map(() => 'white')
 }
 
 function colorsForRows(rows, colCount) {
-    return Array.from({ length: colCount }, (_, ci) => {
-        const col = rows.map(r => Number(r[ci]))
-        const max = Math.max(...col)
-        const min = Math.min(...col)
-        return col.map(v =>
-            rows.length < 2  ? 'transparent'
-            : v === max      ? 'rgba(144,238,144,0.45)'
-            : v === min      ? 'rgba(255,182,193,0.45)'
-            :                  'transparent'
-        )
-    })
+    return Array.from({ length: colCount }, () =>
+        rows.map(() => 'transparent')
+    )
 }
 
 function exportCSV(headers, cols, filename) {

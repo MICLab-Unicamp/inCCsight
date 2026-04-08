@@ -507,9 +507,10 @@ def get_segm(data_paths):
                 for c in contours:
                     ax.plot(c[:, 1], c[:, 0], 'r-', linewidth=1.5)
 
-                ax.tick_params(colors='white', labelsize=8)
+                ax.set_xticks([])
+                ax.set_yticks([])
                 for spine in ax.spines.values():
-                    spine.set_edgecolor('#aaaaaa')
+                    spine.set_visible(False)
 
                 fig.tight_layout()
 

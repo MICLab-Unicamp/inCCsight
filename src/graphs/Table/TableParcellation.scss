@@ -80,22 +80,24 @@
 /* ── Expandable per-subject table ── */
 .expandable-section{
     margin-top: 16px;
-    border-top: 1px solid rgba(0,0,0,0.12);
 
     .expandable-header{
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 10px 4px;
+        padding: 9px 14px;
         cursor: pointer;
         font-weight: 700;
-        font-size: 14px;
-        color: #444;
+        font-size: 13px;
+        color: white;
+        background-color: #1F2C56;
+        border-radius: 6px;
         user-select: none;
+        letter-spacing: 0.03em;
 
-        &:hover{ color: #1F2C56; }
+        &:hover{ background-color: #263a72; }
 
-        .expand-icon{ font-size: 11px; color: #888; }
+        .expand-icon{ font-size: 11px; color: rgba(255,255,255,0.7); }
     }
 
     .expandable-content{

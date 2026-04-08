@@ -121,6 +121,8 @@ function VolumetricView({ filePath }) {
         )
     }
 
+    const BG = '#192444'
+
     const trace = {
         type: 'isosurface',
         x: isoData.x,
@@ -129,13 +131,22 @@ function VolumetricView({ filePath }) {
         value: isoData.value,
         isomin: 0.5,
         isomax: 1.0,
-        surface: { count: 2, fill: 0.9, pattern: 'odd' },
+        surface: { count: 1, fill: 1.0 },
         colorscale: [
-            [0, '#1a3a6e'],
-            [1, '#636EFA']
+            [0, '#3a5fa0'],
+            [1, '#7aa3f0']
         ],
         showscale: false,
         opacity: opacity,
+        flatshading: false,
+        lighting: {
+            ambient: 0.6,
+            diffuse: 0.8,
+            specular: 0.3,
+            roughness: 0.5,
+            fresnel: 0.2
+        },
+        lightposition: { x: 100, y: 200, z: 0 },
         caps: {
             x: { show: false },
             y: { show: false },
@@ -144,16 +155,26 @@ function VolumetricView({ filePath }) {
         hovertemplate: 'X: %{x:.1f}mm<br>Y: %{y:.1f}mm<br>Z: %{z:.1f}mm<extra>CC (CNN)</extra>'
     }
 
+    const hiddenAxis = {
+        visible: false,
+        showgrid: false,
+        zeroline: false,
+        showticklabels: false,
+        showaxeslabels: false,
+        showbackground: false,
+        title: { text: '' }
+    }
+
     const layout = {
         title: {
             text: 'Corpo Caloso — Segmentação Volumétrica (CNN)',
-            font: { size: 15 }
+            font: { size: 15, color: 'white' }
         },
         scene: {
-            xaxis: { title: 'X (mm)', backgroundcolor: '#e8ecf7', gridcolor: 'white' },
-            yaxis: { title: 'Y (mm)', backgroundcolor: '#e8ecf7', gridcolor: 'white' },
-            zaxis: { title: 'Z (mm)', backgroundcolor: '#d0d8f0', gridcolor: 'white' },
-            bgcolor: '#f0f4ff',
+            xaxis: hiddenAxis,
+            yaxis: hiddenAxis,
+            zaxis: hiddenAxis,
+            bgcolor: BG,
             camera: {
                 eye: { x: 1.8, y: 1.8, z: 0.8 }
             },
@@ -161,7 +182,8 @@ function VolumetricView({ filePath }) {
         },
         height: 560,
         margin: { t: 50, b: 10, l: 10, r: 10 },
-        paper_bgcolor: '#f8f9ff'
+        paper_bgcolor: BG,
+        font: { color: 'white' }
     }
 
     return (
