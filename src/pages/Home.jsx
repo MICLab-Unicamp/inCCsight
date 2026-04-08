@@ -1,28 +1,5 @@
 import React, { useState } from 'react'
 
-/* Data — loaded at runtime so new analyses are reflected without a rebuild */
-const fs = window.require('fs')
-const path = window.require('path')
-
-function loadSubjects() {
-    try {
-        const dataPath = path.join(__dirname, '..', 'src', 'data', 'mydata.json')
-        const raw = fs.readFileSync(dataPath, 'utf-8')
-        return JSON.parse(raw)
-    } catch (e) {
-        // Fallback: try relative path used in dev mode
-        try {
-            const raw = fs.readFileSync(path.join(process.cwd(), 'src', 'data', 'mydata.json'), 'utf-8')
-            return JSON.parse(raw)
-        } catch (e2) {
-            console.warn('Could not load mydata.json dynamically, falling back to bundled data.', e2)
-            return require('../data/mydata.json')
-        }
-    }
-}
-
-const subjects = loadSubjects()
-
 /* Imagens */
 import logo from '../assets/images/inccsight.png'
 import unicamp from '../assets/images/unicamp.png'
@@ -35,9 +12,32 @@ import View from '../components/View/View'
 
 /* Icones */
 import { BsGear } from 'react-icons/bs'
-import { createRoot } from 'react-dom/client';
+import { createRoot } from 'react-dom/client'
 
 import '../styles/home.scss'
+
+/* Data — loaded at runtime so new analyses are reflected without a rebuild */
+const fs = window.require('fs')
+const path = window.require('path')
+
+function loadSubjects() {
+    try {
+        const dataPath = path.join(__dirname, '..', 'src', 'data', 'mydata.json')
+        const raw = fs.readFileSync(dataPath, 'utf-8')
+        return JSON.parse(raw)
+    } catch (e) {
+        try {
+            const raw = fs.readFileSync(path.join(process.cwd(), 'src', 'data', 'mydata.json'), 'utf-8')
+            return JSON.parse(raw)
+        } catch (e2) {
+            console.warn('Could not load mydata.json dynamically, falling back to bundled data.', e2)
+            // eslint-disable-next-line import/no-dynamic-require
+            return window.require('../data/mydata.json')
+        }
+    }
+}
+
+const subjects = loadSubjects()
 
 function showConfigs() {
     const container = document.querySelector('#modalArea');
