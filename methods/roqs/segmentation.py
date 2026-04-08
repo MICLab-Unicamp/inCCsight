@@ -432,34 +432,26 @@ def get_segm(data_paths):
 
             save.save_nii(data_path, 'segm_roqs', canvas, affine)
 
-            # Gerar PNG da fatia midsagital com overlay da segmentação
+            # Gerar PNG da fatia midsagital com contorno vermelho da segmentação
             img_path = ""
             try:
-                rows = np.any(segmentation, axis=1)
-                cols = np.any(segmentation, axis=0)
-                rmin, rmax = np.where(rows)[0][[0, -1]]
-                cmin, cmax = np.where(cols)[0][[0, -1]]
-                pad = 20
-                rmin = max(0, rmin - pad)
-                rmax = min(FA.shape[0], rmax + pad)
-                cmin = max(0, cmin - pad)
-                cmax = min(FA.shape[1], cmax + pad)
+                from skimage import measure as sk_measure
 
-                fa_crop   = FA[rmin:rmax, cmin:cmax]
-                segm_crop = segmentation[rmin:rmax, cmin:cmax]
+                fig, ax = plt.subplots(figsize=(5, 3.5), dpi=120)
+                im = ax.imshow(FA, cmap='gray', vmin=0, vmax=1)
+                plt.colorbar(im, ax=ax)
 
-                fig, ax = plt.subplots(figsize=(4, 3), dpi=120)
-                ax.imshow(fa_crop, cmap='gray', origin='lower')
-                overlay = np.zeros((*fa_crop.shape, 4), dtype=float)
-                overlay[segm_crop] = [0.2, 0.6, 1.0, 0.5]
-                ax.imshow(overlay, origin='lower')
-                ax.axis('off')
-                fig.tight_layout(pad=0)
+                # Contorno vermelho da CC (outline, não preenchido)
+                contours = sk_measure.find_contours(segmentation.astype(float), 0.5)
+                for c in contours:
+                    ax.plot(c[:, 1], c[:, 0], 'r-', linewidth=1.5)
+
+                fig.tight_layout()
 
                 out_dir = os.path.join(data_path, 'inCCsight')
                 os.makedirs(out_dir, exist_ok=True)
                 img_path = os.path.join(out_dir, 'midsagittal_roqs.png')
-                fig.savefig(img_path, bbox_inches='tight', pad_inches=0)
+                fig.savefig(img_path, bbox_inches='tight', dpi=120)
                 plt.close(fig)
             except Exception:
                 plt.close('all')
