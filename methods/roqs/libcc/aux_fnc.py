@@ -130,14 +130,14 @@ def print_mask_img(subj_, map_bd):
     msp_points_reg = glob.glob('{}{}.nii.gz'.format(subj_[0],pre_msp))
     gen_img_path = glob.glob('{}*_msp.nii'.format(subj_[0]))
     if msp_points_reg != []:
-        in_img_msp = nib.load(msp_points_reg[0]).get_data()
+        in_img_msp = nib.load(msp_points_reg[0]).get_fdata()
         msp = np.argmax(np.sum(np.sum(in_img_msp,axis=-1),axis=-1))
-        gen_img = nib.load('{}t1_reg.nii.gz'.format(subj_[0])).get_data()[msp]
-        gen_mask = nib.load('{}mask_reg.nii.gz'.format(subj_[0])).get_data()[msp]
+        gen_img = nib.load('{}t1_reg.nii.gz'.format(subj_[0])).get_fdata()[msp]
+        gen_mask = nib.load('{}mask_reg.nii.gz'.format(subj_[0])).get_fdata()[msp]
     elif gen_img_path != []:
-        gen_img = nib.load(gen_img_path[0]).get_data()[::-1,::-1,0]
+        gen_img = nib.load(gen_img_path[0]).get_fdata()[::-1,::-1,0]
         gen_mask_path = glob.glob('{}*corrected.cc.nii'.format(subj_[0]))[0]
-        gen_mask = nib.load(gen_mask_path).get_data()[::-1,::-1,0]
+        gen_mask = nib.load(gen_mask_path).get_fdata()[::-1,::-1,0]
     else:
         gen_mask = np.load(subj_[0]).swapaxes(0,1)[::-1,::-1]
         gen_img = np.zeros((gen_mask.shape))

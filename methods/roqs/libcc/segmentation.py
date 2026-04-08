@@ -155,7 +155,7 @@ def segm_staple(path, fissure, segm_import=None):
     writer.SetFileName('{}/segm_staple.nii.gz'.format(path))
     writer.Execute(nii_staple)
 
-    nii_staple = nib.load('{}/segm_staple.nii.gz'.format(path)).get_data()
+    nii_staple = nib.load('{}/segm_staple.nii.gz'.format(path)).get_fdata()
     seg_staple = nii_staple[fissure,:,:]
 
     seg_staple[seg_staple == np.min(seg_staple)] = 0
@@ -170,7 +170,7 @@ def segm_mask(path, threshold=0):
     import numpy as np
     import matplotlib.pyplot as plt
 
-    volume = nib.load(path).get_data()
+    volume = nib.load(path).get_fdata()
 
     # Normalize
     vol = np.array(volume, dtype='int32')

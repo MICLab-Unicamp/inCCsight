@@ -22,19 +22,19 @@ def loadNiftiDTI(basedir, basename='dti', reorient=False):
     # ====== MAIN FUNCTION START ===========================
     # PRE-LOAD THE FIRST EIGENVALUE VOLUME TO GET HEADER PARAMS
     L = nib.load(_find_nii(basedir, f'{basename}_L1'))
-    s, m, n = L.get_data().shape
+    s, m, n = L.get_fdata().shape
 
     # LOAD AND BUILD EIGENVALUES VOLUME
-    evl = [L.get_data()]
-    evl.append(nib.load(_find_nii(basedir, f'{basename}_L2')).get_data())
-    evl.append(nib.load(_find_nii(basedir, f'{basename}_L3')).get_data())
+    evl = [L.get_fdata()]
+    evl.append(nib.load(_find_nii(basedir, f'{basename}_L2')).get_fdata())
+    evl.append(nib.load(_find_nii(basedir, f'{basename}_L3')).get_fdata())
     evl = np.array(evl)
     evl[evl < 0] = 0
 
     # LOAD AND BUILD EIGENVECTORS VOLUME
-    evt = [nib.load(_find_nii(basedir, f'{basename}_V1')).get_data()]
-    evt.append(nib.load(_find_nii(basedir, f'{basename}_V2')).get_data())
-    evt.append(nib.load(_find_nii(basedir, f'{basename}_V3')).get_data())
+    evt = [nib.load(_find_nii(basedir, f'{basename}_V1')).get_fdata()]
+    evt.append(nib.load(_find_nii(basedir, f'{basename}_V2')).get_fdata())
+    evt.append(nib.load(_find_nii(basedir, f'{basename}_V3')).get_fdata())
     evt = np.array(evt).transpose(0, 4, 1, 2, 3)
 
     T = np.diag(np.ones(4))
