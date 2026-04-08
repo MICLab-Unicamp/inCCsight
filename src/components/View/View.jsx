@@ -1,4 +1,5 @@
 import React from 'react'
+import Plot from 'react-plotly.js'
 
 /* Componentes */
 import TableSegmentation from '../../graphs/Table/TableSegmentation'
@@ -16,6 +17,37 @@ import '../../styles/home.scss'
 import Radar from '../../graphs/Radar/Radar'
 
 const path = window.require('path')
+const fs   = window.require('fs')
+
+function SegmentationPlot({ imgPath }) {
+    if (!imgPath) return <span className='msg-image'>Imagem não disponível</span>
+
+    let base64 = null
+    try {
+        base64 = fs.readFileSync(imgPath).toString('base64')
+    } catch (_) {
+        return <span className='msg-image'>Imagem não encontrada</span>
+    }
+
+    return (
+        <Plot
+            data={[{
+                type: 'image',
+                source: `data:image/png;base64,${base64}`,
+            }]}
+            layout={{
+                margin: { l: 0, r: 0, t: 0, b: 0 },
+                xaxis: { visible: false, showgrid: false },
+                yaxis: { visible: false, showgrid: false },
+                paper_bgcolor: 'transparent',
+                plot_bgcolor: 'transparent',
+            }}
+            config={{ displayModeBar: false, responsive: true }}
+            style={{ width: '100%', height: '100%' }}
+            useResizeHandler
+        />
+    )
+}
 
 /**
  * Resolve o caminho do arquivo NIfTI para um sujeito.
@@ -55,15 +87,7 @@ function View(props) {
                         <span className='subject-name'>{data[0]["Id"]}</span>
 
                         <div className='image'>
-                            {data[0]["img_path"] ? (
-                                <img
-                                    src={`file://${data[0]["img_path"].replace(/\\/g, '/')}`}
-                                    alt={`Segmentação ROQS — ${data[0]["Id"]}`}
-                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                                />
-                            ) : (
-                                <span className='msg-image'>Imagem não disponível</span>
-                            )}
+                            <SegmentationPlot imgPath={data[0]["img_path"]} />
                         </div>
 
                         <div className='image-prompts'>
