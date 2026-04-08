@@ -361,7 +361,8 @@ def get_segm(data_paths):
 
             start = time.time()
             code = os.path.basename(data_path)
-            sub = f'Subject_{code}'
+            # Avoid double-prefix if the folder is already named "Subject_XXX"
+            sub = code if code.startswith('Subject_') else f'Subject_{code}'
 
             print(f"Executando ROQS para {data_path}", flush=True)
 

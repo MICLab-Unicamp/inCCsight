@@ -5,7 +5,7 @@ def getTheCC(segmentation):
     import numpy as np
     from skimage.measure import label, regionprops
 
-    labels = label(input=segmentation, neighbors=4)
+    labels = label(segmentation, connectivity=1)  # connectivity=1 → 4-connectivity in 2D
     regions = regionprops(labels)
 
     theCC = []
