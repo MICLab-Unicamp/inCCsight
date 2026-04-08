@@ -353,6 +353,19 @@ def get_segm(data_paths):
     w_midlinesList         = []
     w_thicknessList        = []
     w_parcellationStatsList = []
+    # ── QC accumulators ──────────────────────────────────────────────────────
+    qc_roqs_flags = []; qc_roqs_probs = []
+    qc_water_flags = []; qc_water_probs = []
+
+    # Load QC model once (graceful fallback if models are missing)
+    try:
+        shape_imports = libcc.shapeSignImports()
+        _qc_available = True
+        print("✓ QC: modelos carregados com sucesso.", flush=True)
+    except Exception as _qc_err:
+        shape_imports = None
+        _qc_available = False
+        print(f"[WARN] QC: não foi possível carregar modelos ({_qc_err}). QC será ignorado.", flush=True)
 
     for data_path in data_paths:
         try:
@@ -397,6 +410,21 @@ def get_segm(data_paths):
             canvas[fissure, :, :] = segmentation
             save.save_nii(data_path, 'segm_roqs', canvas, affine)
 
+            # ── ROQS Quality Check ───────────────────────────────────────────
+            if _qc_available:
+                try:
+                    qc_flag, qc_prob = libcc.checkShapeSign(segmentation, shape_imports)
+                    qc_roqs_flags.append(bool(qc_flag))
+                    qc_roqs_probs.append(float(qc_prob[0]) if hasattr(qc_prob, '__len__') else float(qc_prob))
+                    print(f"  → QC ROQS: flag={qc_flag}, prob={qc_prob}", flush=True)
+                except Exception as _qce:
+                    print(f"  [WARN] QC ROQS falhou para {sub}: {_qce}", flush=True)
+                    qc_roqs_flags.append(None)
+                    qc_roqs_probs.append(None)
+            else:
+                qc_roqs_flags.append(None)
+                qc_roqs_probs.append(None)
+
             # ── Watershed segmentation ────────────────────────────────────────
             print(f"  → Executando Watershed para {sub}", flush=True)
             try:
@@ -421,6 +449,21 @@ def get_segm(data_paths):
                 save.save_nii(data_path, 'segm_watershed', canvas_w, affine)
                 print(f"  → Watershed concluído", flush=True)
 
+                # ── Watershed Quality Check ──────────────────────────────────
+                if _qc_available:
+                    try:
+                        qc_flag_w, qc_prob_w = libcc.checkShapeSign(segm_w, shape_imports)
+                        qc_water_flags.append(bool(qc_flag_w))
+                        qc_water_probs.append(float(qc_prob_w[0]) if hasattr(qc_prob_w, '__len__') else float(qc_prob_w))
+                        print(f"  → QC Watershed: flag={qc_flag_w}, prob={qc_prob_w}", flush=True)
+                    except Exception as _qce_w:
+                        print(f"  [WARN] QC Watershed falhou para {sub}: {_qce_w}", flush=True)
+                        qc_water_flags.append(None)
+                        qc_water_probs.append(None)
+                else:
+                    qc_water_flags.append(None)
+                    qc_water_probs.append(None)
+
             except Exception as e_w:
                 import traceback as _tb
                 print(f"  [WARN] Watershed falhou para {sub}, usando ROQS como fallback: {e_w}")
@@ -433,6 +476,8 @@ def get_segm(data_paths):
                 w_midlinesList.append(roqs_midlines)
                 w_thicknessList.append(thickness_200)
                 w_parcellationStatsList.append(parc_row)
+                qc_water_flags.append(None)
+                qc_water_probs.append(None)
 
             sub_data = {
                 "name":    sub,
@@ -507,6 +552,8 @@ def get_segm(data_paths):
         'RD': meanRDList, 'RD StdDev': stdRDList,
         'AD': meanADList, 'AD StdDev': stdADList,
         'img_path': imgPathList,
+        'qc_flag': qc_roqs_flags,
+        'qc_prob': qc_roqs_probs,
     }, index=names)
     df_roqs_scalar.to_csv("../csvs/ROQS_scalar_statistics.csv", sep=";")
 
@@ -524,6 +571,8 @@ def get_segm(data_paths):
         'RD': w_meanRDList, 'RD StdDev': w_stdRDList,
         'AD': w_meanADList, 'AD StdDev': w_stdADList,
         'img_path': imgPathList,   # same PNG (ROQS midsagittal)
+        'qc_flag': qc_water_flags,
+        'qc_prob': qc_water_probs,
     }, index=names)
     df_watershed_scalar.to_csv("../csvs/Watershed_scalar_statistics.csv", sep=";")
 

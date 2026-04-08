@@ -64,7 +64,9 @@ class Subject:
                  watershed_midlines, ROQS_midlines,
                  watershed_thickness, ROQS_thickness,
                  watershed_parcellation, ROQS_parcellation,
-                 santarosa_scalars, img_path=""):
+                 santarosa_scalars, img_path="",
+                 roqs_qc_flag=None, roqs_qc_prob=None,
+                 water_qc_flag=None, water_qc_prob=None):
         self.name = self._adjust_name(str(name))
         self.watershed_scalar       = watershed_scalar
         self.ROQS_scalars           = ROQS_scalars
@@ -76,16 +78,39 @@ class Subject:
         self.ROQS_parcellation      = ROQS_parcellation
         self.santarosa_scalars      = santarosa_scalars
         self.img_path               = str(img_path) if img_path else ""
+        self.roqs_qc_flag  = roqs_qc_flag
+        self.roqs_qc_prob  = roqs_qc_prob
+        self.water_qc_flag = water_qc_flag
+        self.water_qc_prob = water_qc_prob
 
     def _adjust_name(self, name):
         if name.startswith("Subject_"):
             name = name[len("Subject_"):]
         return name.zfill(7)
 
+    def _safe_bool(self, val):
+        if val is None or (isinstance(val, float) and math.isnan(val)):
+            return None
+        return bool(val)
+
+    def _safe_float(self, val):
+        if val is None or (isinstance(val, float) and math.isnan(val)):
+            return None
+        try:
+            return float(val)
+        except (TypeError, ValueError):
+            return None
+
     def to_dict(self):
         return {
             "Id": self.name,
             "img_path": self.img_path,
+            "qc": {
+                "ROQS":      {"flag": self._safe_bool(self.roqs_qc_flag),
+                              "prob": self._safe_float(self.roqs_qc_prob)},
+                "Watershed": {"flag": self._safe_bool(self.water_qc_flag),
+                              "prob": self._safe_float(self.water_qc_prob)},
+            },
             "Watershed_scalar":    dict(self.watershed_scalar),
             "ROQS_scalar":         dict(self.ROQS_scalars),
             "santarosa_scalars":   dict(self.santarosa_scalars),

@@ -29,3 +29,5 @@ yarn-error.log*
 # Remover os ambientes virtuais (Futuramente corrigir)
 /methods/CNNBased/venv
 /methods/roqs/venv
+
+/methods/venv
