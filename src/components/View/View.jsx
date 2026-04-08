@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useMemo } from 'react'
 import Plot from 'react-plotly.js'
 
 /* Componentes */
@@ -51,24 +51,30 @@ function SegmentationPlot({ imgPath }) {
 }
 
 /**
- * Resolve o caminho do arquivo NIfTI da segmentação CNN para um sujeito.
- * Prioridade:
- *   1. <cwd>/methods/CNNBased/temp/<id>/inCCsight/cnnBased.nii.gz  (saída real do CNN)
- *   2. <cwd>/methods/CNNBased/temp/<id>/santarosa.nii.gz            (dado de teste)
- *   3. Fallback para dado de demonstração do repositório
+ * Varre CNNBased/temp/ e retorna todos os sujeitos que possuem
+ * inCCsight/cnnBased.nii.gz já gerado.
  */
-function resolveNiftiPath(subjectId) {
-    const base = process.cwd()
-    const cnnPath  = path.join(base, 'methods', 'CNNBased', 'temp', subjectId, 'inCCsight', 'cnnBased.nii.gz')
-    const testPath = path.join(base, 'methods', 'CNNBased', 'temp', subjectId, 'santarosa.nii.gz')
-
-    if (fs.existsSync(cnnPath))  return cnnPath
-    if (fs.existsSync(testPath)) return testPath
-
-    return path.join(base, 'methods', 'CNNBased', 'temp', '000215', 'inCCsight', 'cnnBased.nii.gz')
+function getAvailableCNNSubjects() {
+    const tempDir = path.join(process.cwd(), 'methods', 'CNNBased', 'temp')
+    if (!fs.existsSync(tempDir)) return []
+    try {
+        return fs.readdirSync(tempDir)
+            .filter(name => {
+                const p = path.join(tempDir, name, 'inCCsight', 'cnnBased.nii.gz')
+                return fs.existsSync(p)
+            })
+            .map(name => ({
+                id: name,
+                cnnPath: path.join(tempDir, name, 'inCCsight', 'cnnBased.nii.gz'),
+            }))
+    } catch (_) {
+        return []
+    }
 }
 
 function View(props) {
+    const cnnSubjects = useMemo(() => getAvailableCNNSubjects(), [])
+    const [selectedCNNIdx, setSelectedCNNIdx] = useState(0)
 
     function closeSelect(){
         let subjectPainel = document.querySelector("#subjectPainel");
@@ -158,7 +164,7 @@ function View(props) {
         )
     } else if(props.view === "3D"){
 
-        const niftiPath = resolveNiftiPath(data[0]["Id"])
+        const selectedSubject = cnnSubjects[selectedCNNIdx] || null
 
         return(
             <div className='view-container' id="main-area">
@@ -166,18 +172,16 @@ function View(props) {
                 <div className='subject-select' id="subjectPainel">
 
                     <div className='subject-image'>
-                        <span className='subject-name'>3D: {data[0]["Id"]}</span>
+                        <span className='subject-name'>3D: {selectedSubject ? selectedSubject.id : data[0]["Id"]}</span>
 
                         <div className='image-prompts'>
                             <div className='image-inputs'>
-
                                 <div className='input-group'>
                                     <label>Segm. Method</label>
                                     <select>
                                         <option value="">CNN Based</option>
                                     </select>
                                 </div>
-
                             </div>
                         </div>
                     </div>
@@ -199,7 +203,35 @@ function View(props) {
                     </div>
 
                     <div className='area-volumetric'>
-                        <VolumetricView filePath={niftiPath} />
+
+                        <div className='cnn-subject-list'>
+                            <span className='cnn-list-title'>Sujeitos com dados CNN</span>
+
+                            {cnnSubjects.length === 0 ? (
+                                <span className='cnn-empty'>Nenhum dado CNN encontrado.<br/>Execute o pipeline CNN primeiro.</span>
+                            ) : (
+                                cnnSubjects.map((s, i) => (
+                                    <div
+                                        key={s.id}
+                                        className={`cnn-subject-card${selectedCNNIdx === i ? ' selected' : ''}`}
+                                        onClick={() => setSelectedCNNIdx(i)}
+                                    >
+                                        {s.id}
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        <div className='cnn-viewer'>
+                            {selectedSubject ? (
+                                <VolumetricView filePath={selectedSubject.cnnPath} />
+                            ) : (
+                                <div className='cnn-no-subject'>
+                                    <span>Selecione um sujeito na lista para visualizar o corpo caloso em 3D.</span>
+                                </div>
+                            )}
+                        </div>
+
                     </div>
 
                 </div>
