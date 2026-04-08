@@ -87,13 +87,23 @@ def transformInJson(data):
     json.dump(data, final)
 
 def dataFrameStringToList(df):
-  columns = df.columns
-  for i in range(0, len(df)):
-    for column in columns:
+  # Use object dtype so cells can hold Python lists
+  df = df.copy().astype(object)
+  for col in df.columns:
+    for i in range(len(df)):
+      val = df.at[i, col]
+      if not isinstance(val, str):
+        continue
       try:
-        df.iloc[i][column] = ast.literal_eval(df.iloc[i][column])
+        df.at[i, col] = ast.literal_eval(val)
       except (ValueError, SyntaxError):
-        df.iloc[i][column] = []
+        # Fallback: parse as JSON-style list (handles np.float64 repr)
+        try:
+          import re, json
+          cleaned = re.sub(r'np\.float\d+\(([^)]+)\)', r'\1', val)
+          df.at[i, col] = json.loads(cleaned.replace("'", '"'))
+        except Exception:
+          df.at[i, col] = []
   return df
 
 def _safe_drop_index(df):

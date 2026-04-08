@@ -159,8 +159,7 @@ def test_predict(model, data_paths):
 
 			except Exception as _e:
 				import traceback
-				print(f"
-[ERRO] Falha em {data_path}:")
+				print(f"\n[ERRO] Falha em {data_path}:")
 				traceback.print_exc()
 				continue
 

@@ -371,12 +371,12 @@ def get_segm(data_paths):
             meanADList.append(scalar_statistics[6])
             stdADList.append(scalar_statistics[7])
 
-            # Midlines (store as string for CSV compatibility)
+            # Midlines: convert to plain float to avoid np.float64() repr in newer numpy
             midlinesList.append({
-                'FA': str(scalar_midlines.get('FA', [])),
-                'MD': str(scalar_midlines.get('MD', [])),
-                'RD': str(scalar_midlines.get('RD', [])),
-                'AD': str(scalar_midlines.get('AD', [])),
+                'FA': str([float(x) for x in scalar_midlines.get('FA', [])]),
+                'MD': str([float(x) for x in scalar_midlines.get('MD', [])]),
+                'RD': str([float(x) for x in scalar_midlines.get('RD', [])]),
+                'AD': str([float(x) for x in scalar_midlines.get('AD', [])]),
             })
 
             # Thickness: count CC pixels per column, interpolated to 200 points
