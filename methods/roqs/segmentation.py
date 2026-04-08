@@ -8,29 +8,33 @@ import libcc
 import save
 
 
+def _find_nii(basedir, name):
+    """Return path to name.nii.gz or name.nii, whichever exists."""
+    for ext in ('.nii.gz', '.nii'):
+        p = os.path.join(basedir, name + ext)
+        if os.path.isfile(p):
+            return p
+    raise FileNotFoundError(f"Could not find {name}.nii.gz or {name}.nii in {basedir}")
+
+
 def loadNiftiDTI(basedir, basename='dti', reorient=False):
 
     # ====== MAIN FUNCTION START ===========================
     # PRE-LOAD THE FIRST EIGENVALUE VOLUME TO GET HEADER PARAMS
-    L = nib.load(os.path.join(basedir, '{}_L1.nii.gz'.format(basename)))
+    L = nib.load(_find_nii(basedir, f'{basename}_L1'))
     s, m, n = L.get_data().shape
 
     # LOAD AND BUILD EIGENVALUES VOLUME
     evl = [L.get_data()]
-    evl.append(nib.load(os.path.join(
-        basedir, '{}_L2.nii.gz'.format(basename))).get_data())
-    evl.append(nib.load(os.path.join(
-        basedir, '{}_L3.nii.gz'.format(basename))).get_data())
+    evl.append(nib.load(_find_nii(basedir, f'{basename}_L2')).get_data())
+    evl.append(nib.load(_find_nii(basedir, f'{basename}_L3')).get_data())
     evl = np.array(evl)
     evl[evl < 0] = 0
 
     # LOAD AND BUILD EIGENVECTORS VOLUME
-    evt = [nib.load(os.path.join(
-        basedir, '{}_V1.nii.gz'.format(basename))).get_data()]
-    evt.append(nib.load(os.path.join(
-        basedir, '{}_V2.nii.gz'.format(basename))).get_data())
-    evt.append(nib.load(os.path.join(
-        basedir, '{}_V3.nii.gz'.format(basename))).get_data())
+    evt = [nib.load(_find_nii(basedir, f'{basename}_V1')).get_data()]
+    evt.append(nib.load(_find_nii(basedir, f'{basename}_V2')).get_data())
+    evt.append(nib.load(_find_nii(basedir, f'{basename}_V3')).get_data())
     evt = np.array(evt).transpose(0, 4, 1, 2, 3)
 
     T = np.diag(np.ones(4))

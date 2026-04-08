@@ -19,27 +19,27 @@ function FolderSelector(props) {
         const files = event.target.files;
         if (!files || files.length === 0) return;
 
-        const filePath = files[0].path;
+        const firstFile = files[0];
+        const filePath = firstFile.path;
         if (!filePath) {
             alert("Caminho da pasta não disponível. Certifique-se de rodar o app via Electron.");
             return;
         }
 
-        // Determine separator (Windows vs Unix)
-        const sep = filePath.includes('/') ? '/' : '\\';
-        const parts = filePath.split(sep);
+        // webkitRelativePath is relative to the selected folder, e.g.:
+        //   Single subject: "subjectFolder/dti_L1.nii.gz"   → depth 1 → go up 1 level
+        //   Multi subject:  "parentFolder/subject/dti_L1.nii.gz" → depth 2 → go up 2 levels
+        const relDepth = (firstFile.webkitRelativePath || '').split('/').filter(Boolean).length;
+        const levelsUp = relDepth >= 2 ? 2 : 1;
 
-        // files[0].path = /parent/selectedFolder/subject/file
-        // We want /parent/selectedFolder, so drop the last two segments (file + subject)
-        const folderPath = parts.slice(0, -2).join(sep);
+        const sep = filePath.includes('/') ? '/' : '\\';
+        const folderPath = filePath.split(sep).slice(0, -levelsUp).join(sep);
 
         if (!folderPath) return;
 
-        let check = document.querySelector(`#check_${props.id}`)
-        check.style.display = "flex"
-
+        document.querySelector(`#check_${props.id}`).style.display = "flex";
         setFolderPath(folderPath);
-        savePath(folderPath)
+        savePath(folderPath);
     }
 
     function handleFolderButtonClick() {
