@@ -138,7 +138,7 @@ function Home() {
 
                     </div>
 
-                    <button className='btn-check'>Quality Check<span className='btn-tag'>0</span></button>
+                    <button className='btn-check'>Quality Check<span className='btn-tag'>{allSubjects.filter(s => s.qc?.ROQS?.flag === true).length}</span></button>
 
                 </div>
 
@@ -154,7 +154,7 @@ function Home() {
                         {data.map((subject, index) => {
                             if (subject["Id"].includes(filter)) {
                                 return (
-                                    <SubjectCard name={subject["Id"]} id={index} key={index} onClick={selectSubject} />
+                                    <SubjectCard name={subject["Id"]} id={index} key={index} onClick={selectSubject} qc={subject["qc"]} />
                                 )
                             }
                             return false

@@ -144,11 +144,16 @@ def _read_csv(filename, required=True):
 # ── Leitura dos CSVs ──────────────────────────────────────────────────────────
 
 ROQS_scalar_raw  = _read_csv("ROQS_scalar_statistics.csv")
-# Extract img_path column before passing scalar data
-img_paths    = ROQS_scalar_raw["img_path"].tolist() if "img_path" in ROQS_scalar_raw.columns else []
-ROQS_scalar  = ROQS_scalar_raw.drop(columns=["img_path"], errors="ignore")
+# Extract img_path and QC columns before passing scalar data
+img_paths       = ROQS_scalar_raw["img_path"].tolist() if "img_path" in ROQS_scalar_raw.columns else []
+roqs_qc_flags   = ROQS_scalar_raw["qc_flag"].tolist() if "qc_flag" in ROQS_scalar_raw.columns else []
+roqs_qc_probs   = ROQS_scalar_raw["qc_prob"].tolist() if "qc_prob" in ROQS_scalar_raw.columns else []
+ROQS_scalar     = ROQS_scalar_raw.drop(columns=["img_path", "qc_flag", "qc_prob"], errors="ignore")
 
-watershed_scalar = _read_csv("Watershed_scalar_statistics.csv").drop(columns=["img_path"], errors="ignore")
+watershed_scalar_raw = _read_csv("Watershed_scalar_statistics.csv")
+water_qc_flags  = watershed_scalar_raw["qc_flag"].tolist() if "qc_flag" in watershed_scalar_raw.columns else []
+water_qc_probs  = watershed_scalar_raw["qc_prob"].tolist() if "qc_prob" in watershed_scalar_raw.columns else []
+watershed_scalar = watershed_scalar_raw.drop(columns=["img_path", "qc_flag", "qc_prob"], errors="ignore")
 
 try:
     santarosa_scalar = _read_csv("santarosa.csv", required=False)
@@ -187,6 +192,10 @@ for i, name in enumerate(names):
         ROQS_parcellation.iloc[i],
         santarosa_scalar.iloc[santa_i],
         img_path=img_paths[i] if i < len(img_paths) else "",
+        roqs_qc_flag=roqs_qc_flags[i] if i < len(roqs_qc_flags) else None,
+        roqs_qc_prob=roqs_qc_probs[i] if i < len(roqs_qc_probs) else None,
+        water_qc_flag=water_qc_flags[i] if i < len(water_qc_flags) else None,
+        water_qc_prob=water_qc_probs[i] if i < len(water_qc_probs) else None,
     )
     subjects_list.append(sub.to_dict())
 

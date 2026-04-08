@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "React Dev Server",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["start"],
+      "port": 3000
+    },
+    {
+      "name": "Electron + React (full app)",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["electron:serve"],
+      "port": 3000
+    }
+  ]
+}

@@ -125,6 +125,25 @@ function View(props) {
                         </div>
                     </div>
 
+                    <div className='subject-qc'>
+                        <span className='qc-title'>Quality Check</span>
+                        {['ROQS', 'Watershed'].map(method => {
+                            const qc = data[0]?.qc?.[method]
+                            const flag = qc?.flag
+                            const prob = qc?.prob
+                            const dotClass = flag === true ? 'qc-dot qc-fail' : flag === false ? 'qc-dot qc-pass' : 'qc-dot qc-na'
+                            const label   = flag === true ? 'FAIL' : flag === false ? 'PASS' : 'N/A'
+                            return (
+                                <div key={method} className='qc-row'>
+                                    <span className={dotClass} />
+                                    <span className='qc-method'>{method}</span>
+                                    <span className={`qc-label qc-label-${label.toLowerCase()}`}>{label}</span>
+                                    {prob != null && <span className='qc-prob'>{(prob * 100).toFixed(1)}%</span>}
+                                </div>
+                            )
+                        })}
+                    </div>
+
                     <div className='subject-tables'>
                         <TableSegmentation data={data} bg_color="#1F2C56" color="white" type="2D"/>
                         <TableParcellation data={data} bg_color="#1F2C56" color="white" type="2D"/>

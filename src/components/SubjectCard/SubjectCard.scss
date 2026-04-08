@@ -5,6 +5,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
     box-shadow: 4px 4px 6px rgba(0, 0, 0, 0.425);
     color: white;
     font-weight: bold;
@@ -17,4 +18,15 @@
         background-color: black;
         filter: brightness(2);
     }
+}
+
+.qc-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    &.qc-pass  { background-color: #2ecc71; }
+    &.qc-fail  { background-color: #e74c3c; }
+    &.qc-na    { background-color: #7f8c8d; }
 }
