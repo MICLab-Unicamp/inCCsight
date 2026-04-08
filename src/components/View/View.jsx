@@ -71,6 +71,7 @@ function getCNNSubjectsFromData(data) {
 }
 
 function View(props) {
+    const data = props.data
     const cnnSubjects = useMemo(() => getCNNSubjectsFromData(data), [data])
     const [selectedCNNIdx, setSelectedCNNIdx] = useState(0)
 
@@ -78,8 +79,6 @@ function View(props) {
         let subjectPainel = document.querySelector("#subjectPainel");
         subjectPainel.style.display = "none"
     }
-
-    let data = props.data
 
     if(props.view === "2D"){
         return (
