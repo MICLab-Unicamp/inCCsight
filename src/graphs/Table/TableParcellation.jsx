@@ -37,9 +37,13 @@ function exportCSV(headers, cols, filename) {
 function TableParcellation(props) {
     const [methodParcellation, setMethodParcellation] = useState("Witelson")
     const [scalar, setScalar] = useState("FA")
+    const [selectedId, setSelectedId] = useState('__all__')
 
     const headers = ["Method", "P1", "P2", "P3", "P4", "P5"]
-    const subjects = props.data
+    const allSubjects = props.data
+    const subjects = selectedId === '__all__'
+        ? allSubjects
+        : allSubjects.filter(s => s["Id"] === selectedId)
     const parts = ["P1", "P2", "P3", "P4", "P5"]
 
     let cols = [["ROQS", "Watershed-Based"]]
@@ -116,6 +120,18 @@ function TableParcellation(props) {
                         ))}
                     </select>
                 </div>
+
+                {allSubjects.length > 1 && (
+                    <div className='select-group'>
+                        <label className={props.color}>Subject: </label>
+                        <select value={selectedId} onChange={e => setSelectedId(e.target.value)}>
+                            <option value='__all__'>All (mean)</option>
+                            {allSubjects.map(s => (
+                                <option key={s["Id"]} value={s["Id"]}>{s["Id"]}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
             </div>
         </div>
     )

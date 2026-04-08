@@ -39,8 +39,12 @@ function exportCSV(headers, cols, filename) {
 
 function TableSegmentation(props) {
     const [showStd, setShowStd] = useState(false)
+    const [selectedId, setSelectedId] = useState('__all__')
 
-    const subjects = props.data
+    const allSubjects = props.data
+    const subjects = selectedId === '__all__'
+        ? allSubjects
+        : allSubjects.filter(s => s["Id"] === selectedId)
     const headers = showStd
         ? ["Method", ...SCALARS_WITH_STD]
         : ["Method", ...SCALARS]
@@ -115,6 +119,17 @@ function TableSegmentation(props) {
                             {showStd ? <TbEyeOff /> : <TbEyeFilled />}
                         </button>
                     </div>
+                    {allSubjects.length > 1 && (
+                        <div className='select-group'>
+                            <label className={props.color}>Subject: </label>
+                            <select value={selectedId} onChange={e => setSelectedId(e.target.value)}>
+                                <option value='__all__'>All (mean)</option>
+                                {allSubjects.map(s => (
+                                    <option key={s["Id"]} value={s["Id"]}>{s["Id"]}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
                 </div>
             </div>
         )
@@ -173,6 +188,17 @@ function TableSegmentation(props) {
                             {showStd ? <TbEyeOff /> : <TbEyeFilled />}
                         </button>
                     </div>
+                    {allSubjects.length > 1 && (
+                        <div className='select-group'>
+                            <label className={props.color}>Subject: </label>
+                            <select value={selectedId} onChange={e => setSelectedId(e.target.value)}>
+                                <option value='__all__'>All (mean)</option>
+                                {allSubjects.map(s => (
+                                    <option key={s["Id"]} value={s["Id"]}>{s["Id"]}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
                 </div>
             </div>
         )
