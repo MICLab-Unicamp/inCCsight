@@ -16,26 +16,30 @@ function FolderSelector(props) {
     }
 
     function handleFolderChange(event) {
-        
-        const selectedFolder = event.target.files[0].path;
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
 
-        let lastSlashIndex = selectedFolder.lastIndexOf("/");
-        let penultimateSlashIndex = selectedFolder.lastIndexOf("/", lastSlashIndex - 1);
-        let folderPath = selectedFolder.substring(0, penultimateSlashIndex);
-        
-        if(folderPath.length == 0){
-            lastSlashIndex = selectedFolder.lastIndexOf("\\");
-            penultimateSlashIndex = selectedFolder.lastIndexOf("\\", lastSlashIndex - 1);
-            folderPath = selectedFolder.substring(0, penultimateSlashIndex);
+        const filePath = files[0].path;
+        if (!filePath) {
+            alert("Caminho da pasta não disponível. Certifique-se de rodar o app via Electron.");
+            return;
         }
+
+        // Determine separator (Windows vs Unix)
+        const sep = filePath.includes('/') ? '/' : '\\';
+        const parts = filePath.split(sep);
+
+        // files[0].path = /parent/selectedFolder/subject/file
+        // We want /parent/selectedFolder, so drop the last two segments (file + subject)
+        const folderPath = parts.slice(0, -2).join(sep);
+
+        if (!folderPath) return;
 
         let check = document.querySelector(`#check_${props.id}`)
         check.style.display = "flex"
 
-        if (selectedFolder) {
-            setFolderPath(folderPath);
-            savePath(folderPath)
-        }
+        setFolderPath(folderPath);
+        savePath(folderPath)
     }
 
     function handleFolderButtonClick() {
