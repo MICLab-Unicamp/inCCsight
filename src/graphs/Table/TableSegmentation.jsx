@@ -7,6 +7,12 @@ import { TbEyeFilled, TbEyeOff } from 'react-icons/tb'
 const SCALARS = ["FA", "MD", "RD", "AD"]
 const SCALARS_WITH_STD = ["FA", "FA StdDev", "MD", "MD StdDev", "RD", "RD StdDev", "AD", "AD StdDev"]
 
+const METHOD_OPTIONS = [
+    { label: "ROQS",          key: "ROQS_scalar"        },
+    { label: "Watershed-Based", key: "Watershed_scalar" },
+    { label: "CNN-Based",     key: "santarosa_scalars"  },
+]
+
 function getMeanValues(subjects, method, scalar) {
     const values = subjects.map(s => s[method][scalar])
     return (values.reduce((a, b) => a + b, 0) / values.length).toFixed(6)
@@ -20,6 +26,21 @@ function getColumnColors(colValues) {
         if (v === max) return 'rgba(144, 238, 144, 0.6)'
         if (v === min) return 'rgba(255, 182, 193, 0.6)'
         return 'white'
+    })
+}
+
+/** Computes per-column min/max colors for a 2-D array (rows × cols). */
+function colorsForRows(rows, colCount) {
+    return Array.from({ length: colCount }, (_, ci) => {
+        const col = rows.map(r => Number(r[ci]))
+        const max = Math.max(...col)
+        const min = Math.min(...col)
+        return col.map(v =>
+            rows.length < 2  ? 'transparent'
+            : v === max      ? 'rgba(144,238,144,0.45)'
+            : v === min      ? 'rgba(255,182,193,0.45)'
+            :                  'transparent'
+        )
     })
 }
 
@@ -37,6 +58,87 @@ function exportCSV(headers, cols, filename) {
     URL.revokeObjectURL(url)
 }
 
+function ExpandableSubjectTable({ allSubjects, color, type }) {
+    const [open,        setOpen]        = useState(false)
+    const [expandMethod, setExpandMethod] = useState(
+        type === "3D" ? "santarosa_scalars" : "ROQS_scalar"
+    )
+
+    const scalarCols = ["FA", "MD", "RD", "AD"]
+
+    const rows = allSubjects.map(s => {
+        const m = s[expandMethod] || {}
+        return scalarCols.map(sc =>
+            m[sc] != null ? Number(m[sc]).toFixed(6) : "—"
+        )
+    })
+
+    const cellColors = colorsForRows(rows, scalarCols.length)
+
+    const availableMethods = type === "3D"
+        ? METHOD_OPTIONS.filter(m => m.key === "santarosa_scalars")
+        : METHOD_OPTIONS
+
+    function exportExpanded() {
+        const headers = ["Subject", ...scalarCols]
+        const data = allSubjects.map((s, i) => [s["Id"], ...rows[i]])
+        const csv  = [headers, ...data].map(r => r.join(',')).join('\n')
+        const blob = new Blob([csv], { type: 'text/csv' })
+        const url  = URL.createObjectURL(blob)
+        const a    = document.createElement('a'); a.href = url
+        a.download = `segmentation_subjects_${expandMethod}.csv`; a.click()
+        URL.revokeObjectURL(url)
+    }
+
+    return (
+        <div className='expandable-section'>
+            <div className='expandable-header' onClick={() => setOpen(v => !v)}>
+                <span>Per-Subject Data</span>
+                <span className='expand-icon'>{open ? '▲' : '▼'}</span>
+            </div>
+
+            {open && (
+                <div className='expandable-content'>
+                    <div className='expand-controls'>
+                        <div className='select-group'>
+                            <label className={color}>Method: </label>
+                            <select value={expandMethod} onChange={e => setExpandMethod(e.target.value)}>
+                                {availableMethods.map(m => (
+                                    <option key={m.key} value={m.key}>{m.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <button className='btn-export' onClick={exportExpanded}>Export</button>
+                    </div>
+
+                    <div className='subject-table-wrap'>
+                        <table className='subject-table'>
+                            <thead>
+                                <tr>
+                                    <th>Subject</th>
+                                    {scalarCols.map(sc => <th key={sc}>{sc}</th>)}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {allSubjects.map((s, ri) => (
+                                    <tr key={s["Id"]}>
+                                        <td className='subject-id'>{s["Id"]}</td>
+                                        {rows[ri].map((val, ci) => (
+                                            <td key={ci} style={{ backgroundColor: cellColors[ci][ri] }}>
+                                                {val}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
 function TableSegmentation(props) {
     const [showStd, setShowStd] = useState(false)
     const [selectedId, setSelectedId] = useState('__all__')
@@ -45,14 +147,12 @@ function TableSegmentation(props) {
     const subjects = selectedId === '__all__'
         ? allSubjects
         : allSubjects.filter(s => s["Id"] === selectedId)
-    const headers = showStd
-        ? ["Method", ...SCALARS_WITH_STD]
-        : ["Method", ...SCALARS]
 
+    const headers = showStd ? ["Method", ...SCALARS_WITH_STD] : ["Method", ...SCALARS]
     const scalarKeys = showStd ? SCALARS_WITH_STD : SCALARS
 
     const methodNames = ["ROQS", "Watershed-Based", "CNN-Based"]
-    const methodKeys = ["ROQS_scalar", "Watershed_scalar", "santarosa_scalars"]
+    const methodKeys  = ["ROQS_scalar", "Watershed_scalar", "santarosa_scalars"]
 
     let cols = [methodNames]
     for (const key of scalarKeys) {
@@ -60,9 +160,8 @@ function TableSegmentation(props) {
         cols.push(colValues)
     }
 
-    // Cell colors: only apply to scalar columns (not StdDev cols, not Method col)
     const cellColors = [
-        Array(3).fill('#f0f0f0'), // Method column
+        Array(3).fill('#f0f0f0'),
         ...cols.slice(1).map((colValues, i) => {
             const isStdCol = showStd && (i % 2 === 1)
             return isStdCol ? Array(3).fill('white') : getColumnColors(colValues)
@@ -131,6 +230,8 @@ function TableSegmentation(props) {
                         </div>
                     )}
                 </div>
+
+                <ExpandableSubjectTable allSubjects={allSubjects} color={props.color} type="2D" />
             </div>
         )
     }
@@ -200,6 +301,8 @@ function TableSegmentation(props) {
                         </div>
                     )}
                 </div>
+
+                <ExpandableSubjectTable allSubjects={allSubjects} color={props.color} type="3D" />
             </div>
         )
     }

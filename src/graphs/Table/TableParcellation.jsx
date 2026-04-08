@@ -3,6 +3,15 @@ import Plot from 'react-plotly.js'
 import './TableParcellation.scss'
 import InfoTool from '../../components/InfoTool/InfoTool'
 
+const SEG_METHOD_OPTIONS = [
+    { label: "ROQS",            key: "ROQS_parcellation"       },
+    { label: "Watershed-Based", key: "Watershed_parcellation"  },
+]
+
+const PARC_METHODS   = ["Witelson", "Hofer", "Chao", "Cover", "Freesurfer"]
+const SCALARS        = ["FA", "RD", "AD", "MD"]
+const PARTS          = ["P1", "P2", "P3", "P4", "P5"]
+
 function getMeanValues(subjects, method, parc_method, scalar, part) {
     const name = `${parc_method}_${scalar}_${part}`
     const values = subjects.map(s => s[method][name])
@@ -20,6 +29,20 @@ function getColumnColors(colValues) {
     })
 }
 
+function colorsForRows(rows, colCount) {
+    return Array.from({ length: colCount }, (_, ci) => {
+        const col = rows.map(r => Number(r[ci]))
+        const max = Math.max(...col)
+        const min = Math.min(...col)
+        return col.map(v =>
+            rows.length < 2  ? 'transparent'
+            : v === max      ? 'rgba(144,238,144,0.45)'
+            : v === min      ? 'rgba(255,182,193,0.45)'
+            :                  'transparent'
+        )
+    })
+}
+
 function exportCSV(headers, cols, filename) {
     const rows = [headers.join(',')]
     for (let r = 0; r < cols[0].length; r++) {
@@ -32,6 +55,98 @@ function exportCSV(headers, cols, filename) {
     a.download = filename
     a.click()
     URL.revokeObjectURL(url)
+}
+
+function ExpandableParcTable({ allSubjects, color }) {
+    const [open,        setOpen]        = useState(false)
+    const [segMethod,   setSegMethod]   = useState("ROQS_parcellation")
+    const [parcMethod,  setParcMethod]  = useState("Witelson")
+    const [scalar,      setScalar]      = useState("FA")
+
+    const rows = allSubjects.map(s => {
+        const m = s[segMethod] || {}
+        return PARTS.map(part => {
+            const key = `${parcMethod}_${scalar}_${part}`
+            return m[key] != null ? Number(m[key]).toFixed(6) : "—"
+        })
+    })
+
+    const cellColors = colorsForRows(rows, PARTS.length)
+
+    function exportExpanded() {
+        const headers = ["Subject", ...PARTS]
+        const data = allSubjects.map((s, i) => [s["Id"], ...rows[i]])
+        const csv  = [headers, ...data].map(r => r.join(',')).join('\n')
+        const blob = new Blob([csv], { type: 'text/csv' })
+        const url  = URL.createObjectURL(blob)
+        const a    = document.createElement('a'); a.href = url
+        a.download = `parcellation_subjects_${segMethod}_${parcMethod}_${scalar}.csv`
+        a.click(); URL.revokeObjectURL(url)
+    }
+
+    return (
+        <div className='expandable-section'>
+            <div className='expandable-header' onClick={() => setOpen(v => !v)}>
+                <span>Per-Subject Data</span>
+                <span className='expand-icon'>{open ? '▲' : '▼'}</span>
+            </div>
+
+            {open && (
+                <div className='expandable-content'>
+                    <div className='expand-controls'>
+                        <div className='select-group'>
+                            <label className={color}>Seg. Method: </label>
+                            <select value={segMethod} onChange={e => setSegMethod(e.target.value)}>
+                                {SEG_METHOD_OPTIONS.map(m => (
+                                    <option key={m.key} value={m.key}>{m.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className='select-group'>
+                            <label className={color}>Parc. Method: </label>
+                            <select value={parcMethod} onChange={e => setParcMethod(e.target.value)}>
+                                {PARC_METHODS.map(m => (
+                                    <option key={m} value={m}>{m}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className='select-group'>
+                            <label className={color}>Scalar: </label>
+                            <select value={scalar} onChange={e => setScalar(e.target.value)}>
+                                {SCALARS.map(s => (
+                                    <option key={s} value={s}>{s}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <button className='btn-export' onClick={exportExpanded}>Export</button>
+                    </div>
+
+                    <div className='subject-table-wrap'>
+                        <table className='subject-table'>
+                            <thead>
+                                <tr>
+                                    <th>Subject</th>
+                                    {PARTS.map(p => <th key={p}>{p}</th>)}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {allSubjects.map((s, ri) => (
+                                    <tr key={s["Id"]}>
+                                        <td className='subject-id'>{s["Id"]}</td>
+                                        {rows[ri].map((val, ci) => (
+                                            <td key={ci} style={{ backgroundColor: cellColors[ci][ri] }}>
+                                                {val}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
 }
 
 function TableParcellation(props) {
@@ -133,6 +248,8 @@ function TableParcellation(props) {
                     </div>
                 )}
             </div>
+
+            <ExpandableParcTable allSubjects={allSubjects} color={props.color} />
         </div>
     )
 }
