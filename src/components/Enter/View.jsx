@@ -25,17 +25,28 @@ function View(props){
 
 
     async function startAnalyzes() {
-        
-        document.querySelector("#loading-screen").style.display = "flex"
-        
-        let folders = JSON.parse(localStorage.getItem("folders"))
-        
-        await window.startROQS(folders);
-        await window.startCNN(folders);
-        
-        // await window.transformJson();
+        const loadingScreen = document.querySelector("#loading-screen")
+        loadingScreen.style.display = "flex"
 
-        //openWindow();
+        try {
+            let folders = JSON.parse(localStorage.getItem("folders")) || []
+
+            if (folders.length === 0) {
+                loadingScreen.style.display = "none"
+                alert("Selecione pelo menos uma pasta antes de executar a análise.")
+                return
+            }
+
+            await window.startROQS(folders);
+            await window.startCNN(folders);
+            await window.transformJson();
+
+            openWindow();
+        } catch (e) {
+            loadingScreen.style.display = "none"
+            console.error(e)
+            alert("Erro durante a análise: " + (e.message || e))
+        }
     }
 
     async function loadLast(){

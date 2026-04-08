@@ -297,6 +297,9 @@ def get_segm(data_paths):
     stdADList = []
     parcellationsList = {"ROQS": {}}
     times = []
+    midlinesList = []
+    thicknessList = []
+    parcellationStatsList = []
 
     for data_path in data_paths:
         try:
@@ -364,6 +367,37 @@ def get_segm(data_paths):
             meanADList.append(scalar_statistics[6])
             stdADList.append(scalar_statistics[7])
 
+            # Midlines (store as string for CSV compatibility)
+            midlinesList.append({
+                'FA': str(scalar_midlines.get('FA', [])),
+                'MD': str(scalar_midlines.get('MD', [])),
+                'RD': str(scalar_midlines.get('RD', [])),
+                'AD': str(scalar_midlines.get('AD', [])),
+            })
+
+            # Thickness: count CC pixels per column, interpolated to 200 points
+            try:
+                col_heights = np.sum(segmentation, axis=0).astype(float)
+                thickness_200 = np.interp(
+                    np.linspace(0, max(len(col_heights) - 1, 1), 200),
+                    np.arange(len(col_heights)),
+                    col_heights
+                )
+            except Exception:
+                thickness_200 = np.zeros(200)
+            thicknessList.append(thickness_200)
+
+            # Parcellation statistics row
+            parc_row = {'Name': sub}
+            for method_p in ['Witelson', 'Hofer', 'Chao', 'Cover', 'Freesurfer']:
+                for part in ['P1', 'P2', 'P3', 'P4', 'P5']:
+                    for scalar in ['FA', 'FA StdDev', 'MD', 'MD StdDev', 'RD', 'RD StdDev', 'AD', 'AD StdDev']:
+                        try:
+                            parc_row[f'{method_p}_{scalar}_{part}'] = parcellation_dict[method_p][part][scalar]
+                        except Exception:
+                            parc_row[f'{method_p}_{scalar}_{part}'] = 0.0
+            parcellationStatsList.append(parc_row)
+
             name = sub
             meanFA = scalar_statistics[0] 
             stdFA = scalar_statistics[1]
@@ -405,4 +439,31 @@ def get_segm(data_paths):
     df = pd.DataFrame(subjects)
     df.to_csv("./data/roqs_based.csv", sep=";")
     df.to_csv("../csvs/roqs_based.csv", sep=";")
-    #gm.adjust_dict_parcellations_statistics(parcellationsList)
+
+    # Save scalar statistics (subject name as index, matching expected CSV format)
+    df_scalar = pd.DataFrame({
+        'FA': meanFAList, 'FA StdDev': stdFAList,
+        'MD': meanMDList, 'MD StdDev': stdMDList,
+        'RD': meanRDList, 'RD StdDev': stdRDList,
+        'AD': meanADList, 'AD StdDev': stdADList,
+    }, index=names)
+    df_scalar.to_csv("../csvs/ROQS_scalar_statistics.csv", sep=";")
+    df_scalar.to_csv("../csvs/Watershed_scalar_statistics.csv", sep=";")
+
+    # Save midlines (each cell is a string-encoded list)
+    if midlinesList:
+        df_midlines = pd.DataFrame(midlinesList, index=names)
+        df_midlines.to_csv("../csvs/ROQS_scalar_midlines.csv", sep=";")
+        df_midlines.to_csv("../csvs/Watershed_scalar_midlines.csv", sep=";")
+
+    # Save thickness (200 values per subject)
+    if thicknessList:
+        df_thickness = pd.DataFrame(thicknessList, index=names)
+        df_thickness.to_csv("../csvs/ROQS_dict_thickness.csv", sep=";")
+        df_thickness.to_csv("../csvs/Watershed_dict_thickness.csv", sep=";")
+
+    # Save parcellation statistics
+    if parcellationStatsList:
+        df_parc = pd.DataFrame(parcellationStatsList)
+        df_parc.to_csv("../csvs/ROQS_parcellation_statistics.csv", sep=";")
+        df_parc.to_csv("../csvs/Watershed_parcellation_statistics.csv", sep=";")

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import '../../styles/global.scss'
 import { Dna } from  'react-loader-spinner'
 import './Enter.scss'
@@ -11,9 +11,11 @@ import Loading from '../Loading/Loading'
 
 function Enter() {
 
-    localStorage.setItem("folders", JSON.stringify([]));
-    
     const [page, setPage] = useState("Input")
+
+    useEffect(() => {
+        localStorage.setItem("folders", JSON.stringify([]))
+    }, [])
 
     function handleClick(icon, name) {
         const icons = document.querySelectorAll('.enter-icon');
