@@ -80,7 +80,7 @@ def loadNiftiDTI(basedir, basename='dti', reorient=False):
     T = np.diag(np.ones(4))
     if reorient:
         # GET QFORM AFFINE MATRIX (see Nifti and nibabel specifications)
-        T = L.get_header().get_qform()
+        T = L.header.get_qform()
 
         # COMPUTE ROTATION MATRIX TO ALIGN SAGITTAL PLANE
         R = align_sagittal_plane(T)

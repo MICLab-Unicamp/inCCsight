@@ -157,8 +157,11 @@ def test_predict(model, data_paths):
 
 				adjust_dict_parcellations_statistics(parcellationsList, sub_data, data_path)
 
-			except:
-				print(f"Erro com: {data_path}")
+			except Exception as _e:
+				import traceback
+				print(f"
+[ERRO] Falha em {data_path}:")
+				traceback.print_exc()
 				continue
 
 		subjects = {"Names": names, "FA": meanFAList, "FA StdDev": stdFAList, "MD": meanMDList, "MD StdDev": stdMDList, 
