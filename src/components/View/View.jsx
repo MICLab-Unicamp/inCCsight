@@ -51,29 +51,27 @@ function SegmentationPlot({ imgPath }) {
 }
 
 /**
- * Varre CNNBased/temp/ e retorna todos os sujeitos que possuem
- * inCCsight/cnnBased.nii.gz já gerado.
+ * Para cada sujeito carregado no JSON, verifica se existe cnnBased.nii.gz
+ * na mesma pasta inCCsight/ onde o img_path (PNG do ROQS) foi salvo.
+ * Ex: img_path = /dados/000215/inCCsight/midsagittal_roqs.png
+ *  →  cnnPath  = /dados/000215/inCCsight/cnnBased.nii.gz
  */
-function getAvailableCNNSubjects() {
-    const tempDir = path.join(process.cwd(), 'methods', 'CNNBased', 'temp')
-    if (!fs.existsSync(tempDir)) return []
-    try {
-        return fs.readdirSync(tempDir)
-            .filter(name => {
-                const p = path.join(tempDir, name, 'inCCsight', 'cnnBased.nii.gz')
-                return fs.existsSync(p)
-            })
-            .map(name => ({
-                id: name,
-                cnnPath: path.join(tempDir, name, 'inCCsight', 'cnnBased.nii.gz'),
-            }))
-    } catch (_) {
-        return []
-    }
+function getCNNSubjectsFromData(data) {
+    return data
+        .map(subject => {
+            const imgPath = subject["img_path"]
+            if (!imgPath) return null
+            const inccDir = path.dirname(imgPath)
+            const cnnPath = path.join(inccDir, 'cnnBased.nii.gz')
+            return fs.existsSync(cnnPath)
+                ? { id: subject["Id"], cnnPath }
+                : null
+        })
+        .filter(Boolean)
 }
 
 function View(props) {
-    const cnnSubjects = useMemo(() => getAvailableCNNSubjects(), [])
+    const cnnSubjects = useMemo(() => getCNNSubjectsFromData(data), [data])
     const [selectedCNNIdx, setSelectedCNNIdx] = useState(0)
 
     function closeSelect(){
