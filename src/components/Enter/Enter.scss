@@ -80,38 +80,35 @@
 
             .folders-inputs{
                 width: 100%;
-                height: 260px;
-                overflow-y: scroll;
+                max-height: 280px;
+                overflow-y: auto;
                 display: flex;
-                flex-direction: row;
-                flex-wrap: wrap;
+                flex-direction: column;
+                gap: 8px;
+                padding-right: 4px;
 
                 .add-btn{
-                    font-weight: bolder;
-                    width: 140px;
-                    height: 140px;
-                    font-size: 12px;
-                    margin-top: 50px;
-                    border: none;
-                    background-color: var(--white);
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    height: 36px;
+                    padding: 0 14px;
+                    border: 2px dashed var(--primaryColor);
+                    border-radius: 8px;
+                    background: transparent;
+                    color: var(--primaryColor);
+                    font-weight: 600;
+                    font-size: 13px;
+                    cursor: pointer;
+                    transition: background 0.2s;
+
+                    &:hover { background: rgba(31,44,86,0.06); }
 
                     .add-icon{
-                        box-sizing: content-box;
-                        height: 16px;
-                        width: 16px;
-                        padding: 8px;
-                        background-color: var(--primaryColor);
-                        color: var(--white);
-                        border-radius: 50%;
-                        box-shadow: 4px 4px 6px rgba(0, 0, 0, 0.5);
-                        cursor: pointer;
-
-                        &:hover{
-                            transition: .4s;
-                            box-shadow: -4px 4px 6px rgba(0, 0, 0, 0.5);
-                            filter: brightness(2);
-                        }
+                        font-size: 16px;
                     }
+
+                    .add-label { font-size: 13px; }
                 }
             }
         }
@@ -251,7 +248,31 @@
     height: 100%;
     display: none;
     position: fixed;
+    top: 0; left: 0;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    background-color: rgba(0, 0, 0, 0.75);
+    background-color: rgba(0, 0, 0, 0.82);
+    z-index: 9999;
+    gap: 20px;
+    padding: 24px;
+    box-sizing: border-box;
+}
+
+.pipeline-log {
+    width: 100%;
+    max-width: 680px;
+    height: 220px;
+    background: #0d1117;
+    color: #c9d1d9;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    border-radius: 8px;
+    padding: 12px 14px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    border: 1px solid #30363d;
+    box-sizing: border-box;
 }

@@ -46,9 +46,18 @@ function showConfigs() {
     root.render(<ConfigModal root={root} />)
 }
 
+// Derive unique non-empty groups from the loaded data
+const allGroups = [...new Set(subjects.map(s => s.group || '').filter(Boolean))]
+
+// Assign a stable color index per group
+const groupColorIndex = Object.fromEntries(allGroups.map((g, i) => [g, i]))
+
+const GROUP_COLORS = ['#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A', '#19D3F3']
+
 function Home() {
 
     const [filter, setFilter] = useState("")
+    const [groupFilter, setGroupFilter] = useState("")   // "" = all groups
     const [data, setData] = useState(subjects)
     const [allSubjects] = useState(subjects)
     const [view, setView] = useState("2D")
@@ -146,19 +155,60 @@ function Home() {
 
                     <label>Subjects</label>
 
+                    {allGroups.length > 0 && (
+                        <div className='group-tabs'>
+                            <button
+                                className={`group-tab ${groupFilter === '' ? 'active' : ''}`}
+                                style={groupFilter === '' ? { borderColor: '#1F2C56', color: '#1F2C56' } : {}}
+                                onClick={() => setGroupFilter('')}
+                            >
+                                Todos
+                            </button>
+                            {allGroups.map((g, i) => (
+                                <button
+                                    key={g}
+                                    className={`group-tab ${groupFilter === g ? 'active' : ''}`}
+                                    style={groupFilter === g
+                                        ? { borderColor: GROUP_COLORS[i % GROUP_COLORS.length], color: GROUP_COLORS[i % GROUP_COLORS.length], backgroundColor: GROUP_COLORS[i % GROUP_COLORS.length] + '18' }
+                                        : { borderColor: GROUP_COLORS[i % GROUP_COLORS.length] + '80', color: '#555' }
+                                    }
+                                    onClick={() => setGroupFilter(g)}
+                                >
+                                    <span
+                                        className='group-tab-dot'
+                                        style={{ background: GROUP_COLORS[i % GROUP_COLORS.length] }}
+                                    />
+                                    {g}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
                     <input placeholder='E.g: Subject_00002' id="filter" onChange={filterSubject} />
 
                     <div className='subjects'>
                         <SubjectCard name="All" onClick={selectSubject} />
 
-                        {data.map((subject, index) => {
-                            if (subject["Id"].includes(filter)) {
-                                return (
-                                    <SubjectCard name={subject["Id"]} id={index} key={index} onClick={selectSubject} qc={subject["qc"]} />
-                                )
-                            }
-                            return false
-                        })}
+                        {data
+                            .filter(subject => !groupFilter || subject.group === groupFilter)
+                            .map((subject, index) => {
+                                if (subject["Id"].includes(filter)) {
+                                    const gIdx = groupColorIndex[subject.group] ?? -1
+                                    return (
+                                        <SubjectCard
+                                            name={subject["Id"]}
+                                            id={index}
+                                            key={index}
+                                            onClick={selectSubject}
+                                            qc={subject["qc"]}
+                                            group={subject["group"]}
+                                            groupColor={gIdx >= 0 ? GROUP_COLORS[gIdx % GROUP_COLORS.length] : null}
+                                        />
+                                    )
+                                }
+                                return false
+                            })
+                        }
 
                     </div>
 

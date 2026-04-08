@@ -1,92 +1,110 @@
-.folder-container {
-    width: 140px;
-    min-height: 160px;
-    height: auto;
-    max-height: 200px;
+// Group stripe accent colors
+$colors: #636EFA, #EF553B, #00CC96, #AB63FA, #FFA15A, #19D3F3;
+$names: color-0, color-1, color-2, color-3, color-4, color-5;
+
+.folder-row {
+    width: 100%;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 10px;
     gap: 10px;
+    padding: 10px 12px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e0e4ef;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    position: relative;
+    overflow: hidden;
 
-    .check-icon{
-        display: none;
-        margin-top: -6px;
-        font-size: 18px;
-        color: var(--green);
-    }
-
-    .input-text {
-        width: 100%;
+    .group-stripe {
+        width: 4px;
+        height: 100%;
         border-radius: 4px;
-        height: 34px;
-        border: 1px solid var(--primaryColor);
-        padding-left: 4px;
+        flex-shrink: 0;
+        align-self: stretch;
     }
 
-    .input-icon {
-        position: relative;
-        width: 100%;
-        height: 70%;
-        border: 4px dotted var(--primaryColor);
-        border-radius: 8px;
-        cursor: pointer;
+    // Color variants
+    @for $i from 1 through length($colors) {
+        $name: nth($names, $i);
+        $color: nth($colors, $i);
 
-        &:hover{
-            transition: .4s;
-            border: 3px dotted var(--primaryColorLight);
+        &.#{$name} {
+            border-left: 4px solid $color;
+            .group-stripe { background-color: $color; }
+            .group-name-input:focus { border-color: $color; }
+            .folder-picker-btn.has-path { border-color: $color; color: $color; }
         }
     }
 
-    .input-icon input[type="file"] {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        opacity: 0;
-        z-index: -1;
+    .group-name-input {
+        width: 180px;
+        flex-shrink: 0;
+        height: 34px;
+        border-radius: 6px;
+        border: 1px solid #ccd0e0;
+        padding: 0 10px;
+        font-size: 13px;
+        font-weight: 600;
+        outline: none;
+        transition: border-color 0.2s;
     }
 
-    .icon-button {
-        width: 100%;
-        height: 100%;
+    .folder-picker-btn {
+        flex: 1;
+        min-width: 0;
+        height: 34px;
         display: flex;
-        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 0 12px;
+        border-radius: 6px;
+        border: 1px solid #ccd0e0;
+        background: white;
+        cursor: pointer;
+        font-size: 13px;
+        color: #888;
+        transition: all 0.2s;
+        overflow: hidden;
+
+        &:hover { background: #f5f7ff; border-color: var(--primaryColor); }
+
+        &.has-path { color: #333; }
+
+        .folder-icon {
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .folder-label {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            text-align: left;
+        }
+
+        .check-icon {
+            font-size: 16px;
+            flex-shrink: 0;
+            color: var(--green, #2ecc71);
+        }
+    }
+
+    .remove-btn {
+        width: 28px;
+        height: 28px;
+        flex-shrink: 0;
+        display: flex;
         align-items: center;
         justify-content: center;
-        padding: 10px;
-        cursor: pointer;
         border: none;
         background: none;
-        color: #111F4A;
+        cursor: pointer;
+        color: #aaa;
+        border-radius: 50%;
+        font-size: 16px;
+        transition: all 0.2s;
 
-        .icon {
-            width: 50px;
-            height: 50px;
-        }
-
-        .icon-text{
-            font-size: 12px;
-        }
-    
-        &:hover{
-            transition: .4s;
-            color: #686E8E;
-        }
+        &:hover { background: #fee; color: #e74c3c; }
     }
-
-    .path-label{
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        
-        .check{
-            font-size: 16px;
-            color: var(--green);
-        }
-    }
-
 }

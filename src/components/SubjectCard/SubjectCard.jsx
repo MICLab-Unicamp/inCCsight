@@ -9,8 +9,12 @@ function qcDotClass(qc) {
 }
 
 function SubjectCard(props) {
+    const style = props.groupColor
+        ? { borderLeft: `3px solid ${props.groupColor}` }
+        : {}
+
     return (
-        <div className='subject-card' id={props.id} onClick={() => {props.onClick(props.name)}}>
+        <div className='subject-card' id={props.id} style={style} onClick={() => {props.onClick(props.name)}}>
             {props.name}
             {props.qc !== undefined && <span className={qcDotClass(props.qc)} title={
                 props.qc?.ROQS?.prob != null

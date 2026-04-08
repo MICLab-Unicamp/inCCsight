@@ -1,18 +1,13 @@
-import React, { useState, useRef } from "react";
+import React, { useRef } from "react";
 import './FolderSelector.scss'
-import { TbFolder, TbChecks } from 'react-icons/tb'
+import { TbFolder, TbX, TbChecks } from 'react-icons/tb'
 
-function FolderSelector(props) {
-    const [folderPath, setFolderPath] = useState([]);
-    
+function FolderSelector({ id, path, groupName, onUpdate, onRemove, colorIndex }) {
+
     const inputRef = useRef(null);
 
-    function savePath(path){
-        let listPaths = JSON.parse(localStorage.getItem("folders"))
-        listPaths.push(path)
-        let newList = JSON.stringify(listPaths)
-
-        localStorage.setItem("folders", newList)
+    function handleNameChange(e) {
+        onUpdate({ groupName: e.target.value });
     }
 
     function handleFolderChange(event) {
@@ -26,47 +21,57 @@ function FolderSelector(props) {
             return;
         }
 
-        // webkitRelativePath is relative to the selected folder, e.g.:
-        //   Single subject: "subjectFolder/dti_L1.nii.gz"   → depth 1 → go up 1 level
-        //   Multi subject:  "parentFolder/subject/dti_L1.nii.gz" → depth 2 → go up 2 levels
+        // Determine how many levels to go up to get the selected folder
         const relDepth = (firstFile.webkitRelativePath || '').split('/').filter(Boolean).length;
         const levelsUp = relDepth >= 2 ? 2 : 1;
-
         const sep = filePath.includes('/') ? '/' : '\\';
-        const folderPath = filePath.split(sep).slice(0, -levelsUp).join(sep);
+        const resolved = filePath.split(sep).slice(0, -levelsUp).join(sep);
+        if (!resolved) return;
 
-        if (!folderPath) return;
-
-        document.querySelector(`#check_${props.id}`).style.display = "flex";
-        setFolderPath(folderPath);
-        savePath(folderPath);
+        onUpdate({ path: resolved });
     }
 
-    function handleFolderButtonClick() {
-        inputRef.current.click();
-    }
+    const folderLabel = path
+        ? path.split(/[\\/]/).pop() || path
+        : 'Selecionar pasta...';
+
+    const COLOR_CLASSES = ['color-0', 'color-1', 'color-2', 'color-3', 'color-4', 'color-5'];
+    const colorClass = COLOR_CLASSES[colorIndex % COLOR_CLASSES.length];
 
     return (
-        <div className="folder-container">
-            <input className="input-text" placeholder="Ex: Control Group" id={`folder-name-${props.id}`} required/>
+        <div className={`folder-row ${colorClass}`}>
+            <div className={`group-stripe`} />
 
-            <label className="input-icon" htmlFor="folder-selector">
+            <input
+                className="group-name-input"
+                placeholder="Nome do grupo (ex: Controle)"
+                value={groupName}
+                onChange={handleNameChange}
+            />
+
+            <button
+                type="button"
+                className={`folder-picker-btn ${path ? 'has-path' : ''}`}
+                onClick={() => inputRef.current?.click()}
+                title={path || 'Nenhuma pasta selecionada'}
+            >
                 <input
                     type="file"
-                    id={`folder-selector-${props.id}`}
                     webkitdirectory="true"
                     onChange={handleFolderChange}
                     ref={inputRef}
                     style={{ display: "none" }}
                 />
+                <TbFolder className="folder-icon" />
+                <span className="folder-label">{folderLabel}</span>
+                {path && <TbChecks className="check-icon" />}
+            </button>
 
-                <button type="button" className="icon-button" onClick={handleFolderButtonClick}>
-                    <TbFolder className="icon"/>
-                    <span className="icon-text">Click for select a folder</span>
+            {onRemove && (
+                <button className="remove-btn" onClick={onRemove} title="Remover grupo">
+                    <TbX />
                 </button>
-            </label>
-
-            <TbChecks id={`check_${props.id}`} className="check-icon"/>
+            )}
         </div>
     );
 }

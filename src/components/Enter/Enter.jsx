@@ -35,6 +35,7 @@ function Enter() {
         <div className='enter-container'>
             <div className='loading-screen' id='loading-screen'>
                 <Loading/>
+                <pre id='pipeline-log' className='pipeline-log'></pre>
             </div>
 
             <div className='enter-header'>

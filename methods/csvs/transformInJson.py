@@ -2,9 +2,36 @@
 import ast
 import json
 import math
+import os
 import re
 import numpy as np
 import pandas as pd
+
+# ── Leitura do mapeamento de grupos ───────────────────────────────────────────
+
+_GROUPS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'groups.json')
+_groups_map: dict = {}
+if os.path.exists(_GROUPS_FILE):
+    try:
+        with open(_GROUPS_FILE, 'r', encoding='utf-8') as _gf:
+            _groups_map = json.load(_gf)
+        print(f"[OK] groups.json carregado: {len(_groups_map)} grupo(s)")
+    except Exception as _ge:
+        print(f"[AVISO] Não foi possível ler groups.json: {_ge}")
+
+
+def _find_group(img_path: str) -> str:
+    """Determina o grupo de um sujeito a partir do seu img_path e do mapeamento de grupos."""
+    if not img_path or not _groups_map:
+        return ''
+    # img_path = /pasta/grupo/Subject_001/inCCsight/midsagittal_roqs.png
+    subject_dir = os.path.normpath(os.path.dirname(os.path.dirname(img_path)))
+    parent_dir  = os.path.normpath(os.path.dirname(subject_dir))
+    for folder, group in _groups_map.items():
+        normed = os.path.normpath(folder)
+        if normed == subject_dir or normed == parent_dir:
+            return group
+    return ''
 
 
 # ── Parsing de células com listas codificadas como string ────────────────────
@@ -82,6 +109,7 @@ class Subject:
         self.roqs_qc_prob  = roqs_qc_prob
         self.water_qc_flag = water_qc_flag
         self.water_qc_prob = water_qc_prob
+        self.group         = _find_group(self.img_path)
 
     def _adjust_name(self, name):
         if name.startswith("Subject_"):
@@ -105,6 +133,7 @@ class Subject:
         return {
             "Id": self.name,
             "img_path": self.img_path,
+            "group": self.group,
             "qc": {
                 "ROQS":      {"flag": self._safe_bool(self.roqs_qc_flag),
                               "prob": self._safe_float(self.roqs_qc_prob)},
