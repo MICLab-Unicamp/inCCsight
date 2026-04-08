@@ -290,7 +290,12 @@ def getScalars(segm, wFA, wMD, wRD, wAD):
 
 def get_segm(data_paths):
 
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+
     names = []
+    imgPathList = []
     meanFAList = []
     stdFAList = []
     meanMDList = []
@@ -426,6 +431,39 @@ def get_segm(data_paths):
             canvas[fissure, :, :] = segmentation
 
             save.save_nii(data_path, 'segm_roqs', canvas, affine)
+
+            # Gerar PNG da fatia midsagital com overlay da segmentação
+            img_path = ""
+            try:
+                rows = np.any(segmentation, axis=1)
+                cols = np.any(segmentation, axis=0)
+                rmin, rmax = np.where(rows)[0][[0, -1]]
+                cmin, cmax = np.where(cols)[0][[0, -1]]
+                pad = 20
+                rmin = max(0, rmin - pad)
+                rmax = min(FA.shape[0], rmax + pad)
+                cmin = max(0, cmin - pad)
+                cmax = min(FA.shape[1], cmax + pad)
+
+                fa_crop   = FA[rmin:rmax, cmin:cmax]
+                segm_crop = segmentation[rmin:rmax, cmin:cmax]
+
+                fig, ax = plt.subplots(figsize=(4, 3), dpi=120)
+                ax.imshow(fa_crop, cmap='gray', origin='lower')
+                overlay = np.zeros((*fa_crop.shape, 4), dtype=float)
+                overlay[segm_crop] = [0.2, 0.6, 1.0, 0.5]
+                ax.imshow(overlay, origin='lower')
+                ax.axis('off')
+                fig.tight_layout(pad=0)
+
+                out_dir = os.path.join(data_path, 'inCCsight')
+                os.makedirs(out_dir, exist_ok=True)
+                img_path = os.path.join(out_dir, 'midsagittal_roqs.png')
+                fig.savefig(img_path, bbox_inches='tight', pad_inches=0)
+                plt.close(fig)
+            except Exception:
+                plt.close('all')
+            imgPathList.append(img_path)
             # save.save_os(data_path, filename, data_tuple)
 
             end = time.time()
@@ -453,6 +491,7 @@ def get_segm(data_paths):
         'MD': meanMDList, 'MD StdDev': stdMDList,
         'RD': meanRDList, 'RD StdDev': stdRDList,
         'AD': meanADList, 'AD StdDev': stdADList,
+        'img_path': imgPathList,
     }, index=names)
     df_scalar.to_csv("../csvs/ROQS_scalar_statistics.csv", sep=";")
     df_scalar.to_csv("../csvs/Watershed_scalar_statistics.csv", sep=";")

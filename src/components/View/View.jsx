@@ -55,7 +55,15 @@ function View(props) {
                         <span className='subject-name'>{data[0]["Id"]}</span>
 
                         <div className='image'>
-                            <span className='msg-image'></span>
+                            {data[0]["img_path"] ? (
+                                <img
+                                    src={`file://${data[0]["img_path"].replace(/\\/g, '/')}`}
+                                    alt={`Segmentação ROQS — ${data[0]["Id"]}`}
+                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                />
+                            ) : (
+                                <span className='msg-image'>Imagem não disponível</span>
+                            )}
                         </div>
 
                         <div className='image-prompts'>

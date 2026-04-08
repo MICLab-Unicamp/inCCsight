@@ -64,7 +64,7 @@ class Subject:
                  watershed_midlines, ROQS_midlines,
                  watershed_thickness, ROQS_thickness,
                  watershed_parcellation, ROQS_parcellation,
-                 santarosa_scalars):
+                 santarosa_scalars, img_path=""):
         self.name = self._adjust_name(str(name))
         self.watershed_scalar       = watershed_scalar
         self.ROQS_scalars           = ROQS_scalars
@@ -75,6 +75,7 @@ class Subject:
         self.watershed_parcellation = watershed_parcellation
         self.ROQS_parcellation      = ROQS_parcellation
         self.santarosa_scalars      = santarosa_scalars
+        self.img_path               = str(img_path) if img_path else ""
 
     def _adjust_name(self, name):
         if name.startswith("Subject_"):
@@ -84,6 +85,7 @@ class Subject:
     def to_dict(self):
         return {
             "Id": self.name,
+            "img_path": self.img_path,
             "Watershed_scalar":    dict(self.watershed_scalar),
             "ROQS_scalar":         dict(self.ROQS_scalars),
             "santarosa_scalars":   dict(self.santarosa_scalars),
@@ -116,8 +118,12 @@ def _read_csv(filename, required=True):
 
 # ── Leitura dos CSVs ──────────────────────────────────────────────────────────
 
-ROQS_scalar      = _read_csv("ROQS_scalar_statistics.csv")
-watershed_scalar = _read_csv("Watershed_scalar_statistics.csv")
+ROQS_scalar_raw  = _read_csv("ROQS_scalar_statistics.csv")
+# Extract img_path column before passing scalar data
+img_paths    = ROQS_scalar_raw["img_path"].tolist() if "img_path" in ROQS_scalar_raw.columns else []
+ROQS_scalar  = ROQS_scalar_raw.drop(columns=["img_path"], errors="ignore")
+
+watershed_scalar = _read_csv("Watershed_scalar_statistics.csv").drop(columns=["img_path"], errors="ignore")
 
 try:
     santarosa_scalar = _read_csv("santarosa.csv", required=False)
@@ -155,6 +161,7 @@ for i, name in enumerate(names):
         watershed_parcellation.iloc[i],
         ROQS_parcellation.iloc[i],
         santarosa_scalar.iloc[santa_i],
+        img_path=img_paths[i] if i < len(img_paths) else "",
     )
     subjects_list.append(sub.to_dict())
 
