@@ -57,10 +57,10 @@ function TableParcellation(props) {
     ]
 
     const layout = {
-        width: "50%",
         height: 130,
         margin: { t: 10, b: 0, l: 10, r: 10 },
-        paper_bgcolor: props.bg_color
+        paper_bgcolor: props.bg_color,
+        autosize: true,
     }
 
     const plotData = [{
@@ -93,7 +93,10 @@ function TableParcellation(props) {
                 </button>
             </div>
 
-            <Plot data={plotData} layout={layout} />
+            <Plot data={plotData} layout={layout}
+                config={{ responsive: true }}
+                style={{ width: '100%' }}
+                useResizeHandler />
 
             <div className='options-row'>
                 <div className='select-group'>

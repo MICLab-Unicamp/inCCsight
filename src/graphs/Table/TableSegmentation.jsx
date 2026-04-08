@@ -66,10 +66,10 @@ function TableSegmentation(props) {
     ]
 
     const layout = {
-        width: "50%",
         height: showStd ? 160 : 130,
         margin: { t: 10, b: 0, l: 10, r: 10 },
-        paper_bgcolor: props.bg_color
+        paper_bgcolor: props.bg_color,
+        autosize: true,
     }
 
     if (props.type === "2D") {
@@ -103,7 +103,10 @@ function TableSegmentation(props) {
                     </button>
                 </div>
 
-                <Plot data={plotData} layout={layout} />
+                <Plot data={plotData} layout={layout}
+                    config={{ responsive: true }}
+                    style={{ width: '100%' }}
+                    useResizeHandler />
 
                 <div className='options-row'>
                     <div className='select-group'>
@@ -158,7 +161,10 @@ function TableSegmentation(props) {
                     </button>
                 </div>
 
-                <Plot data={plotData3d} layout={layout} />
+                <Plot data={plotData3d} layout={layout}
+                    config={{ responsive: true }}
+                    style={{ width: '100%' }}
+                    useResizeHandler />
 
                 <div className='options-row'>
                     <div className='select-group'>
